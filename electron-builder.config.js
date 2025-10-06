@@ -16,8 +16,14 @@ const config = {
     'dist/main/**/*',
     'dist/preload/**/*',
     'dist/render/**/*',
-    'node_modules/**/*',
-    'package.json'
+    'package.json',
+    {
+      from: 'node_modules',
+      to: 'node_modules',
+      filter: [
+        '**/*'
+      ]
+    }
   ],
   win: {
     target: 'nsis',
