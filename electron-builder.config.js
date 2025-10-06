@@ -19,8 +19,6 @@ const config = {
     'node_modules/**/*',
     'package.json'
   ],
-  // Ignorar el análisis automático de dependencias que causa el problema
-  includeSubNodeModules: false,
   win: {
     target: 'nsis',
     icon: 'build/icon.ico'
