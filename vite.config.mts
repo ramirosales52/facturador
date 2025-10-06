@@ -16,7 +16,19 @@ export default defineConfig({
       main: 'dist/main/index.js',
       entry: 'src/main/index.ts',
       outDir: 'dist/main',
-      external: ['electron'],
+      external: [
+        'electron',
+        '@afipsdk/afip.js',
+        '@nestjs/common',
+        '@nestjs/core',
+        '@nestjs/platform-express',
+        '@nestjs/microservices',
+        '@nestjs/mapped-types',
+        '@doubleshot/nest-electron',
+        'reflect-metadata',
+        'rxjs',
+        'axios',
+      ],
       electron: {
         build: {
           config: './electron-builder.config.js',
