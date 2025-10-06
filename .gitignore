@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AFIP/ARCA certificates - NUNCA commitear estos archivos
+certificates/
+*.crt
+*.key
+*.pem
+.env
+.env.local
+.env.production

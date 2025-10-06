@@ -1,13 +1,16 @@
-import logo from './assets/logo.png'
+import { Navigate, Route, Routes } from "react-router"
+import { Toaster } from "sonner"
+import CrearFactura from "./factura/CrearFactura"
 
 function App() {
   return (
-    <div className="flex flex-col gap-2 items-center w-full h-screen mt-24">
-      <img alt="logo" src={logo} className="h-48 w-auto" />
-      <h1>
-        Vite + React + Electron + NestJS + Shadcn + Tailwind
-      </h1>
-    </div>
+    <>
+      <Toaster position="top-right" richColors />
+      <Routes>
+        <Route path="/" element={<Navigate to="/factura" />} />
+        <Route path="/factura" element={<CrearFactura />} />
+      </Routes>
+    </>
   )
 }
 

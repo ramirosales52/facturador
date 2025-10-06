@@ -2,9 +2,13 @@ import { join } from 'node:path'
 import { ElectronModule } from '@doubleshot/nest-electron'
 import { Module } from '@nestjs/common'
 import { app, BrowserWindow } from 'electron'
+import { ArcaModule } from 'src/api/arca/arca.module'
+
+app.disableHardwareAcceleration()
 
 @Module({
   imports: [
+    ArcaModule,
     ElectronModule.registerAsync({
       useFactory: async () => {
         const isDev = !app.isPackaged
@@ -13,6 +17,7 @@ import { app, BrowserWindow } from 'electron'
           height: 768,
           autoHideMenuBar: true,
           webPreferences: {
+            nodeIntegration: true,
             contextIsolation: true,
             preload: join(__dirname, '../preload/index.js'),
           },
@@ -33,4 +38,5 @@ import { app, BrowserWindow } from 'electron'
     }),
   ],
 })
+
 export class AppModule { }

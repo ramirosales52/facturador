@@ -3,16 +3,37 @@
  * @see https://www.electron.build/configuration/configuration
  */
 const config = {
+  appId: 'com.facturador.app',
+  productName: 'Facturador',
   directories: {
     output: 'dist/electron',
   },
   publish: null,
   npmRebuild: false,
+  nodeGypRebuild: false,
+  buildDependenciesFromSource: false,
   files: [
     'dist/main/**/*',
     'dist/preload/**/*',
     'dist/render/**/*',
+    'node_modules/**/*',
+    'package.json'
   ],
+  // Ignorar el análisis automático de dependencias que causa el problema
+  includeSubNodeModules: false,
+  win: {
+    target: 'nsis',
+    icon: 'build/icon.ico'
+  },
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true
+  },
+  extraMetadata: {
+    main: 'dist/main/index.js'
+  }
 }
 
 module.exports = config
