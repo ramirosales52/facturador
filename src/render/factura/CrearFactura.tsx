@@ -105,7 +105,7 @@ const CrearFactura = () => {
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
-        cuit: 20409378472, // Tu CUIT
+        cuit: 20409378472, // CUIT del emisor (debe coincidir con la configuración del backend)
         ptoVta: response.data.PtoVta,
         tipoCmp: response.data.CbteTipo,
         nroCmp: response.data.CbteDesde,

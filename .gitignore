@@ -31,3 +31,7 @@ certificates/
 .env
 .env.local
 .env.production
+
+# Markdown files
+*.md
+!README.md

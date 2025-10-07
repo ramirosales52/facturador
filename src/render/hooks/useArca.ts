@@ -65,68 +65,47 @@ export const useArca = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const crearFactura = async (data: CreateFacturaDto): Promise<FacturaResponse> => {
+  const handleRequest = async <T,>(requestFn: () => Promise<T>): Promise<T> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post<FacturaResponse>(`${API_BASE_URL}/factura`, data);
-      return response.data;
+      return await requestFn();
     } catch (err) {
       const axiosError = err as AxiosError<{ error?: string }>;
-      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al crear factura';
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error en la solicitud';
       setError(errorMsg);
-      return { success: false, error: errorMsg };
+      return { success: false, error: errorMsg } as T;
     } finally {
       setLoading(false);
     }
+  };
+
+  const crearFactura = async (data: CreateFacturaDto): Promise<FacturaResponse> => {
+    return handleRequest(async () => {
+      const response = await axios.post<FacturaResponse>(`${API_BASE_URL}/factura`, data);
+      return response.data;
+    });
   };
 
   const verificarConexion = async (): Promise<ServerStatusResponse> => {
-    setLoading(true);
-    setError(null);
-    try {
+    return handleRequest(async () => {
       const response = await axios.get<ServerStatusResponse>(`${API_BASE_URL}/server-status`);
       return response.data;
-    } catch (err) {
-      const axiosError = err as AxiosError<{ error?: string }>;
-      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al verificar conexión';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const generarQR = async (qrData: any): Promise<QRResponse> => {
-    setLoading(true);
-    setError(null);
-    try {
+    return handleRequest(async () => {
       const response = await axios.post<QRResponse>(`${API_BASE_URL}/generar-qr`, qrData);
       return response.data;
-    } catch (err) {
-      const axiosError = err as AxiosError<{ error?: string }>;
-      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al generar QR';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const generarPDF = async (facturaInfo: any): Promise<PDFResponse> => {
-    setLoading(true);
-    setError(null);
-    try {
+    return handleRequest(async () => {
       const response = await axios.post<PDFResponse>(`${API_BASE_URL}/generar-pdf`, facturaInfo);
       return response.data;
-    } catch (err) {
-      const axiosError = err as AxiosError<{ error?: string }>;
-      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al generar PDF';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return {

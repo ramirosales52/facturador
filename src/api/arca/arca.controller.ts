@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Inject } from '@nestjs/common';
 import { ArcaService } from './arca.service';
 import { CreateArcaDto } from './dto/create-arca.dto';
-import { UpdateArcaDto } from './dto/update-arca.dto';
 
 @Controller('arca')
 export class ArcaController {
@@ -72,15 +71,5 @@ export class ArcaController {
   @Post('generar-pdf')
   generatePDF(@Body() facturaInfo: any) {
     return this.arcaService.generatePDF(facturaInfo);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateArcaDto: UpdateArcaDto) {
-    return this.arcaService.update(+id, updateArcaDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.arcaService.remove(+id);
   }
 }
