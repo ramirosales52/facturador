@@ -4,8 +4,6 @@ import { Module } from '@nestjs/common'
 import { app, BrowserWindow } from 'electron'
 import { ArcaModule } from 'src/api/arca/arca.module'
 
-app.disableHardwareAcceleration()
-
 @Module({
   imports: [
     ArcaModule,
