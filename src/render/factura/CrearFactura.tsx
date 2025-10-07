@@ -9,6 +9,7 @@ import {
   FormData,
   FacturaResultadoData,
 } from './components';
+import { ALICUOTAS_IVA } from './components/FacturaForm';
 
 interface ConexionStatusData {
   success: boolean;
@@ -28,6 +29,7 @@ const CrearFactura = () => {
     ImpNeto: '',
     ImpIVA: '',
     ImpTotal: '',
+    AlicuotaIVA: '5', // Por defecto IVA 21%
   });
 
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
@@ -41,20 +43,29 @@ const CrearFactura = () => {
     return (netoNum + ivaNum).toFixed(2);
   };
 
+  const calcularIVA = (neto: string, alicuotaId: string): string => {
+    const netoNum = parseFloat(neto) || 0;
+    const alicuota = ALICUOTAS_IVA.find(a => a.id === alicuotaId);
+    if (!alicuota) return '0.00';
+    return (netoNum * (alicuota.porcentaje / 100)).toFixed(2);
+  };
+
   const handleInputChange = (field: keyof FormData, value: string): void => {
     const newData = { ...formData, [field]: value };
     
-    if (field === 'ImpNeto' || field === 'ImpIVA') {
+    // Recalcular IVA automáticamente cuando cambia el neto o la alícuota
+    if (field === 'ImpNeto' || field === 'AlicuotaIVA') {
+      const neto = field === 'ImpNeto' ? value : newData.ImpNeto;
+      const alicuota = field === 'AlicuotaIVA' ? value : newData.AlicuotaIVA;
+      newData.ImpIVA = calcularIVA(neto, alicuota);
+    }
+    
+    // Recalcular total automáticamente
+    if (field === 'ImpNeto' || field === 'ImpIVA' || field === 'AlicuotaIVA') {
       newData.ImpTotal = calcularTotal(newData.ImpNeto, newData.ImpIVA);
     }
     
     setFormData(newData);
-  };
-
-  const calcularIVA21 = (): void => {
-    const neto = parseFloat(formData.ImpNeto) || 0;
-    const iva = (neto * 0.21).toFixed(2);
-    handleInputChange('ImpIVA', iva);
   };
 
   const limpiarFormulario = (): void => {
@@ -63,6 +74,7 @@ const CrearFactura = () => {
       ImpNeto: '',
       ImpIVA: '',
       ImpTotal: '',
+      AlicuotaIVA: '5', // Por defecto IVA 21%
     });
     setResultado(null);
     setQrUrl(null);
@@ -81,6 +93,8 @@ const CrearFactura = () => {
     setQrUrl(null);
     setPdfUrl(null);
 
+    const alicuotaId = parseInt(formData.AlicuotaIVA);
+
     const facturaData = {
       CbteTipo: 6, // Factura B
       DocTipo: 80, // CUIT
@@ -90,7 +104,7 @@ const CrearFactura = () => {
       ImpIVA: parseFloat(formData.ImpIVA),
       Iva: [
         {
-          Id: 5, // IVA 21%
+          Id: alicuotaId,
           BaseImp: parseFloat(formData.ImpNeto),
           Importe: parseFloat(formData.ImpIVA),
         },
@@ -169,7 +183,6 @@ const CrearFactura = () => {
         error={error}
         onInputChange={handleInputChange}
         onSubmit={handleSubmit}
-        onCalcularIVA={calcularIVA21}
         onLimpiar={limpiarFormulario}
       />
 

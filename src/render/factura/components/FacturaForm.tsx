@@ -3,13 +3,25 @@ import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 
 export interface FormData {
   DocNro: string
   ImpNeto: string
   ImpIVA: string
   ImpTotal: string
+  AlicuotaIVA: string
 }
+
+// Alícuotas de IVA según AFIP
+export const ALICUOTAS_IVA = [
+  { id: '3', nombre: 'IVA 0%', porcentaje: 0 },
+  { id: '4', nombre: 'IVA 10.5%', porcentaje: 10.5 },
+  { id: '5', nombre: 'IVA 21%', porcentaje: 21 },
+  { id: '6', nombre: 'IVA 27%', porcentaje: 27 },
+  { id: '8', nombre: 'IVA 5%', porcentaje: 5 },
+  { id: '9', nombre: 'IVA 2.5%', porcentaje: 2.5 },
+]
 
 interface FacturaFormProps {
   formData: FormData
@@ -17,7 +29,6 @@ interface FacturaFormProps {
   error: string | null
   onInputChange: (field: keyof FormData, value: string) => void
   onSubmit: (e: FormEvent<HTMLFormElement>) => Promise<void>
-  onCalcularIVA: () => void
   onLimpiar: () => void
 }
 
@@ -27,7 +38,6 @@ export function FacturaForm({
   error,
   onInputChange,
   onSubmit,
-  onCalcularIVA,
   onLimpiar,
 }: FacturaFormProps) {
   return (
@@ -58,20 +68,35 @@ export function FacturaForm({
 
             <div className="space-y-2">
               <Label htmlFor="ImpNeto">Importe Neto (sin IVA) *</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="ImpNeto"
-                  type="number"
-                  step="0.01"
-                  value={formData.ImpNeto}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('ImpNeto', e.target.value)}
-                  placeholder="100.00"
-                  required
-                />
-                <Button type="button" onClick={onCalcularIVA} variant="outline">
-                  Calc. IVA 21%
-                </Button>
-              </div>
+              <Input
+                id="ImpNeto"
+                type="number"
+                step="0.01"
+                value={formData.ImpNeto}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('ImpNeto', e.target.value)}
+                placeholder="100.00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="AlicuotaIVA">Alícuota de IVA *</Label>
+              <Select
+                value={formData.AlicuotaIVA}
+                onValueChange={(value) => onInputChange('AlicuotaIVA', value)}
+              >
+                <SelectTrigger id="AlicuotaIVA">
+                  <SelectValue placeholder="Seleccione alícuota" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALICUOTAS_IVA.map(alicuota => (
+                    <SelectItem key={alicuota.id} value={alicuota.id}>
+                      {alicuota.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-500">El IVA se calcula automáticamente</p>
             </div>
 
             <div className="space-y-2">
@@ -84,6 +109,8 @@ export function FacturaForm({
                 onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('ImpIVA', e.target.value)}
                 placeholder="21.00"
                 required
+                readOnly
+                className="bg-gray-50"
               />
             </div>
 
@@ -97,7 +124,8 @@ export function FacturaForm({
                 onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('ImpTotal', e.target.value)}
                 placeholder="121.00"
                 required
-                className="font-bold text-lg"
+                readOnly
+                className="font-bold text-lg bg-gray-50"
               />
               <p className="text-sm text-gray-500">Se calcula automáticamente</p>
             </div>
