@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@rend
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
+import { Separator } from '@render/components/ui/separator'
 
 export interface Articulo {
   descripcion: string
@@ -66,14 +67,14 @@ export function FacturaForm({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
             <CardTitle>Datos de la Factura {formData.TipoFactura}</CardTitle>
             <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
           </div>
           
           {/* Tipo de Factura a la derecha del header */}
-          <div className="space-y-1.5 w-40">
+          <div className="space-y-1.5 w-48 shrink-0">
             <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
             <Select
               value={formData.TipoFactura}
@@ -90,7 +91,10 @@ export function FacturaForm({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      
+      <Separator />
+      
+      <CardContent className="pt-4">
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Datos del cliente - Layout horizontal */}
           <div className="grid grid-cols-2 gap-3">
