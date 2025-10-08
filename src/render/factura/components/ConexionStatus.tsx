@@ -18,20 +18,20 @@ interface ConexionStatusProps {
 
 export function ConexionStatus({ conexionStatus, loading, onVerificar }: ConexionStatusProps) {
   return (
-    <Card className="mb-6">
-      <CardContent className="pt-6">
+    <Card className="mb-4">
+      <CardContent className="pt-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Estado de conexión con ARCA/AFIP</p>
-            <p className="text-sm text-gray-600">Verificar disponibilidad del servidor</p>
+            <p className="font-medium text-sm">Estado de conexión con ARCA/AFIP</p>
+            <p className="text-xs text-gray-600">Verificar disponibilidad del servidor</p>
           </div>
-          <Button onClick={onVerificar} disabled={loading} variant="outline">
-            {loading ? 'Verificando...' : 'Verificar Conexión'}
+          <Button onClick={onVerificar} disabled={loading} variant="outline" size="sm">
+            {loading ? 'Verificando...' : 'Verificar'}
           </Button>
         </div>
 
         {conexionStatus && (
-          <div className={`mt-4 p-3 rounded-md ${conexionStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className={`mt-3 p-2 rounded-md text-sm ${conexionStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
             {conexionStatus.success
               ? (
                   <div>
@@ -39,29 +39,17 @@ export function ConexionStatus({ conexionStatus, loading, onVerificar }: Conexio
                       <CheckCircle2 className="h-4 w-4" />
                       Conexión exitosa
                     </p>
-                    <p className="text-sm mt-1">
-                      AppServer:
-                      {' '}
-                      {conexionStatus.serverStatus?.AppServer}
-                      {' '}
-                      |
-                      DbServer:
-                      {' '}
-                      {conexionStatus.serverStatus?.DbServer}
-                      {' '}
-                      |
-                      AuthServer:
-                      {' '}
-                      {conexionStatus.serverStatus?.AuthServer}
+                    <p className="text-xs mt-1">
+                      App: {conexionStatus.serverStatus?.AppServer} | 
+                      DB: {conexionStatus.serverStatus?.DbServer} | 
+                      Auth: {conexionStatus.serverStatus?.AuthServer}
                     </p>
                   </div>
                 )
               : (
                   <p className="font-medium flex items-center gap-2">
                     <XCircle className="h-4 w-4" />
-                    Error:
-                    {' '}
-                    {conexionStatus.error}
+                    Error: {conexionStatus.error}
                   </p>
                 )}
           </div>

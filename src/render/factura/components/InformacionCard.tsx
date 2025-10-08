@@ -2,11 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/
 
 export function InformacionCard() {
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Información</CardTitle>
+    <Card className="mt-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Información</CardTitle>
       </CardHeader>
-      <CardContent className="text-sm space-y-2">
+      <CardContent className="text-xs space-y-1.5">
         <p>
           <span className="font-medium">Factura B:</span>
           {' '}

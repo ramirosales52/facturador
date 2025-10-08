@@ -275,10 +275,10 @@ const CrearFactura = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Facturación Electrónica</h1>
-        <p className="text-gray-600">Crear facturas A y B con artículos detallados</p>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold mb-1">Facturación Electrónica</h1>
+        <p className="text-sm text-gray-600">Crear facturas A y B con artículos detallados</p>
       </div>
 
       <ConexionStatus 
