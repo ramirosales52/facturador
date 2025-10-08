@@ -28,6 +28,8 @@ const CrearFactura = () => {
     TipoFactura: 'B',
     DocNro: '',
     CondicionIVA: '5', // Por defecto Consumidor Final
+    RazonSocial: '',
+    Domicilio: '',
     Articulos: [],
     ImpNeto: '0.00',
     ImpIVA: '0.00',
@@ -202,9 +204,12 @@ const CrearFactura = () => {
       const response = await consultarContribuyente(formData.DocNro)
 
       if (response.success && response.data) {
-        // Actualizar condición IVA si la encontramos
-        if (response.data.condicionIVA) {
-          handleInputChange('CondicionIVA', response.data.condicionIVA.toString())
+        // Actualizar razón social y domicilio
+        if (response.data.razonSocial) {
+          handleInputChange('RazonSocial', response.data.razonSocial)
+        }
+        if (response.data.domicilio) {
+          handleInputChange('Domicilio', response.data.domicilio)
         }
 
         // Mostrar mensaje de éxito con los datos encontrados
@@ -298,6 +303,8 @@ const CrearFactura = () => {
       ...resultado.data,
       TipoFactura: formData.TipoFactura,
       CondicionIVA: condicionIVANombre,
+      RazonSocial: formData.RazonSocial,
+      Domicilio: formData.Domicilio,
       Articulos: articulosPDF,
       IVAsAgrupados: ivasAgrupados,
     };

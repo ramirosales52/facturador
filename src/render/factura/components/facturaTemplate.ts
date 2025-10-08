@@ -28,6 +28,8 @@ export interface FacturaPDFData {
   FchProceso?: string
   TipoFactura?: 'A' | 'B'
   CondicionIVA?: string
+  RazonSocial?: string
+  Domicilio?: string
   Articulos?: ArticuloFactura[]
   IVAsAgrupados?: IVAAgrupado[]
 }
@@ -69,9 +71,15 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
   const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
   const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
+  const razonSocial = facturaInfo.RazonSocial || 'Cliente'
+  const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
   
   // Generar filas de artículos
-  const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => `
+  const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
+    // Calcular subtotal sin IVA (cantidad * precio unitario)
+    const subtotalSinIVA = articulo.cantidad * articulo.precioUnitario
+    
+    return `
     <tr>
       <td>${String(index + 1).padStart(3, '0')}</td>
       <td>${articulo.descripcion}</td>
@@ -80,9 +88,10 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>${articulo.precioUnitario.toFixed(2)}</td>
       <td>0,00</td>
       <td>0,00</td>
-      <td>${articulo.subtotal.toFixed(2)}</td>
+      <td>${subtotalSinIVA.toFixed(2)}</td>
     </tr>
-  `).join('')
+    `
+  }).join('')
   
   // Si no hay artículos, mostrar una fila con los datos básicos
   const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0 ? `
@@ -332,7 +341,7 @@ Factura
 <strong>CUIL/CUIT: </strong>${facturaInfo.DocNro}
 </p>
 <p class="col-8 margin-b-0">
-<strong>Apellido y Nombre / Razón social: </strong>Cliente
+<strong>Apellido y Nombre / Razón social: </strong>${razonSocial}
 </p>
 </div>
 <div class="row">
@@ -340,7 +349,7 @@ Factura
 <strong>Condición Frente al IVA: </strong>${condicionIVA}
 </p>
 <p class="col-6 margin-b-0">
-<strong>Domicilio: </strong>Calle Cliente 456
+<strong>Domicilio: </strong>${domicilio}
 </p>
 </div>
 <p>
