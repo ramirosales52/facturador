@@ -10,7 +10,6 @@ import {
   Articulo,
 } from './components';
 import { ALICUOTAS_IVA } from './components/FacturaForm';
-import { ArcaConfig } from '../../api/arca/arca.config';
 
 interface ConexionStatusData {
   success: boolean;
@@ -169,7 +168,7 @@ const CrearFactura = () => {
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
-        cuit: ArcaConfig.CUIT,
+        cuit: 20409378472,
         ptoVta: response.data.PtoVta,
         tipoCmp: response.data.CbteTipo,
         nroCmp: response.data.CbteDesde,
