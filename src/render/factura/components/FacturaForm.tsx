@@ -66,30 +66,34 @@ export function FacturaForm({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle>Datos de la Factura {formData.TipoFactura}</CardTitle>
-        <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>Datos de la Factura {formData.TipoFactura}</CardTitle>
+            <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
+          </div>
+          
+          {/* Tipo de Factura a la derecha del header */}
+          <div className="space-y-1.5 w-40">
+            <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
+            <Select
+              value={formData.TipoFactura}
+              onValueChange={(value) => onInputChange('TipoFactura', value)}
+            >
+              <SelectTrigger id="TipoFactura">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A">Factura A</SelectItem>
+                <SelectItem value="B">Factura B</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
-          {/* Datos del cliente - Layout en grid */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Tipo de Factura */}
-            <div className="space-y-1.5">
-              <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
-              <Select
-                value={formData.TipoFactura}
-                onValueChange={(value) => onInputChange('TipoFactura', value)}
-              >
-                <SelectTrigger id="TipoFactura">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">Factura A</SelectItem>
-                  <SelectItem value="B">Factura B</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
+          {/* Datos del cliente - Layout horizontal */}
+          <div className="grid grid-cols-2 gap-3">
             {/* CUIT */}
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-sm">CUIT del Cliente</Label>
