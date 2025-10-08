@@ -130,7 +130,6 @@ export function FacturaForm({
                 )}
               </div>
             </div>
-            </div>
 
             {/* Condición IVA - Solo para Factura B */}
             {formData.TipoFactura === 'B' && (
