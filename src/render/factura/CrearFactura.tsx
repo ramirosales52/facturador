@@ -5,12 +5,12 @@ import {
   ConexionStatus,
   FacturaForm,
   FacturaResultado,
-  InformacionCard,
   FormData,
   FacturaResultadoData,
   Articulo,
 } from './components';
 import { ALICUOTAS_IVA } from './components/FacturaForm';
+import { ArcaConfig } from '../../api/arca/arca.config';
 
 interface ConexionStatusData {
   success: boolean;
@@ -33,7 +33,6 @@ const CrearFactura = () => {
     ImpNeto: '0.00',
     ImpIVA: '0.00',
     ImpTotal: '0.00',
-    AlicuotaIVA: '5', // Por defecto IVA 21%
   });
 
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
@@ -101,7 +100,6 @@ const CrearFactura = () => {
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
-      AlicuotaIVA: '5',
     });
     setResultado(null);
     setQrUrl(null);
@@ -171,7 +169,7 @@ const CrearFactura = () => {
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
-        cuit: 20409378472, // CUIT del emisor (debe coincidir con la configuración del backend)
+        cuit: ArcaConfig.CUIT,
         ptoVta: response.data.PtoVta,
         tipoCmp: response.data.CbteTipo,
         nroCmp: response.data.CbteDesde,
@@ -310,8 +308,6 @@ const CrearFactura = () => {
           onGenerarPDF={handleDescargarPDF}
         />
       )}
-
-      <InformacionCard />
     </div>
   );
 };

@@ -20,7 +20,6 @@ export interface FormData {
   ImpNeto: string
   ImpIVA: string
   ImpTotal: string
-  AlicuotaIVA: string
 }
 
 // Alícuotas de IVA según AFIP
@@ -216,7 +215,7 @@ export function FacturaForm({
 
             {formData.Articulos.length === 0 && (
               <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
-                No hay artículos. Haga click en "Agregar Artículo" para comenzar.
+                No hay artículos agregados. Haga clic en "Agregar Artículo" para comenzar.
               </div>
             )}
           </div>
