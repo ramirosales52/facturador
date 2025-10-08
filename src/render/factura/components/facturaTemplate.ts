@@ -1,3 +1,19 @@
+export interface ArticuloFactura {
+  descripcion: string
+  cantidad: number
+  precioUnitario: number
+  alicuotaIVA: string
+  porcentajeIVA: number
+  subtotal: number
+}
+
+export interface IVAAgrupado {
+  alicuota: string
+  porcentaje: number
+  baseImponible: number
+  importeIVA: number
+}
+
 export interface FacturaPDFData {
   PtoVta: number
   CbteTipo: number
@@ -10,6 +26,10 @@ export interface FacturaPDFData {
   CAE: string
   CAEFchVto: string
   FchProceso?: string
+  TipoFactura?: 'A' | 'B'
+  CondicionIVA?: string
+  Articulos?: ArticuloFactura[]
+  IVAsAgrupados?: IVAAgrupado[]
 }
 
 /**
@@ -45,11 +65,67 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const fechaVtoCAE = formatearFecha(facturaInfo.CAEFchVto)
   const ptoVta = String(facturaInfo.PtoVta).padStart(4, '0')
   const nroComp = String(facturaInfo.CbteDesde).padStart(8, '0')
+  
+  // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
+  const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
+  const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
+  
+  // Generar filas de artículos
+  const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => `
+    <tr>
+      <td>${String(index + 1).padStart(3, '0')}</td>
+      <td>${articulo.descripcion}</td>
+      <td>${articulo.cantidad.toFixed(2)}</td>
+      <td>Unidad</td>
+      <td>${articulo.precioUnitario.toFixed(2)}</td>
+      <td>0,00</td>
+      <td>0,00</td>
+      <td>${articulo.subtotal.toFixed(2)}</td>
+    </tr>
+  `).join('')
+  
+  // Si no hay artículos, mostrar una fila con los datos básicos
+  const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0 ? `
+    <tr>
+      <td>001</td>
+      <td>Producto/Servicio</td>
+      <td>1,00</td>
+      <td>Unidad</td>
+      <td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
+      <td>0,00</td>
+      <td>0,00</td>
+      <td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
+    </tr>
+  ` : articulosHTML
+  
+  // Generar filas de IVA agrupado
+  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map(iva => `
+    <div class="row text-right">
+      <p class="col-10 margin-b-0">
+        <strong>IVA ${iva.porcentaje}%: $</strong>
+      </p>
+      <p class="col-2 margin-b-0">
+        <strong>${iva.importeIVA.toFixed(2)}</strong>
+      </p>
+    </div>
+  `).join('')
+  
+  // Si no hay IVAs agrupados, mostrar el IVA simple
+  const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0 ? `
+    <div class="row text-right">
+      <p class="col-10 margin-b-0">
+        <strong>IVA 21%: $</strong>
+      </p>
+      <p class="col-2 margin-b-0">
+        <strong>${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+      </p>
+    </div>
+  ` : ivasHTML
 
   return `<!DOCTYPE html>
 <html>
 <head>
-<title>Factura</title>
+<title>Factura ${tipoFactura}</title>
 <style type="text/css">
 *{
   box-sizing: border-box;
@@ -204,7 +280,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 <tr class="bill-emitter-row">
 <td>
 <div class="bill-type">
-B
+${tipoFactura}
 </div>
 <div class="text-lg text-center">
 Tu Empresa S.A.
@@ -261,7 +337,7 @@ Factura
 </div>
 <div class="row">
 <p class="col-6 margin-b-0">
-<strong>Condición Frente al IVA: </strong>Consumidor final
+<strong>Condición Frente al IVA: </strong>${condicionIVA}
 </p>
 <p class="col-6 margin-b-0">
 <strong>Domicilio: </strong>Calle Cliente 456
@@ -287,16 +363,7 @@ Factura
 <td>Imp. Bonif.</td>
 <td>Subtotal</td>
 </tr>
-<tr>
-<td>001</td>
-<td>Producto/Servicio</td>
-<td>1,00</td>
-<td>Unidad</td>
-<td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
-<td>0,00</td>
-<td>0,00</td>
-<td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
-</tr>
+${articulosDefault}
 </table>
 </div>
 </td>
@@ -312,14 +379,7 @@ Factura
 <strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
 </p>
 </div>
-<div class="row text-right">
-<p class="col-10 margin-b-0">
-<strong>IVA 21%: $</strong>
-</p>
-<p class="col-2 margin-b-0">
-<strong>${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
-</p>
-</div>
+${ivasDefault}
 <div class="row text-right">
 <p class="col-10 margin-b-0">
 <strong>Importe total: $</strong>

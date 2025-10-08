@@ -196,7 +196,68 @@ const CrearFactura = () => {
 
     toast.loading('Generando PDF...', { id: 'pdf-generation' });
 
-    const pdfResponse = await generarPDF(resultado.data);
+    // Preparar artículos para el PDF
+    const articulosPDF = formData.Articulos.map(articulo => {
+      const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
+      return {
+        descripcion: articulo.descripcion,
+        cantidad: articulo.cantidad,
+        precioUnitario: articulo.precioUnitario,
+        alicuotaIVA: articulo.alicuotaIVA,
+        porcentajeIVA: alicuota?.porcentaje || 0,
+        subtotal: articulo.cantidad * articulo.precioUnitario,
+      };
+    });
+
+    // Agrupar IVAs para el PDF
+    const ivaAgrupado = new Map<string, { porcentaje: number; baseImponible: number; importeIVA: number }>();
+    
+    formData.Articulos.forEach((articulo) => {
+      const subtotal = articulo.cantidad * articulo.precioUnitario;
+      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
+      
+      if (alicuota) {
+        const importeIVA = subtotal * (alicuota.porcentaje / 100);
+        
+        if (ivaAgrupado.has(articulo.alicuotaIVA)) {
+          const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
+          ivaAgrupado.set(articulo.alicuotaIVA, {
+            porcentaje: alicuota.porcentaje,
+            baseImponible: actual.baseImponible + subtotal,
+            importeIVA: actual.importeIVA + importeIVA,
+          });
+        } else {
+          ivaAgrupado.set(articulo.alicuotaIVA, {
+            porcentaje: alicuota.porcentaje,
+            baseImponible: subtotal,
+            importeIVA: importeIVA,
+          });
+        }
+      }
+    });
+
+    const ivasAgrupados = Array.from(ivaAgrupado.entries()).map(([alicuota, valores]) => ({
+      alicuota,
+      porcentaje: valores.porcentaje,
+      baseImponible: valores.baseImponible,
+      importeIVA: valores.importeIVA,
+    }));
+
+    // Obtener nombre de condición IVA
+    const condicionIVANombre = formData.TipoFactura === 'B' 
+      ? (formData.CondicionIVA === '4' ? 'IVA Sujeto Exento' : 'Consumidor Final')
+      : 'Responsable Inscripto';
+
+    // Crear datos extendidos para el PDF
+    const pdfData = {
+      ...resultado.data,
+      TipoFactura: formData.TipoFactura,
+      CondicionIVA: condicionIVANombre,
+      Articulos: articulosPDF,
+      IVAsAgrupados: ivasAgrupados,
+    };
+
+    const pdfResponse = await generarPDF(pdfData);
     
     if (pdfResponse.success && pdfResponse.fileUrl) {
       setPdfUrl(pdfResponse.fileUrl);
