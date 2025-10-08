@@ -45,9 +45,10 @@ interface QRResponse {
 
 interface PDFResponse {
   success: boolean;
-  fileUrl?: string;
+  filePath?: string;
   fileName?: string;
   qrUrl?: string;
+  message?: string;
   error?: string;
 }
 

@@ -133,6 +133,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  font-family: Arial, Helvetica, sans-serif;
 }
 .bill-container{
   width: 750px;
@@ -141,7 +142,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   right: 0;
   margin: auto;
   border-collapse: collapse;
-  font-family: sans-serif;
   font-size: 13px;
 }
 

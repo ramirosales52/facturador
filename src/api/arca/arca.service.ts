@@ -1,6 +1,8 @@
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
+import puppeteer from 'puppeteer'
 import { ArcaConfig } from './arca.config'
 import { CreateArcaDto } from './dto/create-arca.dto'
 
@@ -278,7 +280,7 @@ export class ArcaService {
   }
 
   /**
-   * Generar PDF de la factura
+   * Generar PDF de la factura usando Puppeteer (sin límite de 100 PDFs/mes)
    */
   async generatePDF(facturaInfo: {
     PtoVta: number
@@ -313,6 +315,12 @@ export class ArcaService {
         codAut: facturaInfo.CAE,
       })
 
+      // Verificar que se generó el QR correctamente
+      if (!qrResult.success || !qrResult.qrUrl) {
+        const errorMsg = 'error' in qrResult ? qrResult.error : 'Error desconocido al generar QR'
+        throw new Error('Error al generar QR: ' + errorMsg)
+      }
+
       // Generar URL del QR code como imagen
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResult.qrUrl || '')}`
 
@@ -321,29 +329,55 @@ export class ArcaService {
       const html = generarHTMLFactura(facturaInfo, qrImageUrl, ArcaConfig.CUIT)
 
       // Nombre del archivo
-      const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}`
+      const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`
 
-      // Opciones para el PDF
-      const options = {
-        width: 8, // Ancho de página en pulgadas
-        marginLeft: 0.4,
-        marginRight: 0.4,
-        marginTop: 0.4,
-        marginBottom: 0.4,
+      // Directorio de destino en el escritorio
+      const outputDir = '/mnt/c/Users/rami_/Desktop'
+      
+      // Crear el directorio si no existe
+      if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true })
       }
 
-      // Crear el PDF usando el SDK
-      const pdfResult = await this.afip.ElectronicBilling.createPDF({
-        html,
-        file_name: fileName,
-        options,
+      // Ruta completa del archivo PDF
+      const pdfPath = join(outputDir, fileName)
+
+      console.log(`📄 Generando PDF en: ${pdfPath}`)
+
+      // Generar PDF usando Puppeteer
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
       })
+
+      const page = await browser.newPage()
+      
+      // Configurar el contenido HTML
+      await page.setContent(html, { waitUntil: 'networkidle0' })
+
+      // Generar el PDF con las opciones configuradas
+      await page.pdf({
+        path: pdfPath,
+        format: 'A4',
+        margin: {
+          top: '0.4in',
+          right: '0.4in',
+          bottom: '0.4in',
+          left: '0.4in',
+        },
+        printBackground: true,
+      })
+
+      await browser.close()
+
+      console.log(`✅ PDF generado exitosamente: ${fileName}`)
 
       return {
         success: true,
-        fileUrl: pdfResult.file,
+        filePath: pdfPath,
         fileName,
-        qrUrl: qrResult.qrUrl,
+        qrUrl: qrResult.qrUrl || undefined,
+        message: `PDF generado exitosamente en ${pdfPath}`,
       }
     }
     catch (error) {

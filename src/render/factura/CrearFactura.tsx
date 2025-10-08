@@ -256,13 +256,13 @@ const CrearFactura = () => {
 
     const pdfResponse = await generarPDF(pdfData);
     
-    if (pdfResponse.success && pdfResponse.fileUrl) {
-      setPdfUrl(pdfResponse.fileUrl);
+    if (pdfResponse.success && pdfResponse.filePath) {
+      setPdfUrl(pdfResponse.filePath);
       toast.success(
         'PDF generado exitosamente', 
         { 
           id: 'pdf-generation',
-          description: 'El enlace está disponible abajo',
+          description: pdfResponse.message || 'El archivo está guardado en tu escritorio',
           duration: 3000,
         }
       );
