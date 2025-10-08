@@ -1,5 +1,5 @@
 export { ConexionStatus } from './ConexionStatus'
-export { FacturaForm, type FormData, ALICUOTAS_IVA } from './FacturaForm'
+export { FacturaForm, type FormData, type Articulo, ALICUOTAS_IVA, CONDICIONES_IVA } from './FacturaForm'
 export { FacturaResultado, type FacturaResultadoData } from './FacturaResultado'
 export { generarHTMLFactura, type FacturaPDFData } from './facturaTemplate'
 export { InformacionCard } from './InformacionCard'

@@ -8,6 +8,7 @@ import {
   InformacionCard,
   FormData,
   FacturaResultadoData,
+  Articulo,
 } from './components';
 import { ALICUOTAS_IVA } from './components/FacturaForm';
 
@@ -25,10 +26,13 @@ const CrearFactura = () => {
   const { loading, error, crearFactura, verificarConexion, generarQR, generarPDF } = useArca();
   
   const [formData, setFormData] = useState<FormData>({
+    TipoFactura: 'B',
     DocNro: '',
-    ImpNeto: '',
-    ImpIVA: '',
-    ImpTotal: '',
+    CondicionIVA: '5', // Por defecto Consumidor Final
+    Articulos: [],
+    ImpNeto: '0.00',
+    ImpIVA: '0.00',
+    ImpTotal: '0.00',
     AlicuotaIVA: '5', // Por defecto IVA 21%
   });
 
@@ -37,44 +41,67 @@ const CrearFactura = () => {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  const calcularTotal = (neto: string, iva: string): string => {
-    const netoNum = parseFloat(neto) || 0;
-    const ivaNum = parseFloat(iva) || 0;
-    return (netoNum + ivaNum).toFixed(2);
-  };
+  const recalcularTotales = (articulos: Articulo[]): void => {
+    let totalNeto = 0;
+    let totalIVA = 0;
 
-  const calcularIVA = (neto: string, alicuotaId: string): string => {
-    const netoNum = parseFloat(neto) || 0;
-    const alicuota = ALICUOTAS_IVA.find(a => a.id === alicuotaId);
-    if (!alicuota) return '0.00';
-    return (netoNum * (alicuota.porcentaje / 100)).toFixed(2);
+    articulos.forEach((articulo) => {
+      const subtotal = articulo.cantidad * articulo.precioUnitario;
+      totalNeto += subtotal;
+
+      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
+      if (alicuota) {
+        totalIVA += subtotal * (alicuota.porcentaje / 100);
+      }
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      ImpNeto: totalNeto.toFixed(2),
+      ImpIVA: totalIVA.toFixed(2),
+      ImpTotal: (totalNeto + totalIVA).toFixed(2),
+    }));
   };
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
-    const newData = { ...formData, [field]: value };
-    
-    // Recalcular IVA automáticamente cuando cambia el neto o la alícuota
-    if (field === 'ImpNeto' || field === 'AlicuotaIVA') {
-      const neto = field === 'ImpNeto' ? value : newData.ImpNeto;
-      const alicuota = field === 'AlicuotaIVA' ? value : newData.AlicuotaIVA;
-      newData.ImpIVA = calcularIVA(neto, alicuota);
-    }
-    
-    // Recalcular total automáticamente
-    if (field === 'ImpNeto' || field === 'ImpIVA' || field === 'AlicuotaIVA') {
-      newData.ImpTotal = calcularTotal(newData.ImpNeto, newData.ImpIVA);
-    }
-    
-    setFormData(newData);
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleArticuloAdd = (): void => {
+    const nuevoArticulo: Articulo = {
+      descripcion: '',
+      cantidad: 1,
+      precioUnitario: 0,
+      alicuotaIVA: '5', // Por defecto IVA 21%
+    };
+    const nuevosArticulos = [...formData.Articulos, nuevoArticulo];
+    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
+    recalcularTotales(nuevosArticulos);
+  };
+
+  const handleArticuloRemove = (index: number): void => {
+    const nuevosArticulos = formData.Articulos.filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
+    recalcularTotales(nuevosArticulos);
+  };
+
+  const handleArticuloChange = (index: number, field: keyof Articulo, value: string | number): void => {
+    const nuevosArticulos = [...formData.Articulos];
+    nuevosArticulos[index] = { ...nuevosArticulos[index], [field]: value };
+    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
+    recalcularTotales(nuevosArticulos);
   };
 
   const limpiarFormulario = (): void => {
     setFormData({
+      TipoFactura: 'B',
       DocNro: '',
-      ImpNeto: '',
-      ImpIVA: '',
-      ImpTotal: '',
-      AlicuotaIVA: '5', // Por defecto IVA 21%
+      CondicionIVA: '5',
+      Articulos: [],
+      ImpNeto: '0.00',
+      ImpIVA: '0.00',
+      ImpTotal: '0.00',
+      AlicuotaIVA: '5',
     });
     setResultado(null);
     setQrUrl(null);
@@ -93,22 +120,47 @@ const CrearFactura = () => {
     setQrUrl(null);
     setPdfUrl(null);
 
-    const alicuotaId = parseInt(formData.AlicuotaIVA);
+    // Agrupar artículos por alícuota de IVA
+    const ivaAgrupado = new Map<string, { BaseImp: number; Importe: number }>();
+    
+    formData.Articulos.forEach((articulo) => {
+      const subtotal = articulo.cantidad * articulo.precioUnitario;
+      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
+      
+      if (alicuota) {
+        const importeIVA = subtotal * (alicuota.porcentaje / 100);
+        
+        if (ivaAgrupado.has(articulo.alicuotaIVA)) {
+          const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
+          ivaAgrupado.set(articulo.alicuotaIVA, {
+            BaseImp: actual.BaseImp + subtotal,
+            Importe: actual.Importe + importeIVA,
+          });
+        } else {
+          ivaAgrupado.set(articulo.alicuotaIVA, {
+            BaseImp: subtotal,
+            Importe: importeIVA,
+          });
+        }
+      }
+    });
+
+    const ivaArray = Array.from(ivaAgrupado.entries()).map(([id, valores]) => ({
+      Id: parseInt(id),
+      BaseImp: parseFloat(valores.BaseImp.toFixed(2)),
+      Importe: parseFloat(valores.Importe.toFixed(2)),
+    }));
+
+    const cbteTipo = formData.TipoFactura === 'A' ? 1 : 6;
 
     const facturaData = {
-      CbteTipo: 6, // Factura B
+      CbteTipo: cbteTipo,
       DocTipo: 80, // CUIT
       DocNro: parseInt(formData.DocNro),
       ImpTotal: parseFloat(formData.ImpTotal),
       ImpNeto: parseFloat(formData.ImpNeto),
       ImpIVA: parseFloat(formData.ImpIVA),
-      Iva: [
-        {
-          Id: alicuotaId,
-          BaseImp: parseFloat(formData.ImpNeto),
-          Importe: parseFloat(formData.ImpIVA),
-        },
-      ],
+      Iva: ivaArray,
     };
 
     const response = await crearFactura(facturaData);
@@ -167,8 +219,8 @@ const CrearFactura = () => {
   return (
     <div className="container mx-auto p-6 max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Facturación Electrónica - Factura B</h1>
-        <p className="text-gray-600">Crear factura B para monotributistas y responsables inscriptos</p>
+        <h1 className="text-3xl font-bold mb-2">Facturación Electrónica</h1>
+        <p className="text-gray-600">Crear facturas A y B con artículos detallados</p>
       </div>
 
       <ConexionStatus 
@@ -182,6 +234,9 @@ const CrearFactura = () => {
         loading={loading}
         error={error}
         onInputChange={handleInputChange}
+        onArticuloAdd={handleArticuloAdd}
+        onArticuloRemove={handleArticuloRemove}
+        onArticuloChange={handleArticuloChange}
         onSubmit={handleSubmit}
         onLimpiar={limpiarFormulario}
       />
