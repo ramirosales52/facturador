@@ -22,8 +22,8 @@ interface ConexionStatusData {
 }
 
 const CrearFactura = () => {
-  const { loading, error, crearFactura, verificarConexion, generarQR, generarPDF } = useArca();
-  
+  const { loading, error, crearFactura, verificarConexion, generarQR, generarPDF, consultarContribuyente } = useArca();
+
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: 'B',
     DocNro: '',
@@ -38,6 +38,7 @@ const CrearFactura = () => {
   const [conexionStatus, setConexionStatus] = useState<ConexionStatusData | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingContribuyente, setLoadingContribuyente] = useState(false);
 
   const recalcularTotales = (articulos: Articulo[]): void => {
     let totalNeto = 0;
@@ -69,7 +70,7 @@ const CrearFactura = () => {
     const nuevoArticulo: Articulo = {
       descripcion: '',
       cantidad: 1,
-      precioUnitario: 0,
+      precioUnitario: undefined,
       alicuotaIVA: '5', // Por defecto IVA 21%
     };
     const nuevosArticulos = [...formData.Articulos, nuevoArticulo];
@@ -119,14 +120,14 @@ const CrearFactura = () => {
 
     // Agrupar artículos por alícuota de IVA
     const ivaAgrupado = new Map<string, { BaseImp: number; Importe: number }>();
-    
+
     formData.Articulos.forEach((articulo) => {
       const subtotal = articulo.cantidad * articulo.precioUnitario;
       const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
-      
+
       if (alicuota) {
         const importeIVA = subtotal * (alicuota.porcentaje / 100);
-        
+
         if (ivaAgrupado.has(articulo.alicuotaIVA)) {
           const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
           ivaAgrupado.set(articulo.alicuotaIVA, {
@@ -188,6 +189,53 @@ const CrearFactura = () => {
     }
   };
 
+  const handleConsultarContribuyente = async (): Promise<void> => {
+    if (!formData.DocNro) {
+      toast.error('Ingrese un CUIT para buscar')
+      return
+    }
+
+    setLoadingContribuyente(true)
+    toast.loading('Consultando datos en AFIP...', { id: 'consulta-contribuyente' })
+
+    try {
+      const response = await consultarContribuyente(formData.DocNro)
+
+      if (response.success && response.data) {
+        // Actualizar condición IVA si la encontramos
+        if (response.data.condicionIVA) {
+          handleInputChange('CondicionIVA', response.data.condicionIVA.toString())
+        }
+
+        // Mostrar mensaje de éxito con los datos encontrados
+        const mensaje = response.data.esMock 
+          ? `Datos de prueba: ${response.data.razonSocial}`
+          : `Encontrado: ${response.data.razonSocial}`
+
+        toast.success(
+          mensaje,
+          { 
+            id: 'consulta-contribuyente',
+            description: response.data.mensaje || `${response.data.localidad}, ${response.data.provincia}`,
+            duration: 4000,
+          }
+        )
+      } else {
+        toast.error(
+          `No se encontraron datos: ${response.error}`,
+          { id: 'consulta-contribuyente' }
+        )
+      }
+    } catch (err) {
+      toast.error(
+        'Error al consultar contribuyente',
+        { id: 'consulta-contribuyente' }
+      )
+    } finally {
+      setLoadingContribuyente(false)
+    }
+  };
+
   const handleDescargarPDF = async (): Promise<void> => {
     if (!resultado?.data) return;
 
@@ -208,14 +256,14 @@ const CrearFactura = () => {
 
     // Agrupar IVAs para el PDF
     const ivaAgrupado = new Map<string, { porcentaje: number; baseImponible: number; importeIVA: number }>();
-    
+
     formData.Articulos.forEach((articulo) => {
       const subtotal = articulo.cantidad * articulo.precioUnitario;
       const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
-      
+
       if (alicuota) {
         const importeIVA = subtotal * (alicuota.porcentaje / 100);
-        
+
         if (ivaAgrupado.has(articulo.alicuotaIVA)) {
           const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
           ivaAgrupado.set(articulo.alicuotaIVA, {
@@ -241,7 +289,7 @@ const CrearFactura = () => {
     }));
 
     // Obtener nombre de condición IVA
-    const condicionIVANombre = formData.TipoFactura === 'B' 
+    const condicionIVANombre = formData.TipoFactura === 'B'
       ? (formData.CondicionIVA === '4' ? 'IVA Sujeto Exento' : 'Consumidor Final')
       : 'Responsable Inscripto';
 
@@ -255,12 +303,12 @@ const CrearFactura = () => {
     };
 
     const pdfResponse = await generarPDF(pdfData);
-    
+
     if (pdfResponse.success && pdfResponse.filePath) {
       setPdfUrl(pdfResponse.filePath);
       toast.success(
-        'PDF generado exitosamente', 
-        { 
+        'PDF generado exitosamente',
+        {
           id: 'pdf-generation',
           description: pdfResponse.message || 'El archivo está guardado en tu escritorio',
           duration: 3000,
@@ -268,7 +316,7 @@ const CrearFactura = () => {
       );
     } else {
       toast.error(
-        `Error al generar PDF: ${pdfResponse.error}`, 
+        `Error al generar PDF: ${pdfResponse.error}`,
         { id: 'pdf-generation' }
       );
     }
@@ -281,7 +329,7 @@ const CrearFactura = () => {
         <p className="text-sm text-gray-600">Crear facturas A y B con artículos detallados</p>
       </div>
 
-      <ConexionStatus 
+      <ConexionStatus
         conexionStatus={conexionStatus}
         loading={loading}
         onVerificar={handleVerificarConexion}
@@ -297,6 +345,8 @@ const CrearFactura = () => {
         onArticuloChange={handleArticuloChange}
         onSubmit={handleSubmit}
         onLimpiar={limpiarFormulario}
+        onConsultarContribuyente={handleConsultarContribuyente}
+        loadingContribuyente={loadingContribuyente}
       />
 
       {resultado && (

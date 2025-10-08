@@ -72,4 +72,12 @@ export class ArcaController {
   generatePDF(@Body() facturaInfo: any) {
     return this.arcaService.generatePDF(facturaInfo);
   }
+
+  /**
+   * Consultar datos de un contribuyente por CUIT
+   */
+  @Get('contribuyente/:cuit')
+  consultarContribuyente(@Param('cuit') cuit: string) {
+    return this.arcaService.consultarContribuyente(+cuit);
+  }
 }

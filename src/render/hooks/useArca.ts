@@ -52,6 +52,21 @@ interface PDFResponse {
   error?: string;
 }
 
+interface ContribuyenteResponse {
+  success: boolean;
+  data?: {
+    razonSocial: string;
+    domicilio: string;
+    localidad: string;
+    provincia: string;
+    condicionIVA: number;
+    tipoPersona: string;
+    esMock?: boolean;
+    mensaje?: string;
+  };
+  error?: string;
+}
+
 interface ServerStatusResponse {
   success: boolean;
   serverStatus?: {
@@ -109,6 +124,13 @@ export const useArca = () => {
     });
   };
 
+  const consultarContribuyente = async (cuit: string): Promise<ContribuyenteResponse> => {
+    return handleRequest(async () => {
+      const response = await axios.get<ContribuyenteResponse>(`${API_BASE_URL}/contribuyente/${cuit}`);
+      return response.data;
+    });
+  };
+
   return {
     loading,
     error,
@@ -116,5 +138,6 @@ export const useArca = () => {
     verificarConexion,
     generarQR,
     generarPDF,
+    consultarContribuyente,
   };
 };

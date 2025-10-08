@@ -29,6 +29,114 @@ export class ArcaService {
   }
 
   /**
+   * Consultar datos de un contribuyente por CUIT
+   * Por ahora usa datos mock para pruebas sin certificado
+   */
+  async consultarContribuyente(cuit: number) {
+    try {
+      // Datos de prueba (mock) para diferentes CUITs
+      const contribuyentesMock = {
+        20123456789: {
+          razonSocial: 'PEREZ JUAN CARLOS',
+          domicilio: 'Av. Corrientes 1234',
+          localidad: 'CAPITAL FEDERAL',
+          provincia: 'CIUDAD AUTONOMA BUENOS AIRES',
+          condicionIVA: 1, // Responsable Inscripto
+          tipoPersona: 'FISICA',
+        },
+        30123456789: {
+          razonSocial: 'EMPRESA DEMO SA',
+          domicilio: 'Calle Falsa 123',
+          localidad: 'ROSARIO',
+          provincia: 'SANTA FE',
+          condicionIVA: 1, // Responsable Inscripto
+          tipoPersona: 'JURIDICA',
+        },
+        27123456789: {
+          razonSocial: 'GARCIA MARIA TERESA',
+          domicilio: 'San Martin 456',
+          localidad: 'CORDOBA',
+          provincia: 'CORDOBA',
+          condicionIVA: 6, // Monotributo
+          tipoPersona: 'FISICA',
+        },
+        23123456789: {
+          razonSocial: 'LOPEZ ROBERTO DANIEL',
+          domicilio: 'Belgrano 789',
+          localidad: 'MENDOZA',
+          provincia: 'MENDOZA',
+          condicionIVA: 5, // Consumidor Final
+          tipoPersona: 'FISICA',
+        },
+      }
+
+      // Buscar el contribuyente en los datos mock
+      const contribuyente = contribuyentesMock[cuit]
+
+      if (!contribuyente) {
+        // Si no está en los mocks, devolver un genérico
+        return {
+          success: true,
+          data: {
+            razonSocial: 'Contribuyente',
+            domicilio: '',
+            localidad: '',
+            provincia: '',
+            condicionIVA: 5,
+            tipoPersona: 'FISICA',
+            esMock: true,
+            mensaje: 'Datos de prueba - CUIT no encontrado en mock',
+          },
+        }
+      }
+
+      // TODO: Cuando tengas certificado, descomentar esto:
+      // const data = await this.afip.RegisterScopeFive.getTaxpayerDetails(cuit)
+      // return {
+      //   success: true,
+      //   data: {
+      //     razonSocial: data.razonSocial || `${data.apellido} ${data.nombre}`,
+      //     domicilio: data.domicilioFiscal?.direccion,
+      //     localidad: data.domicilioFiscal?.localidad,
+      //     provincia: data.domicilioFiscal?.provincia,
+      //     condicionIVA: this.determinarCondicionIVA(data),
+      //     tipoPersona: data.tipoPersona,
+      //   },
+      // }
+
+      return {
+        success: true,
+        data: {
+          ...contribuyente,
+          esMock: true,
+          mensaje: 'Datos de prueba',
+        },
+      }
+    }
+    catch (error) {
+      return this.handleError(error)
+    }
+  }
+
+  /**
+   * Determinar condición IVA según impuestos inscriptos
+   */
+  private determinarCondicionIVA(data: any): number {
+    // Buscar si tiene IVA inscripto (idImpuesto: 30)
+    const tieneIVA = data.impuestos?.some((imp: any) => imp.idImpuesto === 30)
+
+    if (tieneIVA) {
+      return 1 // Responsable Inscripto
+    }
+    else if (data.categoriaMonotributo) {
+      return 6 // Responsable Monotributo
+    }
+    else {
+      return 5 // Consumidor Final / Exento
+    }
+  }
+
+  /**
    * Helper para manejar errores de forma consistente
    */
   private handleError(error: unknown): { success: false, error: string } {
