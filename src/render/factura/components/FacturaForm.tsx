@@ -75,7 +75,7 @@ export function FacturaForm({
           <div className="grid grid-cols-3 gap-3">
             {/* Tipo de Factura */}
             <div className="space-y-1.5">
-              <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura *</Label>
+              <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
               <Select
                 value={formData.TipoFactura}
                 onValueChange={(value) => onInputChange('TipoFactura', value)}
@@ -92,7 +92,7 @@ export function FacturaForm({
 
             {/* CUIT */}
             <div className="space-y-1.5">
-              <Label htmlFor="DocNro" className="text-sm">CUIT del Cliente *</Label>
+              <Label htmlFor="DocNro" className="text-sm">CUIT del Cliente</Label>
               <Input
                 id="DocNro"
                 type="text"
@@ -106,7 +106,7 @@ export function FacturaForm({
             {/* Condición IVA - Solo para Factura B */}
             {formData.TipoFactura === 'B' && (
               <div className="space-y-1.5">
-                <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA *</Label>
+                <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA</Label>
                 <Select
                   value={formData.CondicionIVA}
                   onValueChange={(value) => onInputChange('CondicionIVA', value)}
@@ -132,96 +132,99 @@ export function FacturaForm({
               </Button>
             </div>
 
-            {formData.Articulos.map((articulo, index) => (
-              <div key={index} className="border p-3 rounded-lg space-y-2 relative bg-gray-50">
-                <Button
-                  type="button"
-                  onClick={() => onArticuloRemove(index)}
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                >
-                  ✕
-                </Button>
+            {formData.Articulos.map((articulo, index) => {
+              // Calcular subtotal e IVA
+              const subtotal = articulo.cantidad * articulo.precioUnitario
+              const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA)
+              const ivaImporte = (subtotal * (alicuota?.porcentaje || 0)) / 100
+              const totalConIVA = subtotal + ivaImporte
+              
+              return (
+                <div key={index} className="border p-3 rounded-lg space-y-2 relative bg-gray-50">
+                  <Button
+                    type="button"
+                    onClick={() => onArticuloRemove(index)}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-1 right-1 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                  >
+                    ✕
+                  </Button>
 
-                {/* Descripción en ancho completo */}
-                <div className="space-y-1 pr-8">
-                  <Label htmlFor={`descripcion-${index}`} className="text-xs">Descripción *</Label>
-                  <Input
-                    id={`descripcion-${index}`}
-                    type="text"
-                    value={articulo.descripcion}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      onArticuloChange(index, 'descripcion', e.target.value)
-                    }
-                    placeholder="Descripción del artículo"
-                    className="h-8"
-                    required
-                  />
-                </div>
-
-                {/* Cantidad, Precio e IVA en una fila */}
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="space-y-1">
-                    <Label htmlFor={`cantidad-${index}`} className="text-xs">Cant. *</Label>
+                  {/* Descripción en ancho completo */}
+                  <div className="space-y-1 pr-8">
+                    <Label htmlFor={`descripcion-${index}`} className="text-xs">Descripción</Label>
                     <Input
-                      id={`cantidad-${index}`}
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={articulo.cantidad}
+                      id={`descripcion-${index}`}
+                      type="text"
+                      value={articulo.descripcion}
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        onArticuloChange(index, 'cantidad', parseFloat(e.target.value) || 1)
+                        onArticuloChange(index, 'descripcion', e.target.value)
                       }
-                      className="h-8"
+                      placeholder="Descripción del artículo"
                       required
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor={`precio-${index}`} className="text-xs">Precio *</Label>
-                    <Input
-                      id={`precio-${index}`}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={articulo.precioUnitario}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        onArticuloChange(index, 'precioUnitario', parseFloat(e.target.value) || 0)
-                      }
-                      className="h-8"
-                      required
-                    />
-                  </div>
+                  {/* Cantidad, Precio e IVA */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor={`cantidad-${index}`} className="text-xs">Cantidad</Label>
+                      <Input
+                        id={`cantidad-${index}`}
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={articulo.cantidad}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          onArticuloChange(index, 'cantidad', parseFloat(e.target.value) || 1)
+                        }
+                        required
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor={`iva-${index}`} className="text-xs">IVA *</Label>
-                    <Select
-                      value={articulo.alicuotaIVA}
-                      onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
-                    >
-                      <SelectTrigger id={`iva-${index}`} className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALICUOTAS_IVA.map((alicuota) => (
-                          <SelectItem key={alicuota.id} value={alicuota.id}>
-                            {alicuota.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`precio-${index}`} className="text-xs">Precio</Label>
+                      <Input
+                        id={`precio-${index}`}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={articulo.precioUnitario}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          onArticuloChange(index, 'precioUnitario', parseFloat(e.target.value) || 0)
+                        }
+                        required
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Subtotal</Label>
-                    <div className="h-8 flex items-center font-medium text-sm">
-                      ${(articulo.cantidad * articulo.precioUnitario).toFixed(2)}
+                    <div className="space-y-1">
+                      <Label htmlFor={`iva-${index}`} className="text-xs">IVA</Label>
+                      <Select
+                        value={articulo.alicuotaIVA}
+                        onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
+                      >
+                        <SelectTrigger id={`iva-${index}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALICUOTAS_IVA.map((alicuota) => (
+                            <SelectItem key={alicuota.id} value={alicuota.id}>
+                              {alicuota.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+
+                  {/* Total con IVA a la derecha */}
+                  <div className="text-right text-sm font-medium text-gray-700 pt-1">
+                    Total: ${totalConIVA.toFixed(2)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {formData.Articulos.length === 0 && (
               <div className="text-center py-4 text-gray-500 text-sm border-2 border-dashed rounded-lg">
@@ -240,7 +243,7 @@ export function FacturaForm({
                 step="0.01"
                 value={formData.ImpNeto}
                 readOnly
-                className="bg-white font-medium h-8"
+                className="bg-white font-medium"
               />
             </div>
 
@@ -252,7 +255,7 @@ export function FacturaForm({
                 step="0.01"
                 value={formData.ImpIVA}
                 readOnly
-                className="bg-white font-medium h-8"
+                className="bg-white font-medium"
               />
             </div>
 
@@ -264,7 +267,7 @@ export function FacturaForm({
                 step="0.01"
                 value={formData.ImpTotal}
                 readOnly
-                className="bg-white font-bold text-base h-8"
+                className="bg-white font-bold text-base"
               />
             </div>
           </div>
