@@ -16,7 +16,7 @@ export function QRCode({ qrUrl }: QRCodeProps) {
           href={qrUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-blue-600 hover:underline cursor-pointer"
         >
           Verificar en AFIP
         </a>
