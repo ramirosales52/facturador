@@ -9,25 +9,37 @@ app.disableHardwareAcceleration()
 const commandLineArgs = process.argv.slice(2); // Saltar 'electron' y el path de la app
 let cuitFromCommandLine: string | null = null;
 
+console.log('=== ARGUMENTOS DE LINEA DE COMANDOS ===');
+console.log('process.argv:', process.argv);
+console.log('commandLineArgs (slice 2):', commandLineArgs);
+
 // Buscar CUIT en los argumentos (debe ser un número de 11 dígitos)
 for (const arg of commandLineArgs) {
+  console.log('Analizando argumento:', arg);
+  
   // Verificar si es un CUIT válido (11 dígitos)
   if (/^\d{11}$/.test(arg)) {
     cuitFromCommandLine = arg;
-    console.log('CUIT detectado desde línea de comandos:', cuitFromCommandLine);
+    console.log('✓ CUIT detectado desde línea de comandos:', cuitFromCommandLine);
     break;
   }
   // También soportar formato con guiones: 20-12345678-9
   const cuitSinGuiones = arg.replace(/-/g, '');
   if (/^\d{11}$/.test(cuitSinGuiones)) {
     cuitFromCommandLine = cuitSinGuiones;
-    console.log('CUIT detectado desde línea de comandos (con guiones):', cuitFromCommandLine);
+    console.log('✓ CUIT detectado desde línea de comandos (con guiones):', cuitFromCommandLine);
     break;
   }
 }
 
+if (!cuitFromCommandLine) {
+  console.log('✗ No se detectó ningún CUIT válido en los argumentos');
+}
+console.log('========================================');
+
 // IPC para que el renderer pueda obtener el CUIT
 ipcMain.handle('get-command-line-cuit', () => {
+  console.log('IPC: get-command-line-cuit llamado, devolviendo:', cuitFromCommandLine);
   return cuitFromCommandLine;
 });
 

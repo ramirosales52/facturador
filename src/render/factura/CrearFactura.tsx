@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useArca } from '../hooks/useArca';
 import { toast } from 'sonner';
 import {
@@ -288,7 +288,7 @@ const CrearFactura = () => {
   };
 
   // Cargar datos del emisor al iniciar
-  useState(() => {
+  useEffect(() => {
     const datosGuardados = localStorage.getItem('datosEmisor')
     if (datosGuardados) {
       try {
@@ -297,10 +297,10 @@ const CrearFactura = () => {
         console.error('Error al cargar datos del emisor')
       }
     }
-  });
+  }, []);
 
   // Cargar CUIT desde línea de comandos al iniciar
-  useState(() => {
+  useEffect(() => {
     const cargarCuitDesdeComandoLinea = async () => {
       try {
         // Verificar si window.electron existe (solo en Electron)
@@ -331,7 +331,7 @@ const CrearFactura = () => {
     }
 
     cargarCuitDesdeComandoLinea()
-  });
+  }, []);
 
   const handleDescargarPDF = async (): Promise<void> => {
     if (!resultado?.data) return;
