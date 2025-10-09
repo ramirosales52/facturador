@@ -6,12 +6,16 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 app.disableHardwareAcceleration()
 
 // Capturar argumentos de línea de comandos
-const commandLineArgs = process.argv.slice(2); // Saltar 'electron' y el path de la app
+// En producción: ['Facturador.exe', 'arg1', 'arg2', ...]
+// En desarrollo: ['electron', 'path/to/app', 'arg1', 'arg2', ...]
+const isDev = !app.isPackaged;
+const commandLineArgs = isDev ? process.argv.slice(2) : process.argv.slice(1);
 let cuitFromCommandLine: string | null = null;
 
 console.log('=== ARGUMENTOS DE LINEA DE COMANDOS ===');
+console.log('isDev:', isDev);
 console.log('process.argv:', process.argv);
-console.log('commandLineArgs (slice 2):', commandLineArgs);
+console.log('commandLineArgs:', commandLineArgs);
 
 // Buscar CUIT en los argumentos (debe ser un número de 11 dígitos)
 for (const arg of commandLineArgs) {
