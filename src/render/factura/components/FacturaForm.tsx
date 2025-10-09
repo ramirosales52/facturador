@@ -5,7 +5,7 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 export interface Articulo {
   descripcion: string
@@ -73,34 +73,35 @@ export function FacturaForm({
 }: FacturaFormProps) {
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Factura {formData.TipoFactura}</CardTitle>
-        <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
+      <CardHeader className='flex justify-between'>
+        <div>
+          <CardTitle>Factura {formData.TipoFactura}</CardTitle>
+          <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
+          <Select
+            value={formData.TipoFactura}
+            onValueChange={(value) => onInputChange('TipoFactura', value)}
+          >
+            <SelectTrigger id="TipoFactura">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="A">Factura A</SelectItem>
+              <SelectItem value="B">Factura B</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
-      
+
       <Separator />
-      
-      <CardContent className="pt-4">
+
+      <CardContent>
         <h3 className="font-medium text-sm mb-3">Datos de la factura</h3>
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Tipo de Factura y CUIT */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
-              <Select
-                value={formData.TipoFactura}
-                onValueChange={(value) => onInputChange('TipoFactura', value)}
-              >
-                <SelectTrigger id="TipoFactura">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">Factura A</SelectItem>
-                  <SelectItem value="B">Factura B</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* CUIT con botón de búsqueda */}
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-sm">CUIT del Cliente</Label>
@@ -128,14 +129,32 @@ export function FacturaForm({
                 )}
               </div>
             </div>
+            {/* Condición IVA - Solo para Factura B */}
+            {formData.TipoFactura === 'B' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA</Label>
+                <Select
+                  value={formData.CondicionIVA}
+                  onValueChange={(value) => onInputChange('CondicionIVA', value)}
+                >
+                  <SelectTrigger id="CondicionIVA">
+                    <SelectValue placeholder="Seleccione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">IVA Sujeto Exento</SelectItem>
+                    <SelectItem value="5">Consumidor Final</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Datos del Cliente - Card editable */}
           {(formData.RazonSocial || formData.Domicilio) && (
             <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="pt-4 space-y-3">
+              <CardContent className="space-y-3">
                 <h4 className="font-medium text-sm text-blue-900">Datos del Cliente</h4>
-                
+
                 <div className="space-y-1.5">
                   <Label htmlFor="RazonSocial" className="text-sm">Razón Social / Nombre</Label>
                   <Input
@@ -161,25 +180,6 @@ export function FacturaForm({
                 </div>
               </CardContent>
             </Card>
-          )}
-
-          {/* Condición IVA - Solo para Factura B */}
-          {formData.TipoFactura === 'B' && (
-            <div className="space-y-1.5">
-              <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA</Label>
-              <Select
-                value={formData.CondicionIVA}
-                onValueChange={(value) => onInputChange('CondicionIVA', value)}
-              >
-                <SelectTrigger id="CondicionIVA">
-                  <SelectValue placeholder="Seleccione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="4">IVA Sujeto Exento</SelectItem>
-                  <SelectItem value="5">Consumidor Final</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           )}
 
           {/* Artículos */}
