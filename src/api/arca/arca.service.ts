@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
 import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
 import puppeteer from 'puppeteer'
@@ -368,8 +369,11 @@ export class ArcaService {
       // Nombre del archivo
       const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`
 
-      // Directorio de destino en el escritorio
-      const outputDir = '/mnt/c/Users/rami_/Desktop'
+      // Directorio de destino en el escritorio del usuario
+      // En Windows: C:\Users\[usuario]\Desktop
+      // En Linux/Mac: /home/[usuario]/Desktop
+      const desktopPath = join(homedir(), 'Desktop')
+      const outputDir = desktopPath
       
       // Crear el directorio si no existe
       if (!existsSync(outputDir)) {
