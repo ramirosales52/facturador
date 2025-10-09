@@ -61,8 +61,6 @@ interface ContribuyenteResponse {
     provincia: string;
     condicionIVA: number;
     tipoPersona: string;
-    esMock?: boolean;
-    mensaje?: string;
   };
   error?: string;
 }

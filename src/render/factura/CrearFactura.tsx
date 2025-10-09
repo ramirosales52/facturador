@@ -9,7 +9,9 @@ import {
   FacturaResultadoData,
   Articulo,
 } from './components';
+import { ConfiguracionEmisor, DatosEmisor } from './components/ConfiguracionEmisor';
 import { ALICUOTAS_IVA } from './components/FacturaForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs';
 
 interface ConexionStatusData {
   success: boolean;
@@ -26,7 +28,9 @@ const CrearFactura = () => {
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: 'B',
+    DocTipo: '80',
     DocNro: '',
+    Concepto: '1',
     CondicionIVA: '5', // Por defecto Consumidor Final
     RazonSocial: '',
     Domicilio: '',
@@ -36,11 +40,22 @@ const CrearFactura = () => {
     ImpTotal: '0.00',
   });
 
+  const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
+    cuit: '20409378472',
+    razonSocial: '',
+    domicilio: '',
+    condicionIVA: '1',
+    iibb: '',
+    inicioActividades: '',
+    puntoVenta: 1,
+  });
+
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
   const [conexionStatus, setConexionStatus] = useState<ConexionStatusData | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loadingContribuyente, setLoadingContribuyente] = useState(false);
+  const [loadingEmisor, setLoadingEmisor] = useState(false);
 
   const recalcularTotales = (articulos: Articulo[]): void => {
     let totalNeto = 0;
@@ -70,8 +85,10 @@ const CrearFactura = () => {
 
   const handleArticuloAdd = (): void => {
     const nuevoArticulo: Articulo = {
+      codigo: '',
       descripcion: '',
       cantidad: 1,
+      unidadMedida: 'unidad',
       precioUnitario: undefined,
       alicuotaIVA: '5', // Por defecto IVA 21%
     };
@@ -96,7 +113,9 @@ const CrearFactura = () => {
   const limpiarFormulario = (): void => {
     setFormData({
       TipoFactura: 'B',
+      DocTipo: '80',
       DocNro: '',
+      Concepto: '1',
       CondicionIVA: '5',
       Articulos: [],
       ImpNeto: '0.00',
@@ -119,6 +138,14 @@ const CrearFactura = () => {
     setResultado(null);
     setQrUrl(null);
     setPdfUrl(null);
+
+    // Validar que haya datos del emisor
+    if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
+      toast.error('Configure los datos del emisor primero', {
+        description: 'Vaya a la pestaña "Configuración" y complete los datos'
+      })
+      return
+    }
 
     // Agrupar artículos por alícuota de IVA
     const ivaAgrupado = new Map<string, { BaseImp: number; Importe: number }>();
@@ -152,11 +179,16 @@ const CrearFactura = () => {
     }));
 
     const cbteTipo = formData.TipoFactura === 'A' ? 1 : 6;
+    const docTipo = parseInt(formData.DocTipo);
+    const docNro = formData.DocTipo === '99' ? 0 : parseInt(formData.DocNro);
+    const concepto = parseInt(formData.Concepto);
 
     const facturaData = {
+      PtoVta: datosEmisor.puntoVenta,
       CbteTipo: cbteTipo,
-      DocTipo: 80, // CUIT
-      DocNro: parseInt(formData.DocNro),
+      Concepto: concepto,
+      DocTipo: docTipo,
+      DocNro: docNro,
       ImpTotal: parseFloat(formData.ImpTotal),
       ImpNeto: parseFloat(formData.ImpNeto),
       ImpIVA: parseFloat(formData.ImpIVA),
@@ -171,7 +203,7 @@ const CrearFactura = () => {
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
-        cuit: 20409378472,
+        cuit: parseInt(datosEmisor.cuit),
         ptoVta: response.data.PtoVta,
         tipoCmp: response.data.CbteTipo,
         nroCmp: response.data.CbteDesde,
@@ -213,15 +245,11 @@ const CrearFactura = () => {
         }
 
         // Mostrar mensaje de éxito con los datos encontrados
-        const mensaje = response.data.esMock 
-          ? `Datos de prueba: ${response.data.razonSocial}`
-          : `Encontrado: ${response.data.razonSocial}`
-
         toast.success(
-          mensaje,
+          `Encontrado: ${response.data.razonSocial}`,
           { 
             id: 'consulta-contribuyente',
-            description: response.data.mensaje || `${response.data.localidad}, ${response.data.provincia}`,
+            description: `${response.data.localidad}, ${response.data.provincia}`,
             duration: 4000,
           }
         )
@@ -241,6 +269,70 @@ const CrearFactura = () => {
     }
   };
 
+  const handleBuscarEmisor = async (cuit: string) => {
+    setLoadingEmisor(true)
+    try {
+      const response = await consultarContribuyente(cuit)
+      setLoadingEmisor(false)
+      return response
+    } catch (err) {
+      setLoadingEmisor(false)
+      return { success: false, error: 'Error al consultar' }
+    }
+  };
+
+  const handleGuardarEmisor = (datos: DatosEmisor) => {
+    setDatosEmisor(datos)
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('datosEmisor', JSON.stringify(datos))
+  };
+
+  // Cargar datos del emisor al iniciar
+  useState(() => {
+    const datosGuardados = localStorage.getItem('datosEmisor')
+    if (datosGuardados) {
+      try {
+        setDatosEmisor(JSON.parse(datosGuardados))
+      } catch (e) {
+        console.error('Error al cargar datos del emisor')
+      }
+    }
+  });
+
+  // Cargar CUIT desde línea de comandos al iniciar
+  useState(() => {
+    const cargarCuitDesdeComandoLinea = async () => {
+      try {
+        // Verificar si window.electron existe (solo en Electron)
+        if (window.electron && window.electron.getCommandLineCuit) {
+          const cuitFromCli = await window.electron.getCommandLineCuit()
+          
+          if (cuitFromCli) {
+            console.log('CUIT recibido desde línea de comandos:', cuitFromCli)
+            
+            // Actualizar el formulario con el CUIT
+            handleInputChange('DocNro', cuitFromCli)
+            
+            // Mostrar notificación
+            toast.info('CUIT cargado desde línea de comandos', {
+              description: `CUIT: ${cuitFromCli}`,
+              duration: 5000,
+            })
+            
+            // Opcional: Ejecutar búsqueda automática después de un breve delay
+            setTimeout(() => {
+              handleConsultarContribuyente()
+            }, 500)
+          }
+        }
+      } catch (error) {
+        console.error('Error al obtener CUIT desde línea de comandos:', error)
+      }
+    }
+
+    cargarCuitDesdeComandoLinea()
+  });
+
   const handleDescargarPDF = async (): Promise<void> => {
     if (!resultado?.data) return;
 
@@ -250,8 +342,10 @@ const CrearFactura = () => {
     const articulosPDF = formData.Articulos.map(articulo => {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
       return {
+        codigo: articulo.codigo || '',
         descripcion: articulo.descripcion,
         cantidad: articulo.cantidad,
+        unidadMedida: articulo.unidadMedida,
         precioUnitario: articulo.precioUnitario,
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
@@ -307,6 +401,15 @@ const CrearFactura = () => {
       Domicilio: formData.Domicilio,
       Articulos: articulosPDF,
       IVAsAgrupados: ivasAgrupados,
+      DatosEmisor: {
+        cuit: datosEmisor.cuit,
+        razonSocial: datosEmisor.razonSocial,
+        domicilio: datosEmisor.domicilio,
+        condicionIVA: datosEmisor.condicionIVA === '1' ? 'Responsable Inscripto' : 
+                      datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+        iibb: datosEmisor.iibb || 'Exento',
+        inicioActividades: datosEmisor.inicioActividades,
+      },
     };
 
     const pdfResponse = await generarPDF(pdfData);
@@ -342,28 +445,48 @@ const CrearFactura = () => {
         onVerificar={handleVerificarConexion}
       />
 
-      <FacturaForm
-        formData={formData}
-        loading={loading}
-        error={error}
-        onInputChange={handleInputChange}
-        onArticuloAdd={handleArticuloAdd}
-        onArticuloRemove={handleArticuloRemove}
-        onArticuloChange={handleArticuloChange}
-        onSubmit={handleSubmit}
-        onLimpiar={limpiarFormulario}
-        onConsultarContribuyente={handleConsultarContribuyente}
-        loadingContribuyente={loadingContribuyente}
-      />
+      <Tabs defaultValue="facturar" className="mt-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="facturar">Crear Factura</TabsTrigger>
+          <TabsTrigger value="configuracion">Configuración Emisor</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="facturar">
+          <FacturaForm
+            formData={formData}
+            loading={loading}
+            error={error}
+            onInputChange={handleInputChange}
+            onArticuloAdd={handleArticuloAdd}
+            onArticuloRemove={handleArticuloRemove}
+            onArticuloChange={handleArticuloChange}
+            onSubmit={handleSubmit}
+            onLimpiar={limpiarFormulario}
+            onConsultarContribuyente={handleConsultarContribuyente}
+            loadingContribuyente={loadingContribuyente}
+          />
 
-      {resultado && (
-        <FacturaResultado
-          resultado={resultado}
-          qrUrl={qrUrl}
-          pdfUrl={pdfUrl}
-          onGenerarPDF={handleDescargarPDF}
-        />
-      )}
+          {resultado && (
+            <div className="mt-4">
+              <FacturaResultado
+                resultado={resultado}
+                qrUrl={qrUrl}
+                pdfUrl={pdfUrl}
+                onGenerarPDF={handleDescargarPDF}
+              />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="configuracion">
+          <ConfiguracionEmisor
+            onGuardar={handleGuardarEmisor}
+            onBuscarCUIT={handleBuscarEmisor}
+            datosIniciales={datosEmisor}
+            loadingBusqueda={loadingEmisor}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

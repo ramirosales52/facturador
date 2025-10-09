@@ -10,7 +10,7 @@ Sistema completo de facturación electrónica integrado con AFIP (ahora ARCA) pa
 - ✅ Cálculo automático de IVA y totales
 - ✅ Verificación de estado del servidor AFIP
 - ✅ Manejo de errores y validaciones
-- ✅ Ambiente de pruebas (homologación)
+- ✅ Listo para producción
 - ✅ Documentación completa en español
 
 ## 🚀 Inicio Rápido
@@ -18,8 +18,8 @@ Sistema completo de facturación electrónica integrado con AFIP (ahora ARCA) pa
 ### Requisitos Previos
 - Node.js 18+
 - npm 9+
-- CUIT de prueba de AFIP
-- Certificados de AFIP (ver guía de configuración)
+- CUIT registrado en AFIP
+- Certificados de AFIP para producción (ver guía de configuración)
 
 ### Instalación
 
@@ -33,26 +33,26 @@ npm install
 
 ### Configuración
 
-1. **Configurar CUIT**
-   ```typescript
-   // Editar: src/api/arca/arca.config.ts
-   export const ArcaConfig = {
-     CUIT: 20409378472, // ← Cambiar por tu CUIT
-     production: false,
-     cert: 'certificates/certificate.crt',
-     key: 'certificates/private_key.key',
-   };
+1. **Configurar Variables de Entorno**
+   ```bash
+   # Copiar archivo de ejemplo
+   cp .env.example .env
+   
+   # Editar .env con tus datos de producción
+   AFIP_CUIT=TU_CUIT_AQUI
+   AFIP_PRODUCTION=true
+   AFIP_CERT_PATH=ruta/al/certificado.crt
+   AFIP_KEY_PATH=ruta/a/clave_privada.key
    ```
 
-2. **Generar Certificados**
-   ```bash
-   node scripts/generar-certificados.js
-   ```
+2. **Generar Certificados de Producción**
+   - Seguir guía en: https://www.afip.gob.ar/ws/documentacion/certificados.asp
+   - Guardar certificados fuera del repositorio
 
 3. **Habilitar Servicio en AFIP**
    - Ir a https://auth.afip.gob.ar/
    - "Administrador de Relaciones de Clave Fiscal"
-   - Habilitar servicio **"wsfe"**
+   - Habilitar servicio **"wsfe"** en producción
 
 ### Ejecutar
 
@@ -162,7 +162,7 @@ facturador/
 
 - ✅ Certificados excluidos del repositorio (`.gitignore`)
 - ✅ Variables de entorno para datos sensibles
-- ✅ Ambiente de prueba por defecto
+- ✅ Configurado para producción
 - ✅ Validación de datos en frontend y backend
 
 ## 🎯 Tipos de Comprobantes Soportados
@@ -200,7 +200,7 @@ Si encuentras algún problema:
 
 ## ⚠️ Disclaimer
 
-Este es un proyecto de prueba/desarrollo. Asegúrate de cumplir con todas las regulaciones de AFIP/ARCA antes de usar en producción. Los certificados de prueba son solo para ambiente de homologación.
+Este sistema está configurado para producción. Asegúrate de cumplir con todas las regulaciones de AFIP/ARCA. Para ambiente de homologación/pruebas, cambiar `AFIP_PRODUCTION=false` en las variables de entorno y usar certificados de homologación.
 
 ---
 

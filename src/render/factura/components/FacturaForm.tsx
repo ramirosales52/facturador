@@ -8,15 +8,19 @@ import { Separator } from '@render/components/ui/separator'
 import { Search, X } from 'lucide-react'
 
 export interface Articulo {
+  codigo?: string
   descripcion: string
   cantidad: number
+  unidadMedida: string
   precioUnitario: number
   alicuotaIVA: string
 }
 
 export interface FormData {
   TipoFactura: 'A' | 'B'
+  DocTipo: string
   DocNro: string
+  Concepto: string
   CondicionIVA: string
   RazonSocial?: string
   Domicilio?: string
@@ -42,6 +46,31 @@ export const CONDICIONES_IVA = [
   { id: '4', nombre: 'IVA Sujeto Exento' },
   { id: '5', nombre: 'Consumidor Final' },
   { id: '6', nombre: 'Responsable Monotributo' },
+]
+
+// Tipos de Documento
+export const TIPOS_DOCUMENTO = [
+  { id: '80', nombre: 'CUIT' },
+  { id: '96', nombre: 'DNI' },
+  { id: '99', nombre: 'Consumidor Final' },
+]
+
+// Conceptos de Facturación
+export const CONCEPTOS = [
+  { id: '1', nombre: 'Productos' },
+  { id: '2', nombre: 'Servicios' },
+  { id: '3', nombre: 'Productos y Servicios' },
+]
+
+// Unidades de Medida
+export const UNIDADES_MEDIDA = [
+  { id: 'unidad', nombre: 'Unidad' },
+  { id: 'kg', nombre: 'Kilogramo' },
+  { id: 'metro', nombre: 'Metro' },
+  { id: 'litro', nombre: 'Litro' },
+  { id: 'hora', nombre: 'Hora' },
+  { id: 'mes', nombre: 'Mes' },
+  { id: 'servicio', nombre: 'Servicio' },
 ]
 
 interface FacturaFormProps {
@@ -100,22 +129,46 @@ export function FacturaForm({
       <CardContent>
         <h3 className="font-medium text-sm mb-3">Datos de la factura</h3>
         <form onSubmit={onSubmit} className="space-y-4">
-          {/* Tipo de Factura y CUIT */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* CUIT con botón de búsqueda */}
+          {/* Tipo de Documento y CUIT/DNI */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Tipo de Documento */}
             <div className="space-y-1.5">
-              <Label htmlFor="DocNro" className="text-sm">CUIT del Cliente</Label>
+              <Label htmlFor="DocTipo" className="text-sm">Tipo de Documento</Label>
+              <Select
+                value={formData.DocTipo}
+                onValueChange={(value) => onInputChange('DocTipo', value)}
+              >
+                <SelectTrigger id="DocTipo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS_DOCUMENTO.map((tipo) => (
+                    <SelectItem key={tipo.id} value={tipo.id}>
+                      {tipo.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* CUIT/DNI con botón de búsqueda */}
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="DocNro" className="text-sm">
+                {formData.DocTipo === '99' ? 'Sin Documento' : 
+                 formData.DocTipo === '96' ? 'DNI del Cliente' : 'CUIT del Cliente'}
+              </Label>
               <div className="flex gap-2">
                 <Input
                   id="DocNro"
                   type="text"
                   value={formData.DocNro}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('DocNro', e.target.value)}
-                  placeholder="20123456789"
-                  required
+                  placeholder={formData.DocTipo === '99' ? '0' : formData.DocTipo === '96' ? '12345678' : '20123456789'}
+                  required={formData.DocTipo !== '99'}
+                  disabled={formData.DocTipo === '99'}
                   className="flex-1"
                 />
-                {onConsultarContribuyente && (
+                {onConsultarContribuyente && formData.DocTipo === '80' && (
                   <Button
                     type="button"
                     onClick={onConsultarContribuyente}
@@ -129,25 +182,46 @@ export function FacturaForm({
                 )}
               </div>
             </div>
-            {/* Condición IVA - Solo para Factura B */}
-            {formData.TipoFactura === 'B' && (
-              <div className="space-y-1.5">
-                <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA</Label>
-                <Select
-                  value={formData.CondicionIVA}
-                  onValueChange={(value) => onInputChange('CondicionIVA', value)}
-                >
-                  <SelectTrigger id="CondicionIVA">
-                    <SelectValue placeholder="Seleccione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">IVA Sujeto Exento</SelectItem>
-                    <SelectItem value="5">Consumidor Final</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
+
+          {/* Concepto */}
+          <div className="space-y-1.5">
+            <Label htmlFor="Concepto" className="text-sm">Concepto de Facturación</Label>
+            <Select
+              value={formData.Concepto}
+              onValueChange={(value) => onInputChange('Concepto', value)}
+            >
+              <SelectTrigger id="Concepto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONCEPTOS.map((concepto) => (
+                  <SelectItem key={concepto.id} value={concepto.id}>
+                    {concepto.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Condición IVA - Solo para Factura B */}
+          {formData.TipoFactura === 'B' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA del Cliente</Label>
+              <Select
+                value={formData.CondicionIVA}
+                onValueChange={(value) => onInputChange('CondicionIVA', value)}
+              >
+                <SelectTrigger id="CondicionIVA">
+                  <SelectValue placeholder="Seleccione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">IVA Sujeto Exento</SelectItem>
+                  <SelectItem value="5">Consumidor Final</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Datos del Cliente - Card editable */}
           {(formData.RazonSocial || formData.Domicilio) && (
@@ -200,9 +274,22 @@ export function FacturaForm({
 
               return (
                 <div key={index} className="border p-3 rounded-lg space-y-2 bg-gray-50">
-                  {/* Descripción en ancho completo */}
-                  <div className="flex gap-2 items-end mb-4">
-                    <div className='w-full space-y-2'>
+                  {/* Código y Descripción */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className='space-y-2'>
+                      <Label htmlFor={`codigo-${index}`} className="text-xs">Código (opcional)</Label>
+                      <Input
+                        id={`codigo-${index}`}
+                        type="text"
+                        value={articulo.codigo || ''}
+                        className='bg-white'
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          onArticuloChange(index, 'codigo', e.target.value)
+                        }
+                        placeholder="001"
+                      />
+                    </div>
+                    <div className='col-span-2 space-y-2'>
                       <Label htmlFor={`descripcion-${index}`} className="text-xs">Descripción</Label>
                       <Input
                         id={`descripcion-${index}`}
@@ -216,26 +303,27 @@ export function FacturaForm({
                         required
                       />
                     </div>
-                    <Button
-                      type="button"
-                      onClick={() => onArticuloRemove(index)}
-                      variant="outline"
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      Borrar
-                      <X />
-                    </Button>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        onClick={() => onArticuloRemove(index)}
+                        variant="outline"
+                        className="text-red-500 hover:text-red-700 w-full"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
-                  {/* Cantidad, Precio e IVA */}
-                  <div className="grid grid-cols-4 gap-2">
+                  {/* Cantidad, Unidad, Precio e IVA */}
+                  <div className="grid grid-cols-5 gap-2">
                     <div className="space-y-2">
                       <Label htmlFor={`cantidad-${index}`} className="text-xs">Cantidad</Label>
                       <Input
                         id={`cantidad-${index}`}
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
                         className='bg-white'
                         value={articulo.cantidad}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -243,6 +331,25 @@ export function FacturaForm({
                         }
                         required
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`unidad-${index}`} className="text-xs">Unidad</Label>
+                      <Select
+                        value={articulo.unidadMedida}
+                        onValueChange={(value) => onArticuloChange(index, 'unidadMedida', value)}
+                      >
+                        <SelectTrigger id={`unidad-${index}`} className='bg-white'>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNIDADES_MEDIDA.map((unidad) => (
+                            <SelectItem key={unidad.id} value={unidad.id}>
+                              {unidad.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -282,12 +389,13 @@ export function FacturaForm({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center justify-end text-sm font-medium">
-                      Total: ${totalConIVA ? totalConIVA.toFixed(2) : "0.00"}
+                    
+                    <div className="flex items-end text-sm font-medium">
+                      <div className="bg-white border rounded-md px-3 py-2 w-full">
+                        ${totalConIVA ? totalConIVA.toFixed(2) : "0.00"}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Total con IVA a la derecha */}
                 </div>
               )
             })}

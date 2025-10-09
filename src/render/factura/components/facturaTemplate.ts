@@ -1,6 +1,8 @@
 export interface ArticuloFactura {
+  codigo?: string
   descripcion: string
   cantidad: number
+  unidadMedida: string
   precioUnitario: number
   alicuotaIVA: string
   porcentajeIVA: number
@@ -32,6 +34,14 @@ export interface FacturaPDFData {
   Domicilio?: string
   Articulos?: ArticuloFactura[]
   IVAsAgrupados?: IVAAgrupado[]
+  DatosEmisor?: {
+    cuit: string
+    razonSocial: string
+    domicilio: string
+    condicionIVA: string
+    iibb: string
+    inicioActividades: string
+  }
 }
 
 /**
@@ -74,36 +84,44 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const razonSocial = facturaInfo.RazonSocial || 'Cliente'
   const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
   
-  // Generar filas de artículos
+  // Datos del emisor
+  const emisor = facturaInfo.DatosEmisor || {
+    razonSocial: 'Tu Empresa',
+    domicilio: 'Domicilio',
+    condicionIVA: 'Responsable Inscripto',
+    iibb: 'Exento',
+    inicioActividades: '01/01/2020',
+    cuit: String(cuit),
+  }
+  
+  // Formatear fecha de inicio de actividades
+  const inicioActividades = emisor.inicioActividades?.includes('-') 
+    ? formatearFecha(emisor.inicioActividades.replace(/-/g, '')) 
+    : emisor.inicioActividades
+  
+  // Generar filas de artículos (simplificado)
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
-    // Calcular subtotal sin IVA (cantidad * precio unitario)
-    const subtotalSinIVA = articulo.cantidad * articulo.precioUnitario
+    const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
     
     return `
     <tr>
-      <td>${String(index + 1).padStart(3, '0')}</td>
+      <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
       <td>${articulo.descripcion}</td>
       <td>${articulo.cantidad.toFixed(2)}</td>
-      <td>Unidad</td>
-      <td>${articulo.precioUnitario.toFixed(2)}</td>
-      <td>0,00</td>
-      <td>0,00</td>
-      <td>${subtotalSinIVA.toFixed(2)}</td>
+      <td>${articulo.unidadMedida || 'Unidad'}</td>
+      <td>$${subtotal.toFixed(2)}</td>
     </tr>
     `
   }).join('')
   
-  // Si no hay artículos, mostrar una fila con los datos básicos
+  // Si no hay artículos, mostrar una fila por defecto
   const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0 ? `
     <tr>
       <td>001</td>
       <td>Producto/Servicio</td>
-      <td>1,00</td>
+      <td>1.00</td>
       <td>Unidad</td>
-      <td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
-      <td>0,00</td>
-      <td>0,00</td>
-      <td>${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
+      <td>$${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
     </tr>
   ` : articulosHTML
   
@@ -292,11 +310,11 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 ${tipoFactura}
 </div>
 <div class="text-lg text-center">
-Tu Empresa S.A.
+${emisor.razonSocial}
 </div>
-<p><strong>Razón social:</strong> Tu Empresa S.A.</p>
-<p><strong>Domicilio Comercial:</strong> Calle falsa 123</p>
-<p><strong>Condición Frente al IVA:</strong> Responsable inscripto</p>
+<p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
+<p><strong>Domicilio Comercial:</strong> ${emisor.domicilio}</p>
+<p><strong>Condición Frente al IVA:</strong> ${emisor.condicionIVA}</p>
 </td>
 <td>
 <div>
@@ -312,9 +330,9 @@ Factura
 </p>
 </div>
 <p><strong>Fecha de Emisión:</strong> ${fecha}</p>
-<p><strong>CUIT:</strong> ${cuit}</p>
-<p><strong>Ingresos Brutos:</strong> Exento</p>
-<p><strong>Fecha de Inicio de Actividades:</strong> 01/01/2020</p>
+<p><strong>CUIT:</strong> ${emisor.cuit}</p>
+<p><strong>Ingresos Brutos:</strong> ${emisor.iibb}</p>
+<p><strong>Fecha de Inicio de Actividades:</strong> ${inicioActividades}</p>
 </div>
 </td>
 </tr>
@@ -364,12 +382,9 @@ Factura
 <table>
 <tr>
 <td>Código</td>
-<td>Producto / Servicio</td>
+<td>Descripción</td>
 <td>Cantidad</td>
-<td>U. Medida</td>
-<td>Precio Unit.</td>
-<td>% Bonif.</td>
-<td>Imp. Bonif.</td>
+<td>Unidad</td>
 <td>Subtotal</td>
 </tr>
 ${articulosDefault}

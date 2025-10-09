@@ -11,7 +11,7 @@ export class ArcaService {
   private afip: Afip
 
   constructor() {
-    // Configuración para ambiente de pruebas (homologación)
+    // Configuración para ambiente de desarrollo/homologación
     const config: any = {
       CUIT: ArcaConfig.CUIT,
       production: ArcaConfig.production,
@@ -30,86 +30,20 @@ export class ArcaService {
 
   /**
    * Consultar datos de un contribuyente por CUIT
-   * Por ahora usa datos mock para pruebas sin certificado
    */
   async consultarContribuyente(cuit: number) {
     try {
-      // Datos de prueba (mock) para diferentes CUITs
-      const contribuyentesMock = {
-        20123456789: {
-          razonSocial: 'PEREZ JUAN CARLOS',
-          domicilio: 'Av. Corrientes 1234',
-          localidad: 'CAPITAL FEDERAL',
-          provincia: 'CIUDAD AUTONOMA BUENOS AIRES',
-          condicionIVA: 1, // Responsable Inscripto
-          tipoPersona: 'FISICA',
-        },
-        30123456789: {
-          razonSocial: 'EMPRESA DEMO SA',
-          domicilio: 'Calle Falsa 123',
-          localidad: 'ROSARIO',
-          provincia: 'SANTA FE',
-          condicionIVA: 1, // Responsable Inscripto
-          tipoPersona: 'JURIDICA',
-        },
-        27123456789: {
-          razonSocial: 'GARCIA MARIA TERESA',
-          domicilio: 'San Martin 456',
-          localidad: 'CORDOBA',
-          provincia: 'CORDOBA',
-          condicionIVA: 6, // Monotributo
-          tipoPersona: 'FISICA',
-        },
-        23123456789: {
-          razonSocial: 'LOPEZ ROBERTO DANIEL',
-          domicilio: 'Belgrano 789',
-          localidad: 'MENDOZA',
-          provincia: 'MENDOZA',
-          condicionIVA: 5, // Consumidor Final
-          tipoPersona: 'FISICA',
-        },
-      }
-
-      // Buscar el contribuyente en los datos mock
-      const contribuyente = contribuyentesMock[cuit]
-
-      if (!contribuyente) {
-        // Si no está en los mocks, devolver un genérico
-        return {
-          success: true,
-          data: {
-            razonSocial: 'Contribuyente',
-            domicilio: '',
-            localidad: '',
-            provincia: '',
-            condicionIVA: 5,
-            tipoPersona: 'FISICA',
-            esMock: true,
-            mensaje: 'Datos de prueba - CUIT no encontrado en mock',
-          },
-        }
-      }
-
-      // TODO: Cuando tengas certificado, descomentar esto:
-      // const data = await this.afip.RegisterScopeFive.getTaxpayerDetails(cuit)
-      // return {
-      //   success: true,
-      //   data: {
-      //     razonSocial: data.razonSocial || `${data.apellido} ${data.nombre}`,
-      //     domicilio: data.domicilioFiscal?.direccion,
-      //     localidad: data.domicilioFiscal?.localidad,
-      //     provincia: data.domicilioFiscal?.provincia,
-      //     condicionIVA: this.determinarCondicionIVA(data),
-      //     tipoPersona: data.tipoPersona,
-      //   },
-      // }
-
+      const data = await this.afip.RegisterScopeFive.getTaxpayerDetails(cuit)
+      
       return {
         success: true,
         data: {
-          ...contribuyente,
-          esMock: true,
-          mensaje: 'Datos de prueba',
+          razonSocial: data.razonSocial || `${data.apellido} ${data.nombre}`,
+          domicilio: data.domicilioFiscal?.direccion,
+          localidad: data.domicilioFiscal?.localidad,
+          provincia: data.domicilioFiscal?.provincia,
+          condicionIVA: this.determinarCondicionIVA(data),
+          tipoPersona: data.tipoPersona,
         },
       }
     }
@@ -157,8 +91,9 @@ export class ArcaService {
       const cbteTipo = createArcaDto.CbteTipo || 11
       const lastVoucher = await this.afip.ElectronicBilling.getLastVoucher(ptoVta, cbteTipo)
 
-      // Determinar condición IVA del receptor según el tipo de documento y comprobante
-      const docTipo = createArcaDto.DocTipo || 99
+      // Usar DocTipo y Concepto del DTO si vienen, si no usar por defecto
+      const docTipo = createArcaDto.DocTipo || 80
+      const concepto = createArcaDto.Concepto || 1
       let condicionIVAReceptorId = createArcaDto.CondicionIVAReceptorId
 
       if (!condicionIVAReceptorId) {
@@ -187,9 +122,9 @@ export class ArcaService {
       const data = {
         CantReg: 1, // Cantidad de comprobantes a registrar
         PtoVta: ptoVta, // Punto de venta
-        CbteTipo: cbteTipo, // Tipo de comprobante (11 = Factura C)
-        Concepto: createArcaDto.Concepto || 1, // Concepto (1 = Productos)
-        DocTipo: docTipo, // Tipo de documento del comprador (99 = Consumidor Final)
+        CbteTipo: cbteTipo, // Tipo de comprobante
+        Concepto: concepto, // Concepto (1 = Productos, 2 = Servicios, 3 = Ambos)
+        DocTipo: docTipo, // Tipo de documento del comprador
         DocNro: createArcaDto.DocNro || 0, // Número de documento
         CondicionIVAReceptorId: condicionIVAReceptorId, // Condición IVA del receptor
         CbteDesde: lastVoucher + 1, // Número de comprobante desde
@@ -363,18 +298,12 @@ export class ArcaService {
         codAut: codAutNumerico, // CAE como número
       }
 
-      // Log para verificar que el CAE está incluido correctamente
-      console.log('📋 Datos del QR:', JSON.stringify(qrData, null, 2))
-      console.log('🔢 CAE como número:', codAutNumerico)
-
       // Crear string de datos base64
       const jsonStr = JSON.stringify(qrData)
       const base64Data = Buffer.from(jsonStr).toString('base64')
 
       // URL del QR de AFIP
       const qrUrl = `https://www.afip.gob.ar/fe/qr/?p=${base64Data}`
-
-      console.log('🔗 URL del QR generada:', qrUrl)
 
       return {
         success: true,
@@ -450,8 +379,6 @@ export class ArcaService {
       // Ruta completa del archivo PDF
       const pdfPath = join(outputDir, fileName)
 
-      console.log(`📄 Generando PDF en: ${pdfPath}`)
-
       // Generar PDF usando Puppeteer
       const browser = await puppeteer.launch({
         headless: true,
@@ -477,8 +404,6 @@ export class ArcaService {
       })
 
       await browser.close()
-
-      console.log(`✅ PDF generado exitosamente: ${fileName}`)
 
       return {
         success: true,

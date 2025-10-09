@@ -1,6 +1,7 @@
 export { ConexionStatus } from './ConexionStatus'
-export { FacturaForm, type FormData, type Articulo, ALICUOTAS_IVA, CONDICIONES_IVA } from './FacturaForm'
+export { FacturaForm, type FormData, type Articulo, ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA } from './FacturaForm'
 export { FacturaResultado, type FacturaResultadoData } from './FacturaResultado'
 export { generarHTMLFactura, type FacturaPDFData } from './facturaTemplate'
 export { PDFActions } from './PDFActions'
 export { QRCode } from './QRCode'
+export { ConfiguracionEmisor, type DatosEmisor } from './ConfiguracionEmisor'

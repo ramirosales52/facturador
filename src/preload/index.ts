@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld(
     onReplyMsg: (cb: (msg: string) => any) => ipcRenderer.on('reply-msg', (e, msg: string) => {
       cb(msg)
     }),
+    getCommandLineCuit: (): Promise<string | null> => ipcRenderer.invoke('get-command-line-cuit'),
   },
 )

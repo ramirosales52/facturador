@@ -1,22 +1,22 @@
 /**
  * Configuración del SDK de AFIP/ARCA
  * 
- * Para obtener los certificados de prueba:
+ * Para obtener los certificados de producción:
  * 1. Ingresar a https://www.afip.gob.ar/ws/documentacion/certificados.asp
- * 2. Generar un certificado de prueba
+ * 2. Generar un certificado de producción
  * 3. Guardar el certificado (.crt) y la clave privada (.key) en una carpeta segura
  */
 
 export const ArcaConfig = {
-  // CUIT de prueba - Reemplazar con tu CUIT
-  CUIT: 20409378472,
+  // CUIT - Se puede configurar desde variable de entorno
+  CUIT: process.env.AFIP_CUIT ? parseInt(process.env.AFIP_CUIT) : 20409378472,
   
   // Ambiente: false = homologación/testing, true = producción
   production: false,
   
   // Rutas a los archivos de certificado
   // IMPORTANTE: Por seguridad, estos archivos NO deben estar en el repositorio
-  // Crear una carpeta fuera del proyecto o usar variables de entorno
+  // Usar variables de entorno para configurar las rutas
   cert: process.env.AFIP_CERT_PATH || 'certificates/certificate.crt',
   key: process.env.AFIP_KEY_PATH || 'certificates/private_key.key',
   
