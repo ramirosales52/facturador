@@ -1,7 +1,29 @@
 import { useState } from 'react';
 import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000/arca';
+// Función para obtener la URL base de la API
+async function getApiBaseUrl(): Promise<string> {
+  // Intentar obtener el puerto del backend desde Electron
+  if (window.electron && window.electron.getBackendPort) {
+    try {
+      const port = await window.electron.getBackendPort();
+      return `http://localhost:${port}/arca`;
+    } catch (err) {
+      console.warn('No se pudo obtener el puerto del backend, usando puerto predeterminado 3000', err);
+    }
+  }
+  return 'http://localhost:3000/arca';
+}
+
+let cachedApiBaseUrl: string | null = null;
+
+// Inicializar la URL base al cargar el módulo
+async function initApiBaseUrl() {
+  cachedApiBaseUrl = await getApiBaseUrl();
+  console.log(`API Base URL: ${cachedApiBaseUrl}`);
+}
+
+initApiBaseUrl();
 
 interface IVA {
   Id: number;
@@ -79,6 +101,14 @@ export const useArca = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getApiUrl = async (): Promise<string> => {
+    if (cachedApiBaseUrl) {
+      return cachedApiBaseUrl;
+    }
+    cachedApiBaseUrl = await getApiBaseUrl();
+    return cachedApiBaseUrl;
+  };
+
   const handleRequest = async <T,>(requestFn: () => Promise<T>): Promise<T> => {
     setLoading(true);
     setError(null);
@@ -96,28 +126,32 @@ export const useArca = () => {
 
   const crearFactura = async (data: CreateFacturaDto): Promise<FacturaResponse> => {
     return handleRequest(async () => {
-      const response = await axios.post<FacturaResponse>(`${API_BASE_URL}/factura`, data);
+      const apiUrl = await getApiUrl();
+      const response = await axios.post<FacturaResponse>(`${apiUrl}/factura`, data);
       return response.data;
     });
   };
 
   const verificarConexion = async (): Promise<ServerStatusResponse> => {
     return handleRequest(async () => {
-      const response = await axios.get<ServerStatusResponse>(`${API_BASE_URL}/server-status`);
+      const apiUrl = await getApiUrl();
+      const response = await axios.get<ServerStatusResponse>(`${apiUrl}/server-status`);
       return response.data;
     });
   };
 
   const generarQR = async (qrData: any): Promise<QRResponse> => {
     return handleRequest(async () => {
-      const response = await axios.post<QRResponse>(`${API_BASE_URL}/generar-qr`, qrData);
+      const apiUrl = await getApiUrl();
+      const response = await axios.post<QRResponse>(`${apiUrl}/generar-qr`, qrData);
       return response.data;
     });
   };
 
   const generarPDF = async (facturaInfo: any): Promise<PDFResponse> => {
     return handleRequest(async () => {
-      const response = await axios.post<PDFResponse>(`${API_BASE_URL}/generar-pdf`, facturaInfo);
+      const apiUrl = await getApiUrl();
+      const response = await axios.post<PDFResponse>(`${apiUrl}/generar-pdf`, facturaInfo);
       return response.data;
     });
   };
@@ -126,7 +160,8 @@ export const useArca = () => {
     // No usamos handleRequest para no afectar el estado de error global
     // Los errores se manejan con toasts en el componente
     try {
-      const response = await axios.get<ContribuyenteResponse>(`${API_BASE_URL}/contribuyente/${cuit}`);
+      const apiUrl = await getApiUrl();
+      const response = await axios.get<ContribuyenteResponse>(`${apiUrl}/contribuyente/${cuit}`);
       return response.data;
     } catch (err) {
       const axiosError = err as AxiosError<{ error?: string }>;

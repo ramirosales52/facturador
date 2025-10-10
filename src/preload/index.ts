@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld(
       cb(msg)
     }),
     getCommandLineCuit: (): Promise<string | null> => ipcRenderer.invoke('get-command-line-cuit'),
+    getBackendPort: (): Promise<number> => ipcRenderer.invoke('get-backend-port'),
   },
 )

@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, dialog } from 'electron';
+import { findAvailablePort } from './utils/port-finder';
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 app.disableHardwareAcceleration()
+
+// Puerto del backend NestJS
+let BACKEND_PORT = 3000;
 
 // Capturar argumentos de línea de comandos
 // En producción: ['Facturador.exe', 'arg1', 'arg2', ...]
@@ -47,6 +51,11 @@ ipcMain.handle('get-command-line-cuit', () => {
   return cuitFromCommandLine;
 });
 
+// IPC para que el renderer obtenga el puerto del backend
+ipcMain.handle('get-backend-port', () => {
+  return BACKEND_PORT;
+});
+
 async function electronAppInit() {
   const isDev = !app.isPackaged;
   app.on('window-all-closed', () => {
@@ -71,11 +80,33 @@ async function electronAppInit() {
 async function bootstrap() {
   try {
     await electronAppInit();
+    
+    // Buscar puerto disponible para el backend
+    console.log('Buscando puerto disponible para el backend...');
+    BACKEND_PORT = await findAvailablePort(3000, 10);
+    console.log(`Puerto del backend: ${BACKEND_PORT}`);
+    
+    // Si no es el puerto predeterminado, informar al usuario
+    if (BACKEND_PORT !== 3000) {
+      console.warn(`⚠️  Puerto 3000 ocupado, usando puerto alternativo: ${BACKEND_PORT}`);
+    }
+    
     const nestApp = await NestFactory.create(AppModule);
     nestApp.enableCors();
-    await nestApp.listen(3000);
+    await nestApp.listen(BACKEND_PORT);
+    
+    console.log(`✓ Servidor NestJS iniciado en puerto ${BACKEND_PORT}`);
   } catch (error) {
-    console.log(error);
+    console.error('Error al iniciar la aplicación:', error);
+    
+    // Mostrar diálogo de error al usuario
+    if (app.isReady()) {
+      await dialog.showErrorBox(
+        'Error al iniciar',
+        `No se pudo iniciar la aplicación:\n\n${error.message}\n\nPor favor, cierre otras aplicaciones que puedan estar usando puertos de red e intente nuevamente.`
+      );
+    }
+    
     app.quit();
   }
 }
