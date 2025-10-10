@@ -123,10 +123,16 @@ export const useArca = () => {
   };
 
   const consultarContribuyente = async (cuit: string): Promise<ContribuyenteResponse> => {
-    return handleRequest(async () => {
+    // No usamos handleRequest para no afectar el estado de error global
+    // Los errores se manejan con toasts en el componente
+    try {
       const response = await axios.get<ContribuyenteResponse>(`${API_BASE_URL}/contribuyente/${cuit}`);
       return response.data;
-    });
+    } catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>;
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error en la solicitud';
+      return { success: false, error: errorMsg };
+    }
   };
 
   const clearError = () => {

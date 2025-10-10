@@ -230,8 +230,6 @@ const CrearFactura = () => {
       return
     }
 
-    // Limpiar error anterior antes de nueva búsqueda
-    clearError()
     setLoadingContribuyente(true)
     toast.loading('Consultando datos en AFIP...', { id: 'consulta-contribuyente' })
 
