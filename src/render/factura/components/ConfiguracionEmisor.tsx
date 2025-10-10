@@ -88,8 +88,10 @@ export function ConfiguracionEmisor({
         })
         setEditado(true)
       } else {
-        toast.error(`No se encontraron datos: ${response.error}`, {
+        // No se encontraron datos - mostrar error sin actualizar campos
+        toast.error('CUIT no encontrado', {
           id: 'buscar-emisor',
+          description: response.error || 'No se encontraron datos en AFIP'
         })
       }
     } catch (err) {

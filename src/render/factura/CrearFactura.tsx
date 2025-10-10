@@ -236,7 +236,7 @@ const CrearFactura = () => {
       const response = await consultarContribuyente(formData.DocNro)
 
       if (response.success && response.data) {
-        // Actualizar razón social y domicilio
+        // Actualizar razón social y domicilio solo si existen
         if (response.data.razonSocial) {
           handleInputChange('RazonSocial', response.data.razonSocial)
         }
@@ -254,9 +254,13 @@ const CrearFactura = () => {
           }
         )
       } else {
+        // No se encontraron datos - mostrar error y NO actualizar campos
         toast.error(
-          `No se encontraron datos: ${response.error}`,
-          { id: 'consulta-contribuyente' }
+          'CUIT no encontrado',
+          { 
+            id: 'consulta-contribuyente',
+            description: response.error || 'No se encontraron datos en AFIP'
+          }
         )
       }
     } catch (err) {
@@ -310,19 +314,8 @@ const CrearFactura = () => {
           if (cuitFromCli) {
             console.log('CUIT recibido desde línea de comandos:', cuitFromCli)
             
-            // Actualizar el formulario con el CUIT
+            // Solo actualizar el formulario con el CUIT, sin búsqueda automática
             handleInputChange('DocNro', cuitFromCli)
-            
-            // Mostrar notificación
-            toast.info('CUIT cargado desde línea de comandos', {
-              description: `CUIT: ${cuitFromCli}`,
-              duration: 5000,
-            })
-            
-            // Opcional: Ejecutar búsqueda automática después de un breve delay
-            setTimeout(() => {
-              handleConsultarContribuyente()
-            }, 500)
           }
         }
       } catch (error) {
