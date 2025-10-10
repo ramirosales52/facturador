@@ -1,4 +1,3 @@
-export { ConexionStatus } from './ConexionStatus'
 export { FacturaForm, type FormData, type Articulo, ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA } from './FacturaForm'
 export { FacturaResultado, type FacturaResultadoData } from './FacturaResultado'
 export { generarHTMLFactura, type FacturaPDFData } from './facturaTemplate'

@@ -87,16 +87,6 @@ interface ContribuyenteResponse {
   error?: string;
 }
 
-interface ServerStatusResponse {
-  success: boolean;
-  serverStatus?: {
-    AppServer: string;
-    DbServer: string;
-    AuthServer: string;
-  };
-  error?: string;
-}
-
 export const useArca = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +103,8 @@ export const useArca = () => {
     setLoading(true);
     setError(null);
     try {
-      return await requestFn();
+      const result = await requestFn();
+      return result;
     } catch (err) {
       const axiosError = err as AxiosError<{ error?: string }>;
       const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error en la solicitud';
@@ -128,14 +119,6 @@ export const useArca = () => {
     return handleRequest(async () => {
       const apiUrl = await getApiUrl();
       const response = await axios.post<FacturaResponse>(`${apiUrl}/factura`, data);
-      return response.data;
-    });
-  };
-
-  const verificarConexion = async (): Promise<ServerStatusResponse> => {
-    return handleRequest(async () => {
-      const apiUrl = await getApiUrl();
-      const response = await axios.get<ServerStatusResponse>(`${apiUrl}/server-status`);
       return response.data;
     });
   };
@@ -179,7 +162,6 @@ export const useArca = () => {
     error,
     clearError,
     crearFactura,
-    verificarConexion,
     generarQR,
     generarPDF,
     consultarContribuyente,

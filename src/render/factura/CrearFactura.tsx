@@ -2,7 +2,6 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useArca } from '../hooks/useArca';
 import { toast } from 'sonner';
 import {
-  ConexionStatus,
   FacturaForm,
   FacturaResultado,
   FormData,
@@ -13,18 +12,8 @@ import { ConfiguracionEmisor, DatosEmisor } from './components/ConfiguracionEmis
 import { ALICUOTAS_IVA } from './components/FacturaForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs';
 
-interface ConexionStatusData {
-  success: boolean;
-  serverStatus?: {
-    AppServer: string;
-    DbServer: string;
-    AuthServer: string;
-  };
-  error?: string;
-}
-
 const CrearFactura = () => {
-  const { loading, error, clearError, crearFactura, verificarConexion, generarQR, generarPDF, consultarContribuyente } = useArca();
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente } = useArca();
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: 'B',
@@ -51,7 +40,6 @@ const CrearFactura = () => {
   });
 
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
-  const [conexionStatus, setConexionStatus] = useState<ConexionStatusData | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loadingContribuyente, setLoadingContribuyente] = useState(false);
@@ -125,12 +113,6 @@ const CrearFactura = () => {
     setResultado(null);
     setQrUrl(null);
     setPdfUrl(null);
-  };
-
-  const handleVerificarConexion = async (): Promise<void> => {
-    setConexionStatus(null);
-    const response = await verificarConexion();
-    setConexionStatus(response);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -230,16 +212,23 @@ const CrearFactura = () => {
       return
     }
 
-    // Limpiar cualquier error previo de otras operaciones
     clearError()
+    
+    // Dismissar TODOS los toasts anteriores para evitar solapamiento
+    toast.dismiss()
+    
+    // Pequeño delay para que la animación de cierre termine
+    await new Promise(resolve => setTimeout(resolve, 150))
+    
     setLoadingContribuyente(true)
-    toast.loading('Consultando datos en AFIP...', { id: 'consulta-contribuyente' })
+    
+    // Crear un toast de loading con ID único para esta búsqueda
+    const toastId = toast.loading('Consultando datos en AFIP...')
 
     try {
       const response = await consultarContribuyente(formData.DocNro)
 
       if (response.success && response.data) {
-        // Actualizar razón social y domicilio solo si existen
         if (response.data.razonSocial) {
           handleInputChange('RazonSocial', response.data.razonSocial)
         }
@@ -247,21 +236,21 @@ const CrearFactura = () => {
           handleInputChange('Domicilio', response.data.domicilio)
         }
 
-        // Mostrar mensaje de éxito con los datos encontrados
+        // Actualizar el toast de loading a success
         toast.success(
           `Encontrado: ${response.data.razonSocial}`,
           { 
-            id: 'consulta-contribuyente',
+            id: toastId,
             description: `${response.data.localidad}, ${response.data.provincia}`,
             duration: 4000,
           }
         )
       } else {
-        // No se encontraron datos - mostrar error y NO actualizar campos
+        // Actualizar el toast de loading a error
         toast.error(
           'CUIT no encontrado',
           { 
-            id: 'consulta-contribuyente',
+            id: toastId,
             description: response.error || 'No se encontraron datos en AFIP'
           }
         )
@@ -269,10 +258,11 @@ const CrearFactura = () => {
     } catch (err) {
       toast.error(
         'Error al consultar contribuyente',
-        { id: 'consulta-contribuyente' }
+        { id: toastId }
       )
     } finally {
       setLoadingContribuyente(false)
+      clearError()
     }
   };
 
@@ -434,12 +424,6 @@ const CrearFactura = () => {
         <h1 className="text-2xl font-bold mb-1">Facturación Electrónica</h1>
         <p className="text-sm text-gray-600">Crear facturas A y B con artículos detallados</p>
       </div>
-
-      <ConexionStatus
-        conexionStatus={conexionStatus}
-        loading={loading}
-        onVerificar={handleVerificarConexion}
-      />
 
       <Tabs defaultValue="facturar" className="mt-4">
         <TabsList className="grid w-full grid-cols-2">
