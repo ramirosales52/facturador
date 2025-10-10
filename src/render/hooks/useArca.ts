@@ -129,9 +129,14 @@ export const useArca = () => {
     });
   };
 
+  const clearError = () => {
+    setError(null);
+  };
+
   return {
     loading,
     error,
+    clearError,
     crearFactura,
     verificarConexion,
     generarQR,

@@ -24,7 +24,7 @@ interface ConexionStatusData {
 }
 
 const CrearFactura = () => {
-  const { loading, error, crearFactura, verificarConexion, generarQR, generarPDF, consultarContribuyente } = useArca();
+  const { loading, error, clearError, crearFactura, verificarConexion, generarQR, generarPDF, consultarContribuyente } = useArca();
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: 'B',
@@ -135,6 +135,7 @@ const CrearFactura = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
+    clearError();
     setResultado(null);
     setQrUrl(null);
     setPdfUrl(null);
@@ -229,6 +230,8 @@ const CrearFactura = () => {
       return
     }
 
+    // Limpiar error anterior antes de nueva búsqueda
+    clearError()
     setLoadingContribuyente(true)
     toast.loading('Consultando datos en AFIP...', { id: 'consulta-contribuyente' })
 
