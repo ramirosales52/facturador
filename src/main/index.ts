@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { app, ipcMain, dialog } from 'electron';
 import { findAvailablePort } from './utils/port-finder';
+import { extraerCUITDeArgumentos } from './utils/cuit-validator';
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 app.disableHardwareAcceleration()
@@ -10,37 +11,19 @@ app.disableHardwareAcceleration()
 let BACKEND_PORT = 3000;
 
 // Capturar argumentos de línea de comandos
-// En producción: ['Facturador.exe', 'arg1', 'arg2', ...]
-// En desarrollo: ['electron', 'path/to/app', 'arg1', 'arg2', ...]
 const isDev = !app.isPackaged;
 const commandLineArgs = isDev ? process.argv.slice(2) : process.argv.slice(1);
-let cuitFromCommandLine: string | null = null;
 
 console.log('=== ARGUMENTOS DE LINEA DE COMANDOS ===');
 console.log('isDev:', isDev);
-console.log('process.argv:', process.argv);
 console.log('commandLineArgs:', commandLineArgs);
 
-// Buscar CUIT en los argumentos (debe ser un número de 11 dígitos)
-for (const arg of commandLineArgs) {
-  console.log('Analizando argumento:', arg);
-  
-  // Verificar si es un CUIT válido (11 dígitos)
-  if (/^\d{11}$/.test(arg)) {
-    cuitFromCommandLine = arg;
-    console.log('✓ CUIT detectado desde línea de comandos:', cuitFromCommandLine);
-    break;
-  }
-  // También soportar formato con guiones: 20-12345678-9
-  const cuitSinGuiones = arg.replace(/-/g, '');
-  if (/^\d{11}$/.test(cuitSinGuiones)) {
-    cuitFromCommandLine = cuitSinGuiones;
-    console.log('✓ CUIT detectado desde línea de comandos (con guiones):', cuitFromCommandLine);
-    break;
-  }
-}
+// Extraer CUIT de los argumentos si existe
+const cuitFromCommandLine = extraerCUITDeArgumentos(commandLineArgs);
 
-if (!cuitFromCommandLine) {
+if (cuitFromCommandLine) {
+  console.log('✓ CUIT detectado desde línea de comandos:', cuitFromCommandLine);
+} else {
   console.log('✗ No se detectó ningún CUIT válido en los argumentos');
 }
 console.log('========================================');

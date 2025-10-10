@@ -9,18 +9,19 @@ import {
   Articulo,
 } from './components';
 import { ConfiguracionEmisor, DatosEmisor } from './components/ConfiguracionEmisor';
-import { ALICUOTAS_IVA } from './components/FacturaForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs';
+import { calcularTotalesFactura, agruparIVAParaAFIP, agruparIVAPorAlicuota, getNombreCondicionIVA, calcularSubtotal } from '../utils/calculos';
+import { DEFAULTS, TIPOS_COMPROBANTE, ALICUOTAS_IVA } from '../constants/afip';
 
 const CrearFactura = () => {
   const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente } = useArca();
 
   const [formData, setFormData] = useState<FormData>({
-    TipoFactura: 'B',
-    DocTipo: '80',
+    TipoFactura: DEFAULTS.TIPO_FACTURA,
+    DocTipo: DEFAULTS.TIPO_DOCUMENTO,
     DocNro: '',
-    Concepto: '1',
-    CondicionIVA: '5', // Por defecto Consumidor Final
+    Concepto: DEFAULTS.CONCEPTO,
+    CondicionIVA: DEFAULTS.CONDICION_IVA,
     RazonSocial: '',
     Domicilio: '',
     Articulos: [],
@@ -30,13 +31,13 @@ const CrearFactura = () => {
   });
 
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
-    cuit: '20409378472',
+    cuit: DEFAULTS.CUIT_EMISOR,
     razonSocial: '',
     domicilio: '',
-    condicionIVA: '1',
+    condicionIVA: DEFAULTS.CONDICION_IVA_EMISOR,
     iibb: '',
     inicioActividades: '',
-    puntoVenta: 1,
+    puntoVenta: DEFAULTS.PUNTO_VENTA,
   });
 
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
@@ -46,24 +47,13 @@ const CrearFactura = () => {
   const [loadingEmisor, setLoadingEmisor] = useState(false);
 
   const recalcularTotales = (articulos: Articulo[]): void => {
-    let totalNeto = 0;
-    let totalIVA = 0;
-
-    articulos.forEach((articulo) => {
-      const subtotal = articulo.cantidad * articulo.precioUnitario;
-      totalNeto += subtotal;
-
-      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
-      if (alicuota) {
-        totalIVA += subtotal * (alicuota.porcentaje / 100);
-      }
-    });
-
+    const totales = calcularTotalesFactura(articulos);
+    
     setFormData((prev) => ({
       ...prev,
-      ImpNeto: totalNeto.toFixed(2),
-      ImpIVA: totalIVA.toFixed(2),
-      ImpTotal: (totalNeto + totalIVA).toFixed(2),
+      ImpNeto: totales.neto.toFixed(2),
+      ImpIVA: totales.iva.toFixed(2),
+      ImpTotal: totales.total.toFixed(2),
     }));
   };
 
@@ -75,10 +65,10 @@ const CrearFactura = () => {
     const nuevoArticulo: Articulo = {
       codigo: '',
       descripcion: '',
-      cantidad: 1,
-      unidadMedida: 'unidad',
+      cantidad: DEFAULTS.CANTIDAD_DEFAULT,
+      unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
       precioUnitario: undefined,
-      alicuotaIVA: '5', // Por defecto IVA 21%
+      alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
     };
     const nuevosArticulos = [...formData.Articulos, nuevoArticulo];
     setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
@@ -100,11 +90,11 @@ const CrearFactura = () => {
 
   const limpiarFormulario = (): void => {
     setFormData({
-      TipoFactura: 'B',
-      DocTipo: '80',
+      TipoFactura: DEFAULTS.TIPO_FACTURA,
+      DocTipo: DEFAULTS.TIPO_DOCUMENTO,
       DocNro: '',
-      Concepto: '1',
-      CondicionIVA: '5',
+      Concepto: DEFAULTS.CONCEPTO,
+      CondicionIVA: DEFAULTS.CONDICION_IVA,
       Articulos: [],
       ImpNeto: '0.00',
       ImpIVA: '0.00',
@@ -130,38 +120,10 @@ const CrearFactura = () => {
       return
     }
 
-    // Agrupar artículos por alícuota de IVA
-    const ivaAgrupado = new Map<string, { BaseImp: number; Importe: number }>();
+    // Usar utilidad para agrupar IVA
+    const ivaArray = agruparIVAParaAFIP(formData.Articulos);
 
-    formData.Articulos.forEach((articulo) => {
-      const subtotal = articulo.cantidad * articulo.precioUnitario;
-      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
-
-      if (alicuota) {
-        const importeIVA = subtotal * (alicuota.porcentaje / 100);
-
-        if (ivaAgrupado.has(articulo.alicuotaIVA)) {
-          const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
-          ivaAgrupado.set(articulo.alicuotaIVA, {
-            BaseImp: actual.BaseImp + subtotal,
-            Importe: actual.Importe + importeIVA,
-          });
-        } else {
-          ivaAgrupado.set(articulo.alicuotaIVA, {
-            BaseImp: subtotal,
-            Importe: importeIVA,
-          });
-        }
-      }
-    });
-
-    const ivaArray = Array.from(ivaAgrupado.entries()).map(([id, valores]) => ({
-      Id: parseInt(id),
-      BaseImp: parseFloat(valores.BaseImp.toFixed(2)),
-      Importe: parseFloat(valores.Importe.toFixed(2)),
-    }));
-
-    const cbteTipo = formData.TipoFactura === 'A' ? 1 : 6;
+    const cbteTipo = formData.TipoFactura === 'A' ? TIPOS_COMPROBANTE.FACTURA_A : TIPOS_COMPROBANTE.FACTURA_B;
     const docTipo = parseInt(formData.DocTipo);
     const docNro = formData.DocTipo === '99' ? 0 : parseInt(formData.DocNro);
     const concepto = parseInt(formData.Concepto);
@@ -324,7 +286,7 @@ const CrearFactura = () => {
 
     toast.loading('Generando PDF...', { id: 'pdf-generation' });
 
-    // Preparar artículos para el PDF
+    // Preparar artículos para el PDF usando utilidades
     const articulosPDF = formData.Articulos.map(articulo => {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
       return {
@@ -335,48 +297,20 @@ const CrearFactura = () => {
         precioUnitario: articulo.precioUnitario,
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
-        subtotal: articulo.cantidad * articulo.precioUnitario,
+        subtotal: calcularSubtotal(articulo),
       };
     });
 
-    // Agrupar IVAs para el PDF
-    const ivaAgrupado = new Map<string, { porcentaje: number; baseImponible: number; importeIVA: number }>();
-
-    formData.Articulos.forEach((articulo) => {
-      const subtotal = articulo.cantidad * articulo.precioUnitario;
-      const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA);
-
-      if (alicuota) {
-        const importeIVA = subtotal * (alicuota.porcentaje / 100);
-
-        if (ivaAgrupado.has(articulo.alicuotaIVA)) {
-          const actual = ivaAgrupado.get(articulo.alicuotaIVA)!;
-          ivaAgrupado.set(articulo.alicuotaIVA, {
-            porcentaje: alicuota.porcentaje,
-            baseImponible: actual.baseImponible + subtotal,
-            importeIVA: actual.importeIVA + importeIVA,
-          });
-        } else {
-          ivaAgrupado.set(articulo.alicuotaIVA, {
-            porcentaje: alicuota.porcentaje,
-            baseImponible: subtotal,
-            importeIVA: importeIVA,
-          });
-        }
-      }
-    });
-
-    const ivasAgrupados = Array.from(ivaAgrupado.entries()).map(([alicuota, valores]) => ({
-      alicuota,
-      porcentaje: valores.porcentaje,
-      baseImponible: valores.baseImponible,
-      importeIVA: valores.importeIVA,
+    // Usar utilidad para agrupar IVAs
+    const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos).map(iva => ({
+      alicuota: iva.id,
+      porcentaje: iva.porcentaje,
+      baseImponible: iva.baseImponible,
+      importeIVA: iva.importeIVA,
     }));
 
-    // Obtener nombre de condición IVA
-    const condicionIVANombre = formData.TipoFactura === 'B'
-      ? (formData.CondicionIVA === '4' ? 'IVA Sujeto Exento' : 'Consumidor Final')
-      : 'Responsable Inscripto';
+    // Obtener nombre de condición IVA usando utilidad
+    const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura);
 
     // Crear datos extendidos para el PDF
     const pdfData = {

@@ -6,6 +6,7 @@ import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Search, Save, Building2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { CONDICIONES_IVA_EMISOR } from '@render/constants/afip'
 
 export interface DatosEmisor {
   cuit: string
@@ -23,12 +24,6 @@ interface ConfiguracionEmisorProps {
   datosIniciales?: DatosEmisor
   loadingBusqueda?: boolean
 }
-
-const CONDICIONES_IVA_EMISOR = [
-  { id: '1', nombre: 'Responsable Inscripto' },
-  { id: '6', nombre: 'Responsable Monotributo' },
-  { id: '4', nombre: 'Exento' },
-]
 
 export function ConfiguracionEmisor({
   onGuardar,

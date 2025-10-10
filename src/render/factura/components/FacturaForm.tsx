@@ -6,6 +6,7 @@ import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
 import { Search, X } from 'lucide-react'
+import { ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA } from '@render/constants/afip'
 
 export interface Articulo {
   codigo?: string
@@ -30,48 +31,9 @@ export interface FormData {
   ImpTotal: string
 }
 
-// Alícuotas de IVA según AFIP
-export const ALICUOTAS_IVA = [
-  { id: '3', nombre: '0%', porcentaje: 0 },
-  { id: '4', nombre: '10.5%', porcentaje: 10.5 },
-  { id: '5', nombre: '21%', porcentaje: 21 },
-  { id: '6', nombre: '27%', porcentaje: 27 },
-  { id: '8', nombre: '5%', porcentaje: 5 },
-  { id: '9', nombre: '2.5%', porcentaje: 2.5 },
-]
+// Re-exportar constantes para compatibilidad con código existente
+export { ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA }
 
-// Condiciones de IVA
-export const CONDICIONES_IVA = [
-  { id: '1', nombre: 'IVA Responsable Inscripto' },
-  { id: '4', nombre: 'IVA Sujeto Exento' },
-  { id: '5', nombre: 'Consumidor Final' },
-  { id: '6', nombre: 'Responsable Monotributo' },
-]
-
-// Tipos de Documento
-export const TIPOS_DOCUMENTO = [
-  { id: '80', nombre: 'CUIT' },
-  { id: '96', nombre: 'DNI' },
-  { id: '99', nombre: 'Consumidor Final' },
-]
-
-// Conceptos de Facturación
-export const CONCEPTOS = [
-  { id: '1', nombre: 'Productos' },
-  { id: '2', nombre: 'Servicios' },
-  { id: '3', nombre: 'Productos y Servicios' },
-]
-
-// Unidades de Medida
-export const UNIDADES_MEDIDA = [
-  { id: 'unidad', nombre: 'Unidad' },
-  { id: 'kg', nombre: 'Kilogramo' },
-  { id: 'metro', nombre: 'Metro' },
-  { id: 'litro', nombre: 'Litro' },
-  { id: 'hora', nombre: 'Hora' },
-  { id: 'mes', nombre: 'Mes' },
-  { id: 'servicio', nombre: 'Servicio' },
-]
 
 interface FacturaFormProps {
   formData: FormData
