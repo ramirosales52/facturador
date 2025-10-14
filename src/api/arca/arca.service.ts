@@ -306,6 +306,7 @@ export class ArcaService {
     CAE: string
     CAEFchVto: string
     FchProceso?: string
+    customPath?: string
   }) {
     try {
       // Generar QR para incluir en el PDF
@@ -343,10 +344,35 @@ export class ArcaService {
 
       // Ruta absoluta de los logos y convertirlos a base64
       // En desarrollo: dist/main -> src/render/assets
-      // Necesitamos ir 2 niveles arriba desde dist/main y luego a src/render/assets
+      // En producción (empaquetado): buscar en resources/assets
       const projectRoot = join(__dirname, '../..')
-      const logoPathRaw = join(projectRoot, 'src/render/assets/logo.png')
-      const arcaLogoPathRaw = join(projectRoot, 'src/render/assets/ARCA.png')
+      
+      // Intentar diferentes rutas según el entorno
+      let logoPathRaw: string
+      let arcaLogoPathRaw: string
+      
+      // En app empaquetada (process.resourcesPath existe cuando está empaquetado)
+      const isPackaged = process.resourcesPath !== undefined
+      
+      if (isPackaged) {
+        // En app empaquetada, assets están en app.asar/assets o app.asar.unpacked/assets
+        const assetsPath = join(process.resourcesPath, 'app.asar', 'assets')
+        logoPathRaw = join(assetsPath, 'logo.png')
+        arcaLogoPathRaw = join(assetsPath, 'ARCA.png')
+        
+        console.log('App empaquetada, buscando en:', assetsPath)
+      } else {
+        // En desarrollo
+        logoPathRaw = join(projectRoot, 'src/render/assets/logo.png')
+        arcaLogoPathRaw = join(projectRoot, 'src/render/assets/ARCA.png')
+        
+        console.log('App en desarrollo, buscando en:', projectRoot)
+      }
+      
+      console.log('Logo path:', logoPathRaw)
+      console.log('ARCA logo path:', arcaLogoPathRaw)
+      console.log('Logo exists:', existsSync(logoPathRaw))
+      console.log('ARCA exists:', existsSync(arcaLogoPathRaw))
       
       const logoBase64 = await this.imageToBase64(logoPathRaw)
       const arcaLogoBase64 = await this.imageToBase64(arcaLogoPathRaw)
@@ -364,11 +390,17 @@ export class ArcaService {
       // Nombre del archivo
       const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`
 
-      // Directorio de destino en el escritorio del usuario
-      // En Windows: C:\Users\[usuario]\Desktop
-      // En Linux/Mac: /home/[usuario]/Desktop
-      const desktopPath = join(homedir(), 'Desktop')
-      const outputDir = desktopPath
+      // Directorio de destino
+      // Si hay customPath usar ese, sino usar Desktop
+      let outputDir: string
+      if (facturaInfo.customPath && existsSync(facturaInfo.customPath)) {
+        outputDir = facturaInfo.customPath
+      } else {
+        // En Windows: C:\Users\[usuario]\Desktop
+        // En Linux/Mac: /home/[usuario]/Desktop
+        const desktopPath = join(homedir(), 'Desktop')
+        outputDir = desktopPath
+      }
       
       // Crear el directorio si no existe
       if (!existsSync(outputDir)) {

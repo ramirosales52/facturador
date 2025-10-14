@@ -1,13 +1,15 @@
 import { Button } from '@render/components/ui/button'
-import { Copy, FolderOpen, FileText } from 'lucide-react'
+import { Copy, FolderOpen, FileText, FolderInput } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PDFActionsProps {
   pdfUrl: string | null
   onGenerar: () => Promise<void>
+  pdfSavePath?: string
+  onSelectFolder?: () => Promise<void>
 }
 
-export function PDFActions({ pdfUrl, onGenerar }: PDFActionsProps) {
+export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: PDFActionsProps) {
   const copiarAlPortapapeles = async (texto: string, tipo: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(texto)
@@ -22,30 +24,52 @@ export function PDFActions({ pdfUrl, onGenerar }: PDFActionsProps) {
     if (!pdfUrl) return
     
     try {
-      // Obtener la carpeta del archivo (eliminar el nombre del archivo)
+      // Obtener la carpeta del archivo
       const carpeta = pdfUrl.substring(0, pdfUrl.lastIndexOf('/'))
       
-      // En Windows WSL, convertir la ruta
-      const carpetaWindows = carpeta.replace('/mnt/c/', 'C:/')
-      
-      // Abrir el explorador de archivos
-      window.open(`file:///${carpetaWindows}`, '_blank')
-      
-      toast.success('Abriendo carpeta del PDF')
+      // Usar el API de Electron para abrir la carpeta
+      // @ts-ignore - Electron API
+      if (window.electron?.shell?.openPath) {
+        // @ts-ignore
+        await window.electron.shell.openPath(carpeta)
+        toast.success('Abriendo carpeta del PDF')
+      } else {
+        // Fallback para desarrollo
+        toast.info('Función disponible solo en la aplicación empaquetada')
+      }
     }
-    catch {
+    catch (error) {
+      console.error('Error al abrir carpeta:', error)
       toast.error('Error al abrir la carpeta')
     }
   }
 
   return (
     <div>
+      {/* Carpeta de guardado */}
+      {onSelectFolder && (
+        <div className="mt-4 flex gap-2 items-center">
+          <div className="flex-1 bg-gray-50 border rounded px-3 py-2 text-sm text-gray-700">
+            <span className="font-medium">Guardar en: </span>
+            {pdfSavePath || 'Escritorio'}
+          </div>
+          <Button onClick={onSelectFolder} variant="outline" size="icon" title="Seleccionar carpeta">
+            <FolderInput className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Botón generar PDF */}
-      <div className="mt-4">
-        <Button onClick={onGenerar} variant="outline" className="w-full">
+      <div className="mt-4 flex gap-2">
+        <Button onClick={onGenerar} variant="outline" className="flex-1">
           <FileText className="mr-2 h-4 w-4" />
           Generar PDF
         </Button>
+        {onSelectFolder && (
+          <Button onClick={onSelectFolder} variant="outline" size="icon" title="Cambiar carpeta">
+            <FolderInput className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Ruta del PDF */}

@@ -18,6 +18,11 @@ const config = {
     'dist/render/**/*',
     'package.json',
     {
+      from: 'src/render/assets',
+      to: 'assets',
+      filter: ['**/*']
+    },
+    {
       from: 'node_modules',
       to: 'node_modules',
       filter: [

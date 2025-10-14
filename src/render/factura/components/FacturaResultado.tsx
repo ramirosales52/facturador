@@ -26,9 +26,11 @@ interface FacturaResultadoProps {
   pdfUrl: string | null
   onGenerarPDF: () => Promise<void>
   htmlPreview?: string
+  pdfSavePath?: string
+  onSelectFolder?: () => Promise<void>
 }
 
-export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF, htmlPreview }: FacturaResultadoProps) {
+export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF, htmlPreview, pdfSavePath, onSelectFolder }: FacturaResultadoProps) {
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
       {resultado.success
@@ -65,7 +67,7 @@ export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF, htmlP
 
               {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={qrUrl} />}
 
-              <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} />
+              <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} pdfSavePath={pdfSavePath} onSelectFolder={onSelectFolder} />
             </div>
           )
         : (

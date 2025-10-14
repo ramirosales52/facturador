@@ -49,6 +49,61 @@ const CrearFactura = () => {
   const [loadingContribuyente, setLoadingContribuyente] = useState(false);
   const [loadingEmisor, setLoadingEmisor] = useState(false);
   const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false);
+  const [pdfSavePath, setPdfSavePath] = useState<string>('');
+
+  // Cargar carpeta guardada al inicio
+  useEffect(() => {
+    const loadSavedPath = async () => {
+      try {
+        // @ts-ignore
+        if (window.electron?.store?.get) {
+          // @ts-ignore
+          const savedPath = await window.electron.store.get('pdfSavePath')
+          if (savedPath) {
+            setPdfSavePath(savedPath)
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar carpeta guardada:', error)
+      }
+    }
+    loadSavedPath()
+  }, []);
+
+  /**
+   * Seleccionar carpeta para guardar PDFs
+   */
+  const handleSelectFolder = async (): Promise<void> => {
+    try {
+      // @ts-ignore
+      if (window.electron?.dialog?.showOpenDialog) {
+        // @ts-ignore
+        const result = await window.electron.dialog.showOpenDialog({
+          properties: ['openDirectory'],
+          title: 'Seleccionar carpeta para guardar PDFs'
+        })
+        
+        if (!result.canceled && result.filePaths.length > 0) {
+          const selectedPath = result.filePaths[0]
+          setPdfSavePath(selectedPath)
+          
+          // Guardar la preferencia
+          // @ts-ignore
+          if (window.electron?.store?.set) {
+            // @ts-ignore
+            await window.electron.store.set('pdfSavePath', selectedPath)
+          }
+          
+          toast.success('Carpeta seleccionada correctamente')
+        }
+      } else {
+        toast.info('Función disponible solo en la aplicación empaquetada')
+      }
+    } catch (error) {
+      console.error('Error al seleccionar carpeta:', error)
+      toast.error('Error al seleccionar carpeta')
+    }
+  };
 
   const recalcularTotales = (articulos: Articulo[]): void => {
     const totales = calcularTotalesFactura(articulos);
@@ -63,6 +118,16 @@ const CrearFactura = () => {
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // Si es Factura B y se cambió el IVA Global, actualizar todos los artículos
+    if (field === 'IVAGlobal' && formData.TipoFactura === 'B') {
+      const articulosActualizados = formData.Articulos.map(articulo => ({
+        ...articulo,
+        alicuotaIVA: value,
+      }));
+      setFormData((prev) => ({ ...prev, Articulos: articulosActualizados, [field]: value }));
+      recalcularTotales(articulosActualizados);
+    }
   };
 
   const handleArticuloAdd = (): void => {
@@ -72,7 +137,8 @@ const CrearFactura = () => {
       cantidad: DEFAULTS.CANTIDAD_DEFAULT,
       unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
       precioUnitario: undefined,
-      alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
+      // Para Factura B usar el IVA global seleccionado
+      alicuotaIVA: formData.TipoFactura === 'B' && formData.IVAGlobal ? formData.IVAGlobal : DEFAULTS.ALICUOTA_IVA_DEFAULT,
     };
     const nuevosArticulos = [...formData.Articulos, nuevoArticulo];
     setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
@@ -435,6 +501,8 @@ const CrearFactura = () => {
         iibb: datosEmisor.iibb || 'Exento',
         inicioActividades: datosEmisor.inicioActividades,
       },
+      // Agregar carpeta de destino personalizada
+      customPath: pdfSavePath || undefined,
     };
 
     const pdfResponse = await generarPDF(pdfData);
@@ -495,6 +563,8 @@ const CrearFactura = () => {
                 pdfUrl={pdfUrl}
                 onGenerarPDF={handleDescargarPDF}
                 htmlPreview={htmlPreview || undefined}
+                pdfSavePath={pdfSavePath}
+                onSelectFolder={handleSelectFolder}
               />
             </div>
           )}
