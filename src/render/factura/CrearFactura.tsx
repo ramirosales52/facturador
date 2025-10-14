@@ -222,7 +222,39 @@ const CrearFactura = () => {
           },
         };
 
-        const htmlContent = await generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit));
+        // Generar vista previa HTML
+        // Para la vista previa en el navegador, cargamos los logos como base64
+        let logoForPreview = ''
+        let arcaLogoForPreview = ''
+        try {
+          const logoModule = await import('../assets/logo.png')
+          const logoPath = logoModule.default
+          const response = await fetch(logoPath)
+          const blob = await response.blob()
+          logoForPreview = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        } catch (error) {
+          console.error('Error cargando logo para vista previa:', error)
+        }
+
+        try {
+          const arcaLogoModule = await import('../assets/ARCA.png')
+          const arcaLogoPath = arcaLogoModule.default
+          const response = await fetch(arcaLogoPath)
+          const blob = await response.blob()
+          arcaLogoForPreview = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+        } catch (error) {
+          console.error('Error cargando logo ARCA para vista previa:', error)
+        }
+
+        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview);
         setHtmlPreview(htmlContent);
       }
     }

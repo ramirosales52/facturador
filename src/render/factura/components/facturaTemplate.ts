@@ -72,22 +72,7 @@ function formatearFecha(fecha: string): string {
  * Genera el HTML para el PDF de la factura
  * Este template se basa en el formato oficial de AFIP
  */
-export async function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: string, cuit: number): Promise<string> {
-  // Convertir el logo a base64 para que funcione en el PDF
-  let logoBase64 = ''
-  try {
-    const logoPath = new URL('../assets/logo.png', import.meta.url).href
-    const response = await fetch(logoPath)
-    const blob = await response.blob()
-    logoBase64 = await new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })
-  } catch (error) {
-    console.error('Error cargando logo:', error)
-  }
-
+export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: string, cuit: number, logoPath?: string, arcaLogoPath?: string): string {
   const fecha = formatearFecha(facturaInfo.FchProceso || new Date().toISOString().split('T')[0])
   const fechaVtoCAE = formatearFecha(facturaInfo.CAEFchVto)
   const ptoVta = String(facturaInfo.PtoVta).padStart(4, '0')
@@ -202,14 +187,16 @@ export async function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl
 body, html {
   margin: 0;
   padding: 0;
-  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 .bill-container{
   width: 750px;
   position: relative;
   left:0;
   right: 0;
-  margin: auto;
+  margin: 0 auto;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -225,15 +212,13 @@ body, html {
 
 .bill-footer-section {
   width: 750px;
-  margin: 20px auto 0 auto;
+  margin: auto auto 0 auto;
+  margin-top: auto;
 }
 
 .bill-footer {
   width: 750px;
   margin: 0 auto;
-}
-
-.row-footer-combined {
   border-top: 2px solid black;
 }
 
@@ -264,7 +249,7 @@ body, html {
 .footer-cae {
   width: 40%;
   text-align: left;
-  padding-left: 20px;
+  padding-left: 10px;
 }
 
 .footer-totals {
@@ -410,7 +395,7 @@ body, html {
 ${tipoFactura}
 </div>
 <div class="text-center" style="padding: 10px 0;">
-<img src="${logoBase64}" alt="Logo" style="max-width: 200px; max-height: 80px;">
+${logoPath ? `<img src="${logoPath.startsWith('data:') ? logoPath : 'file:///' + logoPath}" alt="Logo" style="max-width: 250px; max-height: 100px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
 </div>
 <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
 <p><strong>Domicilio Comercial:</strong> ${emisor.domicilio}</p>
@@ -499,16 +484,16 @@ ${regimenTransparenciaHTML}
 </td>
 <td class="footer-cae">
 <div>
-<div class="margin-b-10">
+<div style="margin-bottom: 5px;">
 <strong>CAE Nº:</strong> ${facturaInfo.CAE}
 </div>
-<div class="margin-b-10">
+<div style="margin-bottom: 5px;">
 <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
 </div>
-<div style="margin-top: 15px; text-align: center;">
-<img src="${logoBase64}" alt="AFIP Logo" style="max-width: 80px; display: block; margin: 0 auto 5px auto;">
-<strong style="font-size: 11px;">Comprobante Autorizado</strong>
-</div>
+${arcaLogoPath ? `<div style="margin-top: 10px; text-align: left;">
+<img src="${arcaLogoPath.startsWith('data:') ? arcaLogoPath : 'file:///' + arcaLogoPath}" alt="AFIP Logo" style="max-width: 100px; display: block; margin-bottom: 3px;">
+<strong style="font-size: 10px;">Comprobante Autorizado</strong>
+</div>` : '<div style="margin-top: 10px;"><strong style="font-size: 10px;">Comprobante Autorizado</strong></div>'}
 </div>
 </td>
 <td class="footer-totals">

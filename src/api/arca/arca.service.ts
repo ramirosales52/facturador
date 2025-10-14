@@ -279,9 +279,17 @@ export class ArcaService {
       // Generar URL del QR code como imagen
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResult.qrUrl || '')}`
 
+      // Ruta absoluta de los logos - convertir a formato file:// para Puppeteer
+      const logoPathRaw = join(__dirname, '../../render/assets/logo.png')
+      const arcaLogoPathRaw = join(__dirname, '../../render/assets/ARCA.png')
+      
+      // En Windows, Puppeteer necesita file:/// con barras normales
+      const logoPath = logoPathRaw.replace(/\\/g, '/')
+      const arcaLogoPath = arcaLogoPathRaw.replace(/\\/g, '/')
+
       // Importar y usar la función de generación de HTML desde facturaTemplate
       const { generarHTMLFactura } = await import('@render/factura/components/facturaTemplate')
-      const html = generarHTMLFactura(facturaInfo, qrImageUrl, ArcaConfig.CUIT)
+      const html = generarHTMLFactura(facturaInfo, qrImageUrl, ArcaConfig.CUIT, logoPath, arcaLogoPath)
 
       // Nombre del archivo
       const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`
