@@ -80,6 +80,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
   // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
   const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
+  const codigoComprobante = String(facturaInfo.CbteTipo).padStart(2, '0')
   const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
   const razonSocial = facturaInfo.RazonSocial || 'Cliente'
   const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
@@ -102,7 +103,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar filas de artículos
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
     const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
-    
+
     // Para Factura B, el subtotal incluye el IVA
     // Para Factura A, el subtotal es sin IVA
     const subtotalMostrar = tipoFactura === 'B' ? subtotal : subtotal
@@ -160,7 +161,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
-  
+
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
   const regimenTransparenciaHTML = tipoFactura === 'B' ? `
 <div class="regimen-transparencia">
@@ -213,7 +214,6 @@ body, html {
 .bill-footer-section {
   width: 750px;
   margin: auto auto 0 auto;
-  margin-top: auto;
 }
 
 .bill-footer {
@@ -413,8 +413,9 @@ body, html {
 <div class="bill-type">
 ${tipoFactura}
 </div>
+<div style="text-align: center; font-size: 11px; margin-top: 52px; font-weight: 600;">Cod. ${codigoComprobante}</div>
 <div class="text-center" style="padding: 10px 0;">
-${logoPath ? `<img src="${logoPath}" alt="Logo" style="max-width: 250px; max-height: 100px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
+${logoPath ? `<img src="${logoPath}" alt="Logo" style="max-width: 280px; max-height: 110px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
 </div>
 <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
 <p><strong>Domicilio:</strong> ${emisor.domicilio}</p>
@@ -506,7 +507,7 @@ ${regimenTransparenciaHTML}
 <div style="margin-bottom: 5px;">
 <strong>CAE Nº:</strong> ${facturaInfo.CAE}
 </div>
-<div style="margin-bottom: 5px;">
+<div style="margin-bottom: 15px;">
 <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
 </div>
 ${arcaLogoPath ? `<div style="margin-top: 10px; text-align: left;">

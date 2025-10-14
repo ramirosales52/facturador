@@ -1,8 +1,38 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { app, ipcMain, dialog } from 'electron';
+import { app, ipcMain, dialog, shell } from 'electron';
 import { findAvailablePort } from './utils/port-finder';
 import { extraerCUITDeArgumentos } from './utils/cuit-validator';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+// Store simple sin dependencias
+const storePath = join(app.getPath('userData'), 'config.json');
+const simpleStore = {
+  get: (key: string) => {
+    try {
+      if (existsSync(storePath)) {
+        const data = JSON.parse(readFileSync(storePath, 'utf-8'));
+        return data[key];
+      }
+    } catch (error) {
+      console.error('Error reading store:', error);
+    }
+    return undefined;
+  },
+  set: (key: string, value: any) => {
+    try {
+      let data = {};
+      if (existsSync(storePath)) {
+        data = JSON.parse(readFileSync(storePath, 'utf-8'));
+      }
+      data[key] = value;
+      writeFileSync(storePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Error writing store:', error);
+    }
+  }
+};
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 app.disableHardwareAcceleration()
@@ -37,6 +67,25 @@ ipcMain.handle('get-command-line-cuit', () => {
 // IPC para que el renderer obtenga el puerto del backend
 ipcMain.handle('get-backend-port', () => {
   return BACKEND_PORT;
+});
+
+// IPC para shell.openPath
+ipcMain.handle('shell-open-path', async (_event, path: string) => {
+  return await shell.openPath(path);
+});
+
+// IPC para dialog.showOpenDialog
+ipcMain.handle('dialog-show-open', async (_event, options: any) => {
+  return await dialog.showOpenDialog(options);
+});
+
+// IPC para electron-store
+ipcMain.handle('store-get', (_event, key: string) => {
+  return simpleStore.get(key);
+});
+
+ipcMain.handle('store-set', (_event, key: string, value: any) => {
+  simpleStore.set(key, value);
 });
 
 async function electronAppInit() {

@@ -436,9 +436,9 @@ export function FacturaForm({
             <div className="space-y-1">
               <Label htmlFor="ImpIVA" className="text-xs">
                 IVA {formData.TipoFactura === 'B' && formData.IVAGlobal 
-                  ? `(${ALICUOTAS_IVA.find(a => a.id === formData.IVAGlobal)?.porcentaje || 21}%)`
+                  ? `(${ALICUOTAS_IVA.find(a => a.id === formData.IVAGlobal)?.porcentaje || 0}%)`
                   : formData.TipoFactura === 'A' && formData.Articulos.length > 0
-                  ? `(${ALICUOTAS_IVA.find(a => a.id === formData.Articulos[0]?.alicuotaIVA)?.porcentaje || 21}%)`
+                  ? `(${ALICUOTAS_IVA.find(a => a.id === formData.Articulos[0]?.alicuotaIVA)?.porcentaje || 0}%)`
                   : ''}
               </Label>
               <Input

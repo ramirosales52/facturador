@@ -49,9 +49,8 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       {/* Carpeta de guardado */}
       {onSelectFolder && (
         <div className="mt-4 flex gap-2 items-center">
-          <div className="flex-1 bg-gray-50 border rounded px-3 py-2 text-sm text-gray-700">
-            <span className="font-medium">Guardar en: </span>
-            {pdfSavePath || 'Escritorio'}
+          <div className="flex-1 bg-gray-50 border rounded px-3 py-2 text-sm text-gray-700 font-mono truncate">
+            {pdfSavePath || 'Escritorio (por defecto)'}
           </div>
           <Button onClick={onSelectFolder} variant="outline" size="icon" title="Seleccionar carpeta">
             <FolderInput className="h-4 w-4" />
@@ -60,16 +59,11 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       )}
 
       {/* Botón generar PDF */}
-      <div className="mt-4 flex gap-2">
-        <Button onClick={onGenerar} variant="outline" className="flex-1">
+      <div className="mt-4">
+        <Button onClick={onGenerar} variant="outline" className="w-full">
           <FileText className="mr-2 h-4 w-4" />
           Generar PDF
         </Button>
-        {onSelectFolder && (
-          <Button onClick={onSelectFolder} variant="outline" size="icon" title="Cambiar carpeta">
-            <FolderInput className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
       {/* Ruta del PDF */}
