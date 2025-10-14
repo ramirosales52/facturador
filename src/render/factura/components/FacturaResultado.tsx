@@ -1,5 +1,6 @@
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { PDFActions } from './PDFActions'
+import { PDFPreview } from './PDFPreview'
 import { QRCode } from './QRCode'
 
 export interface FacturaResultadoData {
@@ -24,9 +25,10 @@ interface FacturaResultadoProps {
   qrUrl: string | null
   pdfUrl: string | null
   onGenerarPDF: () => Promise<void>
+  htmlPreview?: string
 }
 
-export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF }: FacturaResultadoProps) {
+export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF, htmlPreview }: FacturaResultadoProps) {
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
       {resultado.success
@@ -60,6 +62,8 @@ export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF }: Fac
               </div>
 
               {qrUrl && <QRCode qrUrl={qrUrl} />}
+
+              {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={qrUrl} />}
 
               <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} />
             </div>

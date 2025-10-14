@@ -8,6 +8,7 @@ import {
   FacturaResultadoData,
   Articulo,
 } from './components';
+import { generarHTMLFactura, FacturaPDFData } from './components/facturaTemplate';
 import { ConfiguracionEmisor, DatosEmisor } from './components/ConfiguracionEmisor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs';
 import { calcularTotalesFactura, agruparIVAParaAFIP, agruparIVAPorAlicuota, getNombreCondicionIVA, calcularSubtotal } from '../utils/calculos';
@@ -43,6 +44,7 @@ const CrearFactura = () => {
   const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [htmlPreview, setHtmlPreview] = useState<string | null>(null);
   const [loadingContribuyente, setLoadingContribuyente] = useState(false);
   const [loadingEmisor, setLoadingEmisor] = useState(false);
 
@@ -103,6 +105,7 @@ const CrearFactura = () => {
     setResultado(null);
     setQrUrl(null);
     setPdfUrl(null);
+    setHtmlPreview(null);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -111,6 +114,7 @@ const CrearFactura = () => {
     setResultado(null);
     setQrUrl(null);
     setPdfUrl(null);
+    setHtmlPreview(null);
 
     // Validar que haya datos del emisor
     if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
@@ -164,6 +168,54 @@ const CrearFactura = () => {
       const qrResponse = await generarQR(qrData);
       if (qrResponse.success && qrResponse.qrUrl) {
         setQrUrl(qrResponse.qrUrl);
+        
+        // Generar vista previa HTML
+        const articulosPDF = formData.Articulos.map(articulo => {
+          const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
+          return {
+            codigo: articulo.codigo || '',
+            descripcion: articulo.descripcion,
+            cantidad: articulo.cantidad,
+            unidadMedida: articulo.unidadMedida,
+            precioUnitario: articulo.precioUnitario,
+            alicuotaIVA: articulo.alicuotaIVA,
+            porcentajeIVA: alicuota?.porcentaje || 0,
+            subtotal: calcularSubtotal(articulo),
+          };
+        });
+
+        const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos).map(iva => ({
+          alicuota: iva.id,
+          porcentaje: iva.porcentaje,
+          baseImponible: iva.baseImponible,
+          importeIVA: iva.importeIVA,
+        }));
+
+        const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura);
+
+        const pdfData: FacturaPDFData = {
+          ...response.data,
+          ImpNeto: parseFloat(formData.ImpNeto),
+          ImpIVA: parseFloat(formData.ImpIVA),
+          TipoFactura: formData.TipoFactura,
+          CondicionIVA: condicionIVANombre,
+          RazonSocial: formData.RazonSocial,
+          Domicilio: formData.Domicilio,
+          Articulos: articulosPDF,
+          IVAsAgrupados: ivasAgrupados,
+          DatosEmisor: {
+            cuit: datosEmisor.cuit,
+            razonSocial: datosEmisor.razonSocial,
+            domicilio: datosEmisor.domicilio,
+            condicionIVA: datosEmisor.condicionIVA === '1' ? 'Responsable Inscripto' : 
+                          datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+            iibb: datosEmisor.iibb || 'Exento',
+            inicioActividades: datosEmisor.inicioActividades,
+          },
+        };
+
+        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit));
+        setHtmlPreview(htmlContent);
       }
     }
   };
@@ -387,6 +439,7 @@ const CrearFactura = () => {
                 qrUrl={qrUrl}
                 pdfUrl={pdfUrl}
                 onGenerarPDF={handleDescargarPDF}
+                htmlPreview={htmlPreview || undefined}
               />
             </div>
           )}

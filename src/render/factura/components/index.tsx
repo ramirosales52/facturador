@@ -2,5 +2,6 @@ export { FacturaForm, type FormData, type Articulo, ALICUOTAS_IVA, CONDICIONES_I
 export { FacturaResultado, type FacturaResultadoData } from './FacturaResultado'
 export { generarHTMLFactura, type FacturaPDFData } from './facturaTemplate'
 export { PDFActions } from './PDFActions'
+export { PDFPreview } from './PDFPreview'
 export { QRCode } from './QRCode'
 export { ConfiguracionEmisor, type DatosEmisor } from './ConfiguracionEmisor'

@@ -77,13 +77,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const fechaVtoCAE = formatearFecha(facturaInfo.CAEFchVto)
   const ptoVta = String(facturaInfo.PtoVta).padStart(4, '0')
   const nroComp = String(facturaInfo.CbteDesde).padStart(8, '0')
-  
+
   // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
   const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
   const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
   const razonSocial = facturaInfo.RazonSocial || 'Cliente'
   const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
-  
+
   // Datos del emisor
   const emisor = facturaInfo.DatosEmisor || {
     razonSocial: 'Tu Empresa',
@@ -93,16 +93,16 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     inicioActividades: '01/01/2020',
     cuit: String(cuit),
   }
-  
+
   // Formatear fecha de inicio de actividades
-  const inicioActividades = emisor.inicioActividades?.includes('-') 
-    ? formatearFecha(emisor.inicioActividades.replace(/-/g, '')) 
+  const inicioActividades = emisor.inicioActividades?.includes('-')
+    ? formatearFecha(emisor.inicioActividades.replace(/-/g, ''))
     : emisor.inicioActividades
-  
+
   // Generar filas de artículos (simplificado)
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
     const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
-    
+
     return `
     <tr>
       <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
@@ -113,7 +113,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     </tr>
     `
   }).join('')
-  
+
   // Si no hay artículos, mostrar una fila por defecto
   const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0 ? `
     <tr>
@@ -124,28 +124,18 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>$${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
     </tr>
   ` : articulosHTML
-  
+
   // Generar filas de IVA agrupado
   const ivasHTML = (facturaInfo.IVAsAgrupados || []).map(iva => `
-    <div class="row text-right">
-      <p class="col-10 margin-b-0">
-        <strong>IVA ${iva.porcentaje}%: $</strong>
-      </p>
-      <p class="col-2 margin-b-0">
-        <strong>${iva.importeIVA.toFixed(2)}</strong>
-      </p>
+    <div class="text-right margin-b-10">
+      <strong>IVA ${iva.porcentaje}%: $${iva.importeIVA.toFixed(2)}</strong>
     </div>
   `).join('')
-  
+
   // Si no hay IVAs agrupados, mostrar el IVA simple
   const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0 ? `
-    <div class="row text-right">
-      <p class="col-10 margin-b-0">
-        <strong>IVA 21%: $</strong>
-      </p>
-      <p class="col-2 margin-b-0">
-        <strong>${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
-      </p>
+    <div class="text-right margin-b-10">
+      <strong>IVA 21%: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
   ` : ivasHTML
 
@@ -162,14 +152,66 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   user-select: none;
   font-family: Arial, Helvetica, sans-serif;
 }
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
 .bill-container{
   width: 750px;
-  position: absolute;
+  position: relative;
   left:0;
   right: 0;
   margin: auto;
   border-collapse: collapse;
   font-size: 13px;
+}
+.bill-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 750px;
+  margin: auto;
+}
+
+.row-footer-combined {
+  border-top: 2px solid black;
+}
+
+.row-footer-combined td {
+  vertical-align: top;
+  padding: 10px;
+  border: none;
+}
+
+.row-footer-combined td > div {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  margin: 0;
+  padding: 0;
+}
+
+.footer-qr {
+  width: 25%;
+  text-align: left;
+}
+
+.footer-qr img {
+  width: 100%;
+  max-width: 150px;
+}
+
+.footer-cae {
+  width: 40%;
+  text-align: left;
+  padding-left: 20px;
+}
+
+.footer-totals {
+  width: 35%;
+  text-align: right;
 }
 
 .bill-emitter-row td{
@@ -392,53 +434,33 @@ ${articulosDefault}
 </div>
 </td>
 </tr>
-<tr class="bill-row total-row">
-<td colspan="2">
+</table>
+
+<table class="bill-container bill-footer">
+<tr class="bill-row row-footer-combined">
+<td class="footer-qr">
 <div>
-<div class="row text-right">
-<p class="col-10 margin-b-0">
-<strong>Subtotal: $</strong>
-</p>
-<p class="col-2 margin-b-0">
-<strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
-</p>
-</div>
-${ivasDefault}
-<div class="row text-right">
-<p class="col-10 margin-b-0">
-<strong>Importe total: $</strong>
-</p>
-<p class="col-2 margin-b-0">
-<strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
-</p>
-</div>
-</div>
-</td>
-</tr>
-<tr class="bill-row row-qrcode">
-<td>
-<div>
-<div class="row">
 <img id="qrcode" src="${qrImageUrl}" alt="QR Code">
 </div>
+</td>
+<td class="footer-cae">
+<div>
+<div class="margin-b-10">
+<strong>CAE Nº:</strong> ${facturaInfo.CAE}
+</div>
+<div>
+<strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+</div>
 </div>
 </td>
-<td>
+<td class="footer-totals">
 <div>
-<div class="row text-right margin-b-10">
-<strong>CAE Nº:&nbsp;</strong> ${facturaInfo.CAE}
+<div class="text-right margin-b-10">
+<strong>Subtotal: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
 </div>
-<div class="row text-right">
-<strong>Fecha de Vto. de CAE:&nbsp;</strong> ${fechaVtoCAE}
-</div>
-</div>
-</td>
-</tr>
-<tr class="bill-row row-details">
-<td colspan="2">
-<div>
-<div class="row text-center margin-b-10">
-<span style="vertical-align:bottom">Generado con Sistema de Facturación</span>
+${ivasDefault}
+<div class="text-right">
+<strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
 </div>
 </div>
 </td>
