@@ -277,8 +277,9 @@ export function FacturaForm({
                     </div>
                   </div>
 
-                  {/* Cantidad, Unidad, Precio e IVA */}
-                  <div className="grid grid-cols-5 gap-2">
+                  {/* Cantidad, Unidad, Precio, IVA y Subtotal */}
+                  <div className="flex gap-2">
+                    <div className="flex-1 grid grid-cols-5 gap-2">
                     <div className="space-y-2">
                       <Label htmlFor={`cantidad-${index}`} className="text-xs">Cantidad</Label>
                       <Input
@@ -330,30 +331,36 @@ export function FacturaForm({
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`iva-${index}`} className="text-xs">IVA</Label>
-                      <Select
-                        value={articulo.alicuotaIVA}
-                        onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
-                      >
-                        <SelectTrigger
-                          id={`iva-${index}`}
-                          className='bg-white'
+                    {/* Solo mostrar IVA para Factura A */}
+                    {formData.TipoFactura === 'A' && (
+                      <div className="space-y-2">
+                        <Label htmlFor={`iva-${index}`} className="text-xs">IVA</Label>
+                        <Select
+                          value={articulo.alicuotaIVA}
+                          onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALICUOTAS_IVA.map((alicuota) => (
-                            <SelectItem key={alicuota.id} value={alicuota.id}>
-                              {alicuota.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="flex items-end text-sm font-medium">
-                      <div className="bg-white border rounded-md px-3 py-2 w-full">
+                          <SelectTrigger
+                            id={`iva-${index}`}
+                            className='bg-white'
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALICUOTAS_IVA.map((alicuota) => (
+                              <SelectItem key={alicuota.id} value={alicuota.id}>
+                                {alicuota.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                    {/* Subtotal a la derecha */}
+                    <div className="w-32 space-y-2">
+                      <Label htmlFor={`subtotal-${index}`} className="text-xs text-right block">Subtotal</Label>
+                      <div className="bg-white border rounded-md px-3 py-2 text-right text-sm font-medium h-10 flex items-center justify-end">
                         ${totalConIVA ? totalConIVA.toFixed(2) : "0.00"}
                       </div>
                     </div>
@@ -370,7 +377,7 @@ export function FacturaForm({
           </div>
 
           {/* Totales */}
-          <div className="grid grid-cols-3 gap-3 border-t pt-3 bg-gray-50 p-3 rounded-lg">
+          <div className="gap-3 border-t pt-3 bg-gray-50 p-3 rounded-lg grid grid-cols-3">
             <div className="space-y-1">
               <Label htmlFor="ImpNeto" className="text-xs">Neto (sin IVA)</Label>
               <Input

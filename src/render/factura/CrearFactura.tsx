@@ -172,6 +172,14 @@ const CrearFactura = () => {
         // Generar vista previa HTML
         const articulosPDF = formData.Articulos.map(articulo => {
           const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
+          const subtotalSinIVA = calcularSubtotal(articulo);
+          const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100);
+          
+          // Para Factura B, el subtotal mostrado debe incluir el IVA
+          const subtotalMostrar = formData.TipoFactura === 'B' 
+            ? subtotalSinIVA + ivaArticulo 
+            : subtotalSinIVA;
+          
           return {
             codigo: articulo.codigo || '',
             descripcion: articulo.descripcion,
@@ -180,7 +188,7 @@ const CrearFactura = () => {
             precioUnitario: articulo.precioUnitario,
             alicuotaIVA: articulo.alicuotaIVA,
             porcentajeIVA: alicuota?.porcentaje || 0,
-            subtotal: calcularSubtotal(articulo),
+            subtotal: subtotalMostrar,
           };
         });
 
@@ -341,6 +349,14 @@ const CrearFactura = () => {
     // Preparar artículos para el PDF usando utilidades
     const articulosPDF = formData.Articulos.map(articulo => {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
+      const subtotalSinIVA = calcularSubtotal(articulo);
+      const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100);
+      
+      // Para Factura B, el subtotal mostrado debe incluir el IVA
+      const subtotalMostrar = formData.TipoFactura === 'B' 
+        ? subtotalSinIVA + ivaArticulo 
+        : subtotalSinIVA;
+      
       return {
         codigo: articulo.codigo || '',
         descripcion: articulo.descripcion,
@@ -349,7 +365,7 @@ const CrearFactura = () => {
         precioUnitario: articulo.precioUnitario,
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
-        subtotal: calcularSubtotal(articulo),
+        subtotal: subtotalMostrar,
       };
     });
 

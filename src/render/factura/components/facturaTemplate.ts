@@ -99,9 +99,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     ? formatearFecha(emisor.inicioActividades.replace(/-/g, ''))
     : emisor.inicioActividades
 
-  // Generar filas de artículos (simplificado)
+  // Generar filas de artículos
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
     const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
+    
+    // Para Factura B, el subtotal incluye el IVA
+    // Para Factura A, el subtotal es sin IVA
+    const subtotalMostrar = tipoFactura === 'B' ? subtotal : subtotal
 
     return `
     <tr>
@@ -109,7 +113,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>${articulo.descripcion}</td>
       <td>${articulo.cantidad.toFixed(2)}</td>
       <td>${articulo.unidadMedida || 'Unidad'}</td>
-      <td>$${subtotal.toFixed(2)}</td>
+      <td>$${subtotalMostrar.toFixed(2)}</td>
     </tr>
     `
   }).join('')
@@ -126,18 +130,46 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   ` : articulosHTML
 
   // Generar filas de IVA agrupado
-  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map(iva => `
+  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map(iva => {
+    const label = tipoFactura === 'B' ? `IVA contenido (${iva.porcentaje}%)` : `IVA ${iva.porcentaje}%`
+    return `
     <div class="text-right margin-b-10">
-      <strong>IVA ${iva.porcentaje}%: $${iva.importeIVA.toFixed(2)}</strong>
+      <strong>${label}: $${iva.importeIVA.toFixed(2)}</strong>
     </div>
-  `).join('')
+  `
+  }).join('')
 
   // Si no hay IVAs agrupados, mostrar el IVA simple
   const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0 ? `
     <div class="text-right margin-b-10">
-      <strong>IVA 21%: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA 21%'}: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
   ` : ivasHTML
+
+  // Generar la sección de totales según el tipo de factura
+  const totalesHTML = tipoFactura === 'A' ? `
+    <div class="text-right margin-b-10">
+      <strong>Subtotal: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
+    </div>
+    ${ivasDefault}
+    <div class="text-right">
+      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    </div>
+  ` : `
+    <div class="text-right">
+      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    </div>
+  `
+  
+  // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
+  const regimenTransparenciaHTML = tipoFactura === 'B' ? `
+<div class="regimen-transparencia">
+  <div style="margin-bottom: 3px;">
+    <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+  </div>
+  ${ivasDefault}
+</div>
+  ` : ''
 
   return `<!DOCTYPE html>
 <html>
@@ -173,6 +205,18 @@ body, html {
   right: 0;
   width: 750px;
   margin: auto;
+}
+
+.regimen-transparencia {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  margin-left: -375px;
+  width: 375px;
+  padding: 8px;
+  font-size: 10px;
+  border: 1px solid #999;
+  background: #f9f9f9;
 }
 
 .row-footer-combined {
@@ -351,8 +395,8 @@ body, html {
 <div class="bill-type">
 ${tipoFactura}
 </div>
-<div class="text-lg text-center">
-${emisor.razonSocial}
+<div class="text-center" style="padding: 10px 0;">
+<img src="file:///home/ramiro/Dev/facturador/src/render/assets/logo.png" alt="Logo" style="max-width: 200px; max-height: 80px;">
 </div>
 <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
 <p><strong>Domicilio Comercial:</strong> ${emisor.domicilio}</p>
@@ -363,14 +407,7 @@ ${emisor.razonSocial}
 <div class="text-lg">
 Factura
 </div>
-<div class="row">
-<p class="col-6 margin-b-0">
-<strong>Punto de Venta: ${ptoVta}</strong>
-</p>
-<p class="col-6 margin-b-0">
-<strong>Comp. Nro: ${nroComp}</strong> 
-</p>
-</div>
+<p><strong>Nro: ${ptoVta}-${nroComp}</strong></p>
 <p><strong>Fecha de Emisión:</strong> ${fecha}</p>
 <p><strong>CUIT:</strong> ${emisor.cuit}</p>
 <p><strong>Ingresos Brutos:</strong> ${emisor.iibb}</p>
@@ -436,6 +473,8 @@ ${articulosDefault}
 </tr>
 </table>
 
+${regimenTransparenciaHTML}
+
 <table class="bill-container bill-footer">
 <tr class="bill-row row-footer-combined">
 <td class="footer-qr">
@@ -448,20 +487,18 @@ ${articulosDefault}
 <div class="margin-b-10">
 <strong>CAE Nº:</strong> ${facturaInfo.CAE}
 </div>
-<div>
+<div class="margin-b-10">
 <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+</div>
+<div style="margin-top: 15px; text-align: center;">
+<img src="file:///home/ramiro/Dev/facturador/src/render/assets/logo.png" alt="AFIP Logo" style="max-width: 80px; display: block; margin: 0 auto 5px auto;">
+<strong style="font-size: 11px;">Comprobante Autorizado</strong>
 </div>
 </div>
 </td>
 <td class="footer-totals">
 <div>
-<div class="text-right margin-b-10">
-<strong>Subtotal: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
-</div>
-${ivasDefault}
-<div class="text-right">
-<strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
-</div>
+${totalesHTML}
 </div>
 </td>
 </tr>
