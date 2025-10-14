@@ -153,11 +153,11 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     </div>
     ${ivasDefault}
     <div class="text-right">
-      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+      <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   ` : `
     <div class="text-right">
-      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+      <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
   
@@ -198,7 +198,7 @@ body, html {
   right: 0;
   margin: 0 auto;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .regimen-transparencia {
@@ -220,6 +220,7 @@ body, html {
   width: 750px;
   margin: 0 auto;
   border-top: 2px solid black;
+  font-size: 12px;
 }
 
 .row-footer-combined td {
@@ -351,10 +352,19 @@ body, html {
 .row-details td > div, .row-qrcode td > div{
   border: 0;
   margin: 0 -1px 0 -2px;
-  padding: 0;
+  padding: 0 !important;
 }
 .row-details table td{
   padding: 5px;
+  text-align: center;
+}
+.row-details table td:first-child{
+  padding-left: 10px;
+  text-align: left;
+}
+.row-details table td:last-child{
+  padding-right: 10px;
+  text-align: right;
 }
 .row-details table tr:nth-child(1){
   border-top: 1px solid; 
@@ -362,6 +372,15 @@ body, html {
   background: #c0c0c0;
   font-weight: bold;
   text-align: center;
+}
+.row-details table tr:nth-child(1) td{
+  padding: 5px;
+}
+.row-details table tr:nth-child(1) td:first-child{
+  padding-left: 10px;
+}
+.row-details table tr:nth-child(1) td:last-child{
+  padding-right: 10px;
 }
 .row-details table tr +  tr{
   border-top: 1px solid #c0c0c0; 
@@ -395,10 +414,10 @@ body, html {
 ${tipoFactura}
 </div>
 <div class="text-center" style="padding: 10px 0;">
-${logoPath ? `<img src="${logoPath.startsWith('data:') ? logoPath : 'file:///' + logoPath}" alt="Logo" style="max-width: 250px; max-height: 100px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
+${logoPath ? `<img src="${logoPath}" alt="Logo" style="max-width: 250px; max-height: 100px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
 </div>
 <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
-<p><strong>Domicilio Comercial:</strong> ${emisor.domicilio}</p>
+<p><strong>Domicilio:</strong> ${emisor.domicilio}</p>
 <p><strong>Condición Frente al IVA:</strong> ${emisor.condicionIVA}</p>
 </td>
 <td>
@@ -456,7 +475,7 @@ Factura
 </tr>
 <tr class="bill-row row-details">
 <td colspan="2">
-<div>
+<div style="padding: 0;">
 <table>
 <tr>
 <td>Código</td>
@@ -491,7 +510,7 @@ ${regimenTransparenciaHTML}
 <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
 </div>
 ${arcaLogoPath ? `<div style="margin-top: 10px; text-align: left;">
-<img src="${arcaLogoPath.startsWith('data:') ? arcaLogoPath : 'file:///' + arcaLogoPath}" alt="AFIP Logo" style="max-width: 100px; display: block; margin-bottom: 3px;">
+<img src="${arcaLogoPath}" alt="AFIP Logo" style="max-width: 140px; display: block; margin-bottom: 3px;">
 <strong style="font-size: 10px;">Comprobante Autorizado</strong>
 </div>` : '<div style="margin-top: 10px;"><strong style="font-size: 10px;">Comprobante Autorizado</strong></div>'}
 </div>

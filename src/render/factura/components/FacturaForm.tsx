@@ -1,11 +1,12 @@
 import type { ChangeEvent, FormEvent } from 'react'
+import { useState } from 'react'
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
-import { Search, X } from 'lucide-react'
+import { Search, X, Edit3 } from 'lucide-react'
 import { ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA } from '@render/constants/afip'
 
 export interface Articulo {
@@ -29,6 +30,7 @@ export interface FormData {
   ImpNeto: string
   ImpIVA: string
   ImpTotal: string
+  IVAGlobal?: string // Para Factura B
 }
 
 // Re-exportar constantes para compatibilidad con código existente
@@ -47,6 +49,8 @@ interface FacturaFormProps {
   onLimpiar: () => void
   onConsultarContribuyente?: () => Promise<void>
   loadingContribuyente?: boolean
+  mostrarDatosCliente?: boolean
+  onToggleDatosCliente?: () => void
 }
 
 export function FacturaForm({
@@ -61,7 +65,14 @@ export function FacturaForm({
   onLimpiar,
   onConsultarContribuyente,
   loadingContribuyente,
+  mostrarDatosCliente: mostrarDatosClienteProp,
+  onToggleDatosCliente,
 }: FacturaFormProps) {
+  // Usar estado local solo si no se proporciona desde el padre
+  const [mostrarDatosClienteLocal, setMostrarDatosClienteLocal] = useState(false)
+  const mostrarDatosCliente = mostrarDatosClienteProp ?? mostrarDatosClienteLocal
+  const setMostrarDatosCliente = onToggleDatosCliente ?? (() => setMostrarDatosClienteLocal(!mostrarDatosClienteLocal))
+
   return (
     <Card>
       <CardHeader className='flex justify-between'>
@@ -91,11 +102,11 @@ export function FacturaForm({
       <CardContent>
         <h3 className="font-medium text-sm mb-3">Datos de la factura</h3>
         <form onSubmit={onSubmit} className="space-y-4">
-          {/* Tipo de Documento y CUIT/DNI */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Primera fila: Tipo Doc y CUIT con botones */}
+          <div className="flex gap-4">
             {/* Tipo de Documento */}
             <div className="space-y-1.5">
-              <Label htmlFor="DocTipo" className="text-sm">Tipo de Documento</Label>
+              <Label htmlFor="DocTipo" className="text-xs">Tipo Doc.</Label>
               <Select
                 value={formData.DocTipo}
                 onValueChange={(value) => onInputChange('DocTipo', value)}
@@ -113,11 +124,11 @@ export function FacturaForm({
               </Select>
             </div>
 
-            {/* CUIT/DNI con botón de búsqueda */}
-            <div className="space-y-1.5 col-span-2">
-              <Label htmlFor="DocNro" className="text-sm">
-                {formData.DocTipo === '99' ? 'Sin Documento' : 
-                 formData.DocTipo === '96' ? 'DNI del Cliente' : 'CUIT del Cliente'}
+            {/* CUIT/DNI con botones de búsqueda y editar */}
+            <div className="space-y-1.5">
+              <Label htmlFor="DocNro" className="text-xs">
+                {formData.DocTipo === '99' ? 'Sin Documento' :
+                  formData.DocTipo === '96' ? 'DNI' : 'CUIT'}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -136,57 +147,87 @@ export function FacturaForm({
                     onClick={onConsultarContribuyente}
                     disabled={!formData.DocNro || loadingContribuyente}
                     variant="outline"
-                    size="default"
+                    size="icon"
                     title="Buscar datos en AFIP"
                   >
                     {loadingContribuyente ? '...' : <Search className="h-4 w-4" />}
                   </Button>
                 )}
+                <Button
+                  type="button"
+                  onClick={setMostrarDatosCliente}
+                  variant="outline"
+                  size="icon"
+                  title="Editar datos del cliente"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* Concepto */}
-          <div className="space-y-1.5">
-            <Label htmlFor="Concepto" className="text-sm">Concepto de Facturación</Label>
-            <Select
-              value={formData.Concepto}
-              onValueChange={(value) => onInputChange('Concepto', value)}
-            >
-              <SelectTrigger id="Concepto">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CONCEPTOS.map((concepto) => (
-                  <SelectItem key={concepto.id} value={concepto.id}>
-                    {concepto.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Condición IVA - Solo para Factura B */}
-          {formData.TipoFactura === 'B' && (
+          {/* Segunda fila: Concepto, Condición IVA (B), IVA (B) */}
+          <div className={`flex gap-4`}>
             <div className="space-y-1.5">
-              <Label htmlFor="CondicionIVA" className="text-sm">Condición IVA del Cliente</Label>
+              <Label htmlFor="Concepto" className="text-xs">Concepto</Label>
               <Select
-                value={formData.CondicionIVA}
-                onValueChange={(value) => onInputChange('CondicionIVA', value)}
+                value={formData.Concepto}
+                onValueChange={(value) => onInputChange('Concepto', value)}
               >
-                <SelectTrigger id="CondicionIVA">
-                  <SelectValue placeholder="Seleccione" />
+                <SelectTrigger id="Concepto">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="4">IVA Sujeto Exento</SelectItem>
-                  <SelectItem value="5">Consumidor Final</SelectItem>
+                  {CONCEPTOS.map((concepto) => (
+                    <SelectItem key={concepto.id} value={concepto.id}>
+                      {concepto.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          {/* Datos del Cliente - Card editable */}
-          {(formData.RazonSocial || formData.Domicilio) && (
+            {/* Condición IVA y IVA - Solo para Factura B */}
+            {formData.TipoFactura === 'B' && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="CondicionIVA" className="text-xs">Condición IVA</Label>
+                  <Select
+                    value={formData.CondicionIVA}
+                    onValueChange={(value) => onInputChange('CondicionIVA', value)}
+                  >
+                    <SelectTrigger id="CondicionIVA">
+                      <SelectValue placeholder="Seleccione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="4">IVA Sujeto Exento</SelectItem>
+                      <SelectItem value="5">Consumidor Final</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="IVAGlobal" className="text-xs">IVA</Label>
+                  <Select
+                    value={formData.IVAGlobal || '5'}
+                    onValueChange={(value) => onInputChange('IVAGlobal', value)}
+                  >
+                    <SelectTrigger id="IVAGlobal">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">0%</SelectItem>
+                      <SelectItem value="4">10.5%</SelectItem>
+                      <SelectItem value="5">21%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Datos del Cliente - Card editable con botón toggle (ahora solo el card) */}
+          {mostrarDatosCliente && (
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="space-y-3">
                 <h4 className="font-medium text-sm text-blue-900">Datos del Cliente</h4>
@@ -198,7 +239,7 @@ export function FacturaForm({
                     type="text"
                     value={formData.RazonSocial || ''}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('RazonSocial', e.target.value)}
-                    placeholder="Nombre del cliente"
+                    placeholder="Nombre"
                     className="bg-white"
                   />
                 </div>
@@ -210,7 +251,7 @@ export function FacturaForm({
                     type="text"
                     value={formData.Domicilio || ''}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('Domicilio', e.target.value)}
-                    placeholder="Dirección del cliente"
+                    placeholder="Dirección"
                     className="bg-white"
                   />
                 </div>
@@ -236,22 +277,9 @@ export function FacturaForm({
 
               return (
                 <div key={index} className="border p-3 rounded-lg space-y-2 bg-gray-50">
-                  {/* Código y Descripción */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className='space-y-2'>
-                      <Label htmlFor={`codigo-${index}`} className="text-xs">Código (opcional)</Label>
-                      <Input
-                        id={`codigo-${index}`}
-                        type="text"
-                        value={articulo.codigo || ''}
-                        className='bg-white'
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          onArticuloChange(index, 'codigo', e.target.value)
-                        }
-                        placeholder="001"
-                      />
-                    </div>
-                    <div className='col-span-2 space-y-2'>
+                  {/* Primera fila: Descripción y botón eliminar */}
+                  <div className="flex gap-2">
+                    <div className='flex-1 space-y-2'>
                       <Label htmlFor={`descripcion-${index}`} className="text-xs">Descripción</Label>
                       <Input
                         id={`descripcion-${index}`}
@@ -270,97 +298,112 @@ export function FacturaForm({
                         type="button"
                         onClick={() => onArticuloRemove(index)}
                         variant="outline"
-                        className="text-red-500 hover:text-red-700 w-full"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700"
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
-                  {/* Cantidad, Unidad, Precio, IVA y Subtotal */}
-                  <div className="flex gap-2">
-                    <div className="flex-1 grid grid-cols-5 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor={`cantidad-${index}`} className="text-xs">Cantidad</Label>
-                      <Input
-                        id={`cantidad-${index}`}
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        className='bg-white'
-                        value={articulo.cantidad}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          onArticuloChange(index, 'cantidad', parseFloat(e.target.value) || 1)
-                        }
-                        required
-                      />
-                    </div>
+                  {/* Segunda fila: Código, Cantidad, Unidad, Precio juntos + Subtotal separado a la derecha */}
+                  <div className="flex justify-between">
+                    <div className='flex gap-2'>
+                      <div className="space-y-1 w-32">
+                        <Label htmlFor={`codigo-${index}`} className="text-xs">Código (opcional)</Label>
+                        <Input
+                          id={`codigo-${index}`}
+                          type="text"
+                          value={articulo.codigo || ''}
+                          className='bg-white'
+                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onArticuloChange(index, 'codigo', e.target.value)
+                          }
+                          placeholder="001"
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`unidad-${index}`} className="text-xs">Unidad</Label>
-                      <Select
-                        value={articulo.unidadMedida}
-                        onValueChange={(value) => onArticuloChange(index, 'unidadMedida', value)}
-                      >
-                        <SelectTrigger id={`unidad-${index}`} className='bg-white'>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIDADES_MEDIDA.map((unidad) => (
-                            <SelectItem key={unidad.id} value={unidad.id}>
-                              {unidad.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      <div className="space-y-1 w-20">
+                        <Label htmlFor={`cantidad-${index}`} className="text-xs">Cantidad</Label>
+                        <Input
+                          id={`cantidad-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          className='bg-white'
+                          value={articulo.cantidad}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onArticuloChange(index, 'cantidad', e.target.value === "" ? null : parseFloat(e.target.value))
+                          }
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`precio-${index}`} className="text-xs">Precio</Label>
-                      <Input
-                        id={`precio-${index}`}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className='bg-white'
-                        value={articulo.precioUnitario}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          onArticuloChange(index, 'precioUnitario', e.target.value === "" ? null : parseFloat(e.target.value))
-                        }
-                        required
-                      />
-                    </div>
-
-                    {/* Solo mostrar IVA para Factura A */}
-                    {formData.TipoFactura === 'A' && (
-                      <div className="space-y-2">
-                        <Label htmlFor={`iva-${index}`} className="text-xs">IVA</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor={`unidad-${index}`} className="text-xs">Unidad</Label>
                         <Select
-                          value={articulo.alicuotaIVA}
-                          onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
+                          value={articulo.unidadMedida}
+                          onValueChange={(value) => onArticuloChange(index, 'unidadMedida', value)}
                         >
-                          <SelectTrigger
-                            id={`iva-${index}`}
-                            className='bg-white'
-                          >
+                          <SelectTrigger id={`unidad-${index}`} className='bg-white'>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {ALICUOTAS_IVA.map((alicuota) => (
-                              <SelectItem key={alicuota.id} value={alicuota.id}>
-                                {alicuota.nombre}
+                            {UNIDADES_MEDIDA.map((unidad) => (
+                              <SelectItem key={unidad.id} value={unidad.id}>
+                                {unidad.nombre}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
-                  </div>
 
-                    {/* Subtotal a la derecha */}
-                    <div className="w-32 space-y-2">
-                      <Label htmlFor={`subtotal-${index}`} className="text-xs text-right block">Subtotal</Label>
-                      <div className="bg-white border rounded-md px-3 py-2 text-right text-sm font-medium h-10 flex items-center justify-end">
+                      <div className="space-y-1 w-28">
+                        <Label htmlFor={`precio-${index}`} className="text-xs">Precio</Label>
+                        <Input
+                          id={`precio-${index}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder='$'
+                          className='bg-white'
+                          value={articulo.precioUnitario}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onArticuloChange(index, 'precioUnitario', e.target.value === "" ? null : parseFloat(e.target.value))
+                          }
+                          required
+                        />
+                      </div>
+
+                      {formData.TipoFactura === 'A' && (
+                        <div className="space-y-1">
+                          <Label htmlFor={`iva-${index}`} className="text-xs">Alícuota IVA</Label>
+                          <Select
+                            value={articulo.alicuotaIVA}
+                            onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
+                          >
+                            <SelectTrigger
+                              id={`iva-${index}`}
+                              className='bg-white'
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ALICUOTAS_IVA.map((alicuota) => (
+                                <SelectItem key={alicuota.id} value={alicuota.id}>
+                                  {alicuota.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+
+                    <div className="min-w-36 space-y-1">
+                      <Label className="text-xs">Subtotal</Label>
+                      <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
                         ${totalConIVA ? totalConIVA.toFixed(2) : "0.00"}
                       </div>
                     </div>

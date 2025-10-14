@@ -235,6 +235,63 @@ export class ArcaService {
   }
 
   /**
+   * Convierte una imagen a base64
+   */
+  private async imageToBase64(imagePath: string): Promise<string | null> {
+    try {
+      const fs = await import('node:fs/promises')
+      const buffer = await fs.readFile(imagePath)
+      const base64 = buffer.toString('base64')
+      
+      // Detectar el tipo de imagen por extensión
+      let mimeType = 'image/png'
+      if (imagePath.toLowerCase().endsWith('.jpg') || imagePath.toLowerCase().endsWith('.jpeg')) {
+        mimeType = 'image/jpeg'
+      }
+      
+      return `data:${mimeType};base64,${base64}`
+    }
+    catch (error) {
+      console.error(`Error al convertir imagen a base64: ${imagePath}`, error)
+      return null
+    }
+  }
+
+  /**
+   * Descarga una imagen de una URL y la convierte a base64
+   */
+  private async urlToBase64(url: string): Promise<string | null> {
+    try {
+      const https = await import('node:https')
+      const http = await import('node:http')
+      
+      return new Promise((resolve, reject) => {
+        const protocol = url.startsWith('https') ? https : http
+        
+        protocol.get(url, (response) => {
+          if (response.statusCode !== 200) {
+            reject(new Error(`Failed to download image: ${response.statusCode}`))
+            return
+          }
+          
+          const chunks: Buffer[] = []
+          response.on('data', (chunk) => chunks.push(chunk))
+          response.on('end', () => {
+            const buffer = Buffer.concat(chunks)
+            const base64 = buffer.toString('base64')
+            const mimeType = response.headers['content-type'] || 'image/png'
+            resolve(`data:${mimeType};base64,${base64}`)
+          })
+        }).on('error', reject)
+      })
+    }
+    catch (error) {
+      console.error('Error al descargar imagen:', error)
+      return null
+    }
+  }
+
+  /**
    * Generar PDF de la factura usando Puppeteer (sin límite de 100 PDFs/mes)
    */
   async generatePDF(facturaInfo: {
@@ -276,20 +333,33 @@ export class ArcaService {
         throw new Error('Error al generar QR: ' + errorMsg)
       }
 
-      // Generar URL del QR code como imagen
+      // Generar URL del QR code como imagen y convertirla a base64
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResult.qrUrl || '')}`
-
-      // Ruta absoluta de los logos - convertir a formato file:// para Puppeteer
-      const logoPathRaw = join(__dirname, '../../render/assets/logo.png')
-      const arcaLogoPathRaw = join(__dirname, '../../render/assets/ARCA.png')
+      const qrImageBase64 = await this.urlToBase64(qrImageUrl)
       
-      // En Windows, Puppeteer necesita file:/// con barras normales
-      const logoPath = logoPathRaw.replace(/\\/g, '/')
-      const arcaLogoPath = arcaLogoPathRaw.replace(/\\/g, '/')
+      if (!qrImageBase64) {
+        throw new Error('Error al descargar y convertir el código QR')
+      }
+
+      // Ruta absoluta de los logos y convertirlos a base64
+      // En desarrollo: dist/main -> src/render/assets
+      // Necesitamos ir 2 niveles arriba desde dist/main y luego a src/render/assets
+      const projectRoot = join(__dirname, '../..')
+      const logoPathRaw = join(projectRoot, 'src/render/assets/logo.png')
+      const arcaLogoPathRaw = join(projectRoot, 'src/render/assets/ARCA.png')
+      
+      const logoBase64 = await this.imageToBase64(logoPathRaw)
+      const arcaLogoBase64 = await this.imageToBase64(arcaLogoPathRaw)
 
       // Importar y usar la función de generación de HTML desde facturaTemplate
       const { generarHTMLFactura } = await import('@render/factura/components/facturaTemplate')
-      const html = generarHTMLFactura(facturaInfo, qrImageUrl, ArcaConfig.CUIT, logoPath, arcaLogoPath)
+      const html = generarHTMLFactura(
+        facturaInfo, 
+        qrImageBase64, 
+        ArcaConfig.CUIT, 
+        logoBase64 || undefined, 
+        arcaLogoBase64 || undefined
+      )
 
       // Nombre del archivo
       const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`

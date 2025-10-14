@@ -29,6 +29,7 @@ const CrearFactura = () => {
     ImpNeto: '0.00',
     ImpIVA: '0.00',
     ImpTotal: '0.00',
+    IVAGlobal: '5', // 21% por defecto
   });
 
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
@@ -47,6 +48,7 @@ const CrearFactura = () => {
   const [htmlPreview, setHtmlPreview] = useState<string | null>(null);
   const [loadingContribuyente, setLoadingContribuyente] = useState(false);
   const [loadingEmisor, setLoadingEmisor] = useState(false);
+  const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false);
 
   const recalcularTotales = (articulos: Articulo[]): void => {
     const totales = calcularTotalesFactura(articulos);
@@ -290,6 +292,9 @@ const CrearFactura = () => {
           handleInputChange('Domicilio', response.data.domicilio)
         }
 
+        // Auto-mostrar la sección de datos del cliente
+        setMostrarDatosCliente(true)
+
         // Actualizar el toast de loading a success
         toast.success(
           `Encontrado: ${response.data.razonSocial}`,
@@ -478,6 +483,8 @@ const CrearFactura = () => {
             onLimpiar={limpiarFormulario}
             onConsultarContribuyente={handleConsultarContribuyente}
             loadingContribuyente={loadingContribuyente}
+            mostrarDatosCliente={mostrarDatosCliente}
+            onToggleDatosCliente={() => setMostrarDatosCliente(!mostrarDatosCliente)}
           />
 
           {resultado && (
