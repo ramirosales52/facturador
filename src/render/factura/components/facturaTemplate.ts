@@ -72,7 +72,22 @@ function formatearFecha(fecha: string): string {
  * Genera el HTML para el PDF de la factura
  * Este template se basa en el formato oficial de AFIP
  */
-export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: string, cuit: number): string {
+export async function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: string, cuit: number): Promise<string> {
+  // Convertir el logo a base64 para que funcione en el PDF
+  let logoBase64 = ''
+  try {
+    const logoPath = new URL('../assets/logo.png', import.meta.url).href
+    const response = await fetch(logoPath)
+    const blob = await response.blob()
+    logoBase64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.readAsDataURL(blob)
+    })
+  } catch (error) {
+    console.error('Error cargando logo:', error)
+  }
+
   const fecha = formatearFecha(facturaInfo.FchProceso || new Date().toISOString().split('T')[0])
   const fechaVtoCAE = formatearFecha(facturaInfo.CAEFchVto)
   const ptoVta = String(facturaInfo.PtoVta).padStart(4, '0')
@@ -198,25 +213,24 @@ body, html {
   border-collapse: collapse;
   font-size: 13px;
 }
-.bill-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 750px;
-  margin: auto;
-}
 
 .regimen-transparencia {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  margin-left: -375px;
   width: 375px;
   padding: 8px;
   font-size: 10px;
   border: 1px solid #999;
   background: #f9f9f9;
+  margin-bottom: 10px;
+}
+
+.bill-footer-section {
+  width: 750px;
+  margin: 20px auto 0 auto;
+}
+
+.bill-footer {
+  width: 750px;
+  margin: 0 auto;
 }
 
 .row-footer-combined {
@@ -396,7 +410,7 @@ body, html {
 ${tipoFactura}
 </div>
 <div class="text-center" style="padding: 10px 0;">
-<img src="file:///home/ramiro/Dev/facturador/src/render/assets/logo.png" alt="Logo" style="max-width: 200px; max-height: 80px;">
+<img src="${logoBase64}" alt="Logo" style="max-width: 200px; max-height: 80px;">
 </div>
 <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
 <p><strong>Domicilio Comercial:</strong> ${emisor.domicilio}</p>
@@ -473,9 +487,10 @@ ${articulosDefault}
 </tr>
 </table>
 
+<div class="bill-footer-section">
 ${regimenTransparenciaHTML}
 
-<table class="bill-container bill-footer">
+<table class="bill-footer">
 <tr class="bill-row row-footer-combined">
 <td class="footer-qr">
 <div>
@@ -491,7 +506,7 @@ ${regimenTransparenciaHTML}
 <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
 </div>
 <div style="margin-top: 15px; text-align: center;">
-<img src="file:///home/ramiro/Dev/facturador/src/render/assets/logo.png" alt="AFIP Logo" style="max-width: 80px; display: block; margin: 0 auto 5px auto;">
+<img src="${logoBase64}" alt="AFIP Logo" style="max-width: 80px; display: block; margin: 0 auto 5px auto;">
 <strong style="font-size: 11px;">Comprobante Autorizado</strong>
 </div>
 </div>
@@ -503,6 +518,7 @@ ${totalesHTML}
 </td>
 </tr>
 </table>
+</div>
 </body>
 </html>`
 }

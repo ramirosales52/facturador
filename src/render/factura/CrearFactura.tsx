@@ -222,7 +222,7 @@ const CrearFactura = () => {
           },
         };
 
-        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit));
+        const htmlContent = await generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit));
         setHtmlPreview(htmlContent);
       }
     }
