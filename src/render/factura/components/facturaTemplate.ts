@@ -412,8 +412,8 @@ body, html {
 <td>
 <div class="bill-type">
 ${tipoFactura}
+<div style="text-align: center; font-size: 11px; font-weight: 600;">Cod. ${codigoComprobante}</div>
 </div>
-<div style="text-align: center; font-size: 11px; margin-top: 52px; font-weight: 600;">Cod. ${codigoComprobante}</div>
 <div class="text-center" style="padding: 10px 0;">
 ${logoPath ? `<img src="${logoPath}" alt="Logo" style="max-width: 280px; max-height: 110px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
 </div>

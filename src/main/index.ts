@@ -69,9 +69,20 @@ ipcMain.handle('get-backend-port', () => {
   return BACKEND_PORT;
 });
 
-// IPC para shell.openPath
+// IPC para shell.openPath - Abrir carpeta en el explorador
 ipcMain.handle('shell-open-path', async (_event, path: string) => {
-  return await shell.openPath(path);
+  try {
+    // En Windows, usar shell.openPath para abrir la carpeta
+    const result = await shell.openPath(path);
+    if (result) {
+      // Si devuelve algo es porque hubo error
+      console.error('Error al abrir carpeta:', result);
+    }
+    return result;
+  } catch (error) {
+    console.error('Error en shell.openPath:', error);
+    return String(error);
+  }
 });
 
 // IPC para dialog.showOpenDialog
