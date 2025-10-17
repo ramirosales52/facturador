@@ -33,7 +33,7 @@ const CrearFactura = () => {
   });
 
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
-    cuit: DEFAULTS.CUIT_EMISOR,
+    cuit: '', // Iniciar vacío - se llena al crear certificado ARCA
     razonSocial: '',
     domicilio: '',
     condicionIVA: DEFAULTS.CONDICION_IVA_EMISOR,
@@ -94,14 +94,14 @@ const CrearFactura = () => {
             await window.electron.store.set('pdfSavePath', selectedPath)
           }
           
-          toast.success('Carpeta seleccionada correctamente')
+          toast.success('Carpeta seleccionada correctamente', { id: 'seleccionar-carpeta' })
         }
       } else {
-        toast.info('Función disponible solo en la aplicación empaquetada')
+        toast.info('Función disponible solo en la aplicación empaquetada', { id: 'seleccionar-carpeta' })
       }
     } catch (error) {
       console.error('Error al seleccionar carpeta:', error)
-      toast.error('Error al seleccionar carpeta')
+      toast.error('Error al seleccionar carpeta', { id: 'seleccionar-carpeta' })
     }
   };
 
@@ -187,6 +187,7 @@ const CrearFactura = () => {
     // Validar que haya datos del emisor
     if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
       toast.error('Configure los datos del emisor primero', {
+        id: 'validar-emisor',
         description: 'Vaya a la pestaña "Configuración" y complete los datos'
       })
       return
@@ -330,7 +331,7 @@ const CrearFactura = () => {
 
   const handleConsultarContribuyente = async (): Promise<void> => {
     if (!formData.DocNro) {
-      toast.error('Ingrese un CUIT para buscar')
+      toast.error('Ingrese un CUIT para buscar', { id: 'buscar-contribuyente' })
       return
     }
 

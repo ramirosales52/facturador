@@ -292,6 +292,102 @@ export class ArcaService {
   }
 
   /**
+   * Crear certificado de desarrollo para ARCA
+   * Utiliza las automatizaciones del SDK de AFIP
+   */
+  async crearCertificadoDev(data: { cuit: string; username: string; password: string }) {
+    try {
+      console.log('Iniciando creación de certificado con datos:', { 
+        cuit: data.username, // El CUIT debe ser el del username
+        username: data.username,
+        hasPassword: !!data.password 
+      });
+
+      // Configurar Afip con el access_token
+      const afipInstance = new Afip({ 
+        access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+      })
+
+      // Datos para la automatización - IMPORTANTE: cuit debe ser el mismo que username
+      const automationData = {
+        cuit: data.username, // Usar el username como CUIT
+        username: data.username,
+        password: data.password,
+        alias: 'afipsdkcert'
+      }
+
+      console.log('Ejecutando automatización create-cert-dev con datos:', automationData);
+
+      // Ejecutar la automatización create-cert-dev
+      const result = await afipInstance.CreateAutomation('create-cert-dev', automationData, true)
+
+      console.log('Resultado de la automatización:', { 
+        id: result.id, 
+        status: result.status,
+        hasCert: !!result.data?.cert,
+        hasKey: !!result.data?.key
+      });
+
+      // Verificar que la automatización se completó exitosamente
+      if (result.status !== 'complete') {
+        throw new Error(`La automatización no se completó correctamente. Estado: ${result.status}`)
+      }
+
+      if (!result.data?.cert || !result.data?.key) {
+        throw new Error('La automatización no devolvió certificado o clave')
+      }
+
+      // Guardar el certificado y la clave
+      const certsDir = join(homedir(), 'afip-certs')
+      
+      // Crear el directorio si no existe
+      if (!existsSync(certsDir)) {
+        mkdirSync(certsDir, { recursive: true })
+      }
+
+      const fs = await import('node:fs/promises')
+      // Guardar con el CUIT del username
+      const certPath = join(certsDir, `${data.username}_dev.crt`)
+      const keyPath = join(certsDir, `${data.username}_dev.key`)
+      
+      await fs.writeFile(certPath, result.data.cert)
+      await fs.writeFile(keyPath, result.data.key)
+
+      console.log('Certificados guardados exitosamente en:', certPath);
+
+      return {
+        success: true,
+        message: 'Certificado de desarrollo creado exitosamente',
+        certPath,
+        keyPath,
+        certDir: certsDir,
+      }
+    } catch (error: any) {
+      console.error('Error en crearCertificadoDev:', error);
+      
+      // Intentar extraer más información del error del SDK
+      if (error.data?.data_errors) {
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2));
+      }
+      
+      // Construir mensaje de error más descriptivo
+      let errorMessage = 'Error al crear certificado';
+      
+      if (error.data?.data_errors?.params) {
+        const paramErrors = error.data.data_errors.params;
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
    * Generar PDF de la factura usando Puppeteer (sin límite de 100 PDFs/mes)
    */
   async generatePDF(facturaInfo: {
@@ -451,6 +547,16 @@ export class ArcaService {
         success: false,
         error: errorMessage,
       }
+    }
+  }
+
+  /**
+   * Obtener la configuración de ARCA
+   */
+  getConfig() {
+    return {
+      cuit: ArcaConfig.CUIT,
+      production: ArcaConfig.production,
     }
   }
 }

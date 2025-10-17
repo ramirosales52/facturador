@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Inject, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ArcaService } from './arca.service';
 import { CreateArcaDto } from './dto/create-arca.dto';
+import { CreateCertDevDto } from './dto/create-cert-dev.dto';
 
 @Controller('arca')
 export class ArcaController {
@@ -36,5 +37,22 @@ export class ArcaController {
   @Get('contribuyente/:cuit')
   consultarContribuyente(@Param('cuit') cuit: string) {
     return this.arcaService.consultarContribuyente(+cuit);
+  }
+
+  /**
+   * Crear certificado de desarrollo para ARCA
+   */
+  @Post('crear-certificado-dev')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  crearCertificadoDev(@Body() data: CreateCertDevDto) {
+    return this.arcaService.crearCertificadoDev(data);
+  }
+
+  /**
+   * Obtener configuración de ARCA (incluyendo CUIT)
+   */
+  @Get('config')
+  getConfig() {
+    return this.arcaService.getConfig();
   }
 }

@@ -13,10 +13,10 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
   const copiarAlPortapapeles = async (texto: string, tipo: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(texto)
-      toast.success(`${tipo} copiado al portapapeles`)
+      toast.success(`${tipo} copiado al portapapeles`, { id: 'copiar-portapapeles' })
     }
     catch {
-      toast.error('Error al copiar al portapapeles')
+      toast.error('Error al copiar al portapapeles', { id: 'copiar-portapapeles' })
     }
   }
 
@@ -32,15 +32,15 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
         await window.electron.shell.openPath(carpeta)
-        toast.success('Abriendo carpeta del PDF')
+        toast.success('Abriendo carpeta del PDF', { id: 'abrir-carpeta-pdf' })
       } else {
         // Fallback para desarrollo
-        toast.info('Función disponible solo en la aplicación empaquetada')
+        toast.info('Función disponible solo en la aplicación empaquetada', { id: 'abrir-carpeta-pdf' })
       }
     }
     catch (error) {
       console.error('Error al abrir carpeta:', error)
-      toast.error('Error al abrir la carpeta')
+      toast.error('Error al abrir la carpeta', { id: 'abrir-carpeta-pdf' })
     }
   }
 
