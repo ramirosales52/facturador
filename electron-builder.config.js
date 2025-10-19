@@ -17,6 +17,7 @@ const config = {
     'dist/preload/**/*',
     'dist/render/**/*',
     'package.json',
+    '.env.example',
     {
       from: 'src/render/assets',
       to: 'assets',

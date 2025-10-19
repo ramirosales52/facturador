@@ -7,11 +7,22 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
 
-// Cargar variables de entorno desde .env
+// Cargar variables de entorno desde múltiples ubicaciones
+// 1. Desde el directorio del proyecto (desarrollo)
 config();
 
+// 2. Desde el directorio userData (producción)
+const userDataPath = app.getPath('userData');
+const envPathUserData = join(userDataPath, '.env');
+if (existsSync(envPathUserData)) {
+  config({ path: envPathUserData });
+  console.log('✓ Variables de entorno cargadas desde:', envPathUserData);
+} else {
+  console.log('ℹ No se encontró .env en userData, usando variables del sistema');
+}
+
 // Store simple sin dependencias
-const storePath = join(app.getPath('userData'), 'config.json');
+const storePath = join(userDataPath, 'config.json');
 const simpleStore = {
   get: (key: string) => {
     try {
