@@ -18,12 +18,25 @@ export class ArcaService {
       production: ArcaConfig.production,
     }
 
-    // Solo incluir certificados si existen
-    if (ArcaConfig.cert && existsSync(ArcaConfig.cert)) {
+    // Intentar usar certificados de desarrollo desde el directorio de usuario
+    const certsDir = join(homedir(), 'afip-certs')
+    const certPathDev = join(certsDir, `${ArcaConfig.CUIT}_dev.crt`)
+    const keyPathDev = join(certsDir, `${ArcaConfig.CUIT}_dev.key`)
+
+    // Primero intentar certificados de desarrollo
+    if (existsSync(certPathDev) && existsSync(keyPathDev)) {
+      console.log('Usando certificados de desarrollo:', certPathDev)
+      config.cert = certPathDev
+      config.key = keyPathDev
+    } 
+    // Si no, intentar con los certificados configurados
+    else if (ArcaConfig.cert && existsSync(ArcaConfig.cert) && ArcaConfig.key && existsSync(ArcaConfig.key)) {
+      console.log('Usando certificados configurados:', ArcaConfig.cert)
       config.cert = ArcaConfig.cert
-    }
-    if (ArcaConfig.key && existsSync(ArcaConfig.key)) {
       config.key = ArcaConfig.key
+    }
+    else {
+      console.log('⚠️  No se encontraron certificados. Usando configuración sin certificados (solo para desarrollo con CUIT de prueba)')
     }
 
     this.afip = new Afip(config)
@@ -303,9 +316,14 @@ export class ArcaService {
         hasPassword: !!data.password 
       });
 
-      // Configurar Afip con el access_token
+      // Configurar Afip con el access_token desde variable de entorno
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN;
+      if (!accessToken) {
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno');
+      }
+      
       const afipInstance = new Afip({ 
-        access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+        access_token: accessToken
       })
 
       // Datos para la automatización - IMPORTANTE: cuit debe ser el mismo que username
@@ -319,6 +337,7 @@ export class ArcaService {
       console.log('Ejecutando automatización create-cert-dev con datos:', automationData);
 
       // Ejecutar la automatización create-cert-dev
+      // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
       const result = await afipInstance.CreateAutomation('create-cert-dev', automationData, true)
 
       console.log('Resultado de la automatización:', { 
@@ -373,7 +392,10 @@ export class ArcaService {
       // Construir mensaje de error más descriptivo
       let errorMessage = 'Error al crear certificado';
       
-      if (error.data?.data_errors?.params) {
+      // Priorizar mensaje del servidor AFIP si está disponible
+      if (error.data?.data?.message) {
+        errorMessage = error.data.data.message;
+      } else if (error.data?.data_errors?.params) {
         const paramErrors = error.data.data_errors.params;
         errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`;
       } else if (error.message) {
@@ -543,6 +565,96 @@ export class ArcaService {
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       console.error('Error al generar PDF:', error)
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Autorizar web service de desarrollo
+   * Utiliza las automatizaciones del SDK de AFIP para autorizar un web service
+   */
+  async autorizarWebServiceDev(data: { 
+    cuit: string
+    username: string
+    password: string
+    alias: string
+    service: string 
+  }) {
+    try {
+      console.log('Iniciando autorización de web service con datos:', { 
+        cuit: data.cuit,
+        username: data.username,
+        alias: data.alias,
+        service: data.service,
+        hasPassword: !!data.password 
+      });
+
+      // Configurar Afip con el access_token desde variable de entorno
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN;
+      if (!accessToken) {
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno');
+      }
+      
+      const afipInstance = new Afip({ 
+        access_token: accessToken
+      })
+
+      // Datos para la automatización
+      const automationData = {
+        cuit: data.cuit,
+        username: data.username,
+        password: data.password,
+        alias: data.alias,
+        service: data.service
+      }
+
+      console.log('Ejecutando automatización auth-web-service-dev con datos:', automationData);
+
+      // Ejecutar la automatización auth-web-service-dev
+      // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+      const result = await afipInstance.CreateAutomation('auth-web-service-dev', automationData, true)
+
+      console.log('Resultado de la automatización:', { 
+        id: result.id, 
+        status: result.status,
+        data: result.data
+      });
+
+      // Verificar que la automatización se completó exitosamente
+      if (result.status !== 'complete') {
+        throw new Error(`La automatización no se completó correctamente. Estado: ${result.status}`)
+      }
+
+      if (result.data?.status !== 'created') {
+        throw new Error('La autorización no se completó correctamente')
+      }
+
+      return {
+        success: true,
+        message: 'Web service autorizado exitosamente',
+        data: result.data,
+      }
+    } catch (error: any) {
+      console.error('Error en autorizarWebServiceDev:', error);
+      
+      // Intentar extraer más información del error del SDK
+      if (error.data?.data_errors) {
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2));
+      }
+      
+      // Construir mensaje de error más descriptivo
+      let errorMessage = 'Error al autorizar web service';
+      
+      if (error.data?.data_errors?.params) {
+        const paramErrors = error.data.data_errors.params;
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
         error: errorMessage,

@@ -164,323 +164,366 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
   const regimenTransparenciaHTML = tipoFactura === 'B' ? `
-    <div class="regimen-transparencia">
-      <div style="margin-bottom: 3px;">
-        <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
-      </div>
-      ${ivasDefault}
-    </div>
+<div class="regimen-transparencia">
+  <div style="margin-bottom: 3px;">
+    <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+  </div>
+  ${ivasDefault}
+</div>
   ` : ''
 
-  return `<!doctype html>
-    <html lang="es">
+  return `<!DOCTYPE html>
+<html>
+<head>
+<title>Factura ${tipoFactura}</title>
+<style type="text/css">
+*{
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  font-family: Arial, Helvetica, sans-serif;
+}
+body, html {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.bill-container{
+  width: 750px;
+  position: relative;
+  left:0;
+  right: 0;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 12px;
+}
 
-    <head>
-      <meta charset="utf-8" />
-      <title>Factura ${tipoFactura}</title>
-      <style>
-        @page {
-          size: A4;
-          margin: 20mm;
-        }
+.regimen-transparencia {
+  width: 375px;
+  padding: 8px;
+  font-size: 10px;
+  border: 1px solid #999;
+  background: #f9f9f9;
+  margin-bottom: 10px;
+}
 
-        * {
-          box-sizing: border-box;
-          font-family: Arial, Helvetica, sans-serif;
-        }
+.bill-footer-section {
+  width: 750px;
+  margin: auto auto 0 auto;
+}
 
-        body {
-          margin: 0;
-          padding: 0;
-          background: #fff;
-          display: flex;
-          justify-content: center;
-        }
+.bill-footer {
+  width: 750px;
+  margin: 0 auto;
+  border-top: 2px solid black;
+  font-size: 12px;
+}
 
-        .a4-page {
-          width: 210mm;
-          height: 297mm;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          border: 1px solid #ccc;
-          padding: 15mm;
-          position: relative;
-        }
+.row-footer-combined td {
+  vertical-align: top;
+  padding: 10px;
+  border: none;
+}
 
-        /* --- HEADER --- */
-        header {
-          display: flex;
-          justify-content: space-between;
-          position: relative;
-          border-bottom: 2px solid #000;
-          padding-bottom: 10px;
-        }
+.row-footer-combined td > div {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  margin: 0;
+  padding: 0;
+}
 
-        .bill-type {
-          position: absolute;
-          left: 50%;
-          top: -10px;
-          transform: translateX(-50%);
-          background: white;
-          border: 2px solid #000;
-          width: 60px;
-          height: 60px;
-          border-radius: 8px;
-          text-align: center;
-          font-size: 32px;
-          font-weight: 700;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
+.footer-qr {
+  width: 25%;
+  text-align: left;
+}
 
-        .bill-type small {
-          font-size: 10px;
-          margin-top: 3px;
-        }
+.footer-qr img {
+  width: 100%;
+  max-width: 150px;
+}
 
-        .emisor-info,
-        .factura-info {
-          width: 48%;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
+.footer-cae {
+  width: 40%;
+  text-align: left;
+  padding-left: 10px;
+}
 
-        .emisor-info img {
-          max-width: 240px;
-          max-height: 90px;
-          object-fit: contain;
-          margin-bottom: 5px;
-        }
+.footer-totals {
+  width: 35%;
+  text-align: right;
+}
 
-        .text-lg {
-          font-size: 20px;
-          font-weight: bold;
-        }
+.bill-emitter-row td{
+  width: 50%;
+  border-bottom: 1px solid; 
+  padding-top: 10px;
+  padding-left: 10px;
+  vertical-align: top;
+}
+.bill-emitter-row{
+  position: relative;
+}
+.bill-emitter-row td:nth-child(2){
+  padding-left: 60px;
+}
+.bill-emitter-row td:nth-child(1){
+  padding-right: 60px;
+}
 
-        /* --- MAIN --- */
-        main {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          gap: 10px;
-          overflow: hidden;
-        }
+.bill-type{
+  border: 1px solid;
+  border-top: 1px solid; 
+  border-bottom: 1px solid; 
+  margin-right: -30px;
+  background: white;
+  width: 60px;
+  height: 50px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  margin: auto;
+  text-align: center;
+  font-size: 40px;
+  font-weight: 600;
+}
+.text-lg{
+  font-size: 30px;
+}
+.text-center{
+  text-align: center;
+}
 
-        /* CLIENTE */
-        .client-section {
-          border-bottom: 1px solid #aaa;
-          padding-bottom: 6px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
+.col-2{
+  width: 16.66666667%;
+  float: left;
+}
+.col-3{
+  width: 25%;
+  float: left;
+}
+.col-4{
+  width: 33.3333333%;
+  float: left;
+}
+.col-5{
+  width: 41.66666667%;
+  float: left;
+}
+.col-6{
+  width: 50%;
+  float: left;
+}
+.col-8{
+  width: 66.66666667%;
+  float: left;
+}
+.col-10{
+  width: 83.33333333%;
+  float: left;
+}
+.row{
+  overflow: hidden;
+}
 
-        .client-row {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: space-between;
-          gap: 10px;
-        }
+.margin-b-0{
+  margin-bottom: 0px;
+}
 
-        .client-row p {
-          margin: 0;
-          flex: 1;
-          min-width: 200px;
-        }
+.bill-row td{
+  padding-top: 5px
+}
 
-        /* DETALLES */
-        .details-section {
-          border: 1px solid #999;
-          border-radius: 4px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
+.bill-row td > div{
+  border-top: 1px solid; 
+  border-bottom: 1px solid; 
+  margin: 0 -1px 0 -2px;
+  padding: 0 10px 13px 10px;
+}
+.row-details table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.row-details td > div, .row-qrcode td > div{
+  border: 0;
+  margin: 0 -1px 0 -2px;
+  padding: 0 !important;
+}
+.row-details table td{
+  padding: 5px;
+  text-align: center;
+}
+.row-details table td:first-child{
+  padding-left: 10px;
+  text-align: left;
+}
+.row-details table td:last-child{
+  padding-right: 10px;
+  text-align: right;
+}
+.row-details table tr:nth-child(1){
+  border-top: 1px solid; 
+  border-bottom: 1px solid; 
+  background: #c0c0c0;
+  font-weight: bold;
+  text-align: center;
+}
+.row-details table tr:nth-child(1) td{
+  padding: 5px;
+}
+.row-details table tr:nth-child(1) td:first-child{
+  padding-left: 10px;
+}
+.row-details table tr:nth-child(1) td:last-child{
+  padding-right: 10px;
+}
+.row-details table tr +  tr{
+  border-top: 1px solid #c0c0c0; 
+}
+.text-right{
+  text-align: right;
+}
 
-        .details-header,
-        .details-row {
-          display: grid;
-          grid-template-columns: 1fr 3fr 1fr 1fr 1fr;
-          padding: 6px 10px;
-          border-bottom: 1px solid #ccc;
-          text-align: center;
-        }
+.margin-b-10 {
+  margin-bottom: 10px;
+}
 
-        .details-header {
-          background: #e0e0e0;
-          font-weight: bold;
-        }
+.total-row td > div{
+  border-width: 2px;
+}
 
-        .details-row:nth-child(even) {
-          background: #fafafa;
-        }
+.row-qrcode td{
+  padding: 10px;
+}
 
-        /* --- FOOTER FIJO --- */
-        footer {
-          margin-top: auto;
-          border-top: 2px solid #000;
-          padding-top: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
+#qrcode {
+  width: 50%
+}
+</style>
+</head>
+<body>
+<table class="bill-container">
+<tr class="bill-emitter-row">
+<td>
+<div class="bill-type">
+${tipoFactura}
+<div style="text-align: center; font-size: 11px; font-weight: 600; margin-b-0: 4px">Cod. ${codigoComprobante}</div>
+</div>
+<div class="text-center" style="padding: 10px 0;">
+${logoPath ? `<img src="${logoPath}" alt="Logo" style="max-width: 280px; max-height: 110px;">` : `<div class="text-lg">${emisor.razonSocial}</div>`}
+</div>
+<p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
+<p><strong>Domicilio:</strong> ${emisor.domicilio}</p>
+<p><strong>Condición Frente al IVA:</strong> ${emisor.condicionIVA}</p>
+</td>
+<td>
+<div>
+<div class="text-lg">
+Factura
+</div>
+<p><strong>Nro: ${ptoVta}-${nroComp}</strong></p>
+<p><strong>Fecha de Emisión:</strong> ${fecha}</p>
+<p><strong>CUIT:</strong> ${emisor.cuit}</p>
+<p><strong>Ingresos Brutos:</strong> ${emisor.iibb}</p>
+<p><strong>Fecha de Inicio de Actividades:</strong> ${inicioActividades}</p>
+</div>
+</td>
+</tr>
+<tr class="bill-row">
+<td colspan="2">
+<div class="row">
+<p class="col-4 margin-b-0">
+<strong>Período Facturado Desde: </strong>${fecha}
+</p>
+<p class="col-3 margin-b-0">
+<strong>Hasta: </strong>${fecha}
+</p>
+<p class="col-5 margin-b-0">
+<strong>Fecha de Vto. para el pago: </strong>${fecha}
+</p>
+</div>
+</td>
+</tr>
+<tr class="bill-row">
+<td colspan="2">
+<div>
+<div class="row">
+<p class="col-4 margin-b-0">
+<strong>CUIL/CUIT: </strong>${facturaInfo.DocNro}
+</p>
+<p class="col-8 margin-b-0">
+<strong>Apellido y Nombre / Razón social: </strong>${razonSocial}
+</p>
+</div>
+<div class="row">
+<p class="col-6 margin-b-0">
+<strong>Condición Frente al IVA: </strong>${condicionIVA}
+</p>
+<p class="col-6 margin-b-0">
+<strong>Domicilio: </strong>${domicilio}
+</p>
+</div>
+<p>
+<strong>Condicion de venta: </strong>Efectivo
+</p>
+</div>
+</td>
+</tr>
+<tr class="bill-row row-details">
+<td colspan="2">
+<div style="padding: 0;">
+<table>
+<tr>
+<td>Código</td>
+<td>Descripción</td>
+<td>Cantidad</td>
+<td>Unidad</td>
+<td>Subtotal</td>
+</tr>
+${articulosDefault}
+</table>
+</div>
+</td>
+</tr>
+</table>
 
-        .footer-upper {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 20px;
-        }
+<div class="bill-footer-section">
+${regimenTransparenciaHTML}
 
-        .footer-left {
-          display: flex;
-          gap: 10px;
-          width: 50%;
-        }
-
-        .footer-left img {
-          width: 120px;
-          height: auto;
-        }
-
-        .footer-left small {
-          font-size: 10px;
-          display: block;
-          margin-top: 4px;
-        }
-
-        .footer-right {
-          text-align: right;
-          flex: 1;
-        }
-
-        .footer-right div {
-          margin-bottom: 5px;
-        }
-
-        .regimen-transparencia {
-          font-size: 10px;
-          border: 1px solid #999;
-          background: #f9f9f9;
-          padding: 6px;
-        }
-
-        /* --- IMPRESIÓN --- */
-        @media print {
-          body {
-            margin: 0;
-            background: none;
-          }
-
-          .a4-page {
-            border: none;
-            box-shadow: none;
-            height: auto;
-            min-height: 297mm;
-          }
-        }
-      </style>
-    </head>
-
-    <body>
-      <div class="a4-page">
-
-        <!-- HEADER -->
-        <header>
-          <div class="emisor-info">
-            ${logoPath
-      ? `<img src="${logoPath}" alt="Logo">`
-      : `<div class="text-lg">${emisor.razonSocial}</div>`}
-
-            <p><strong>Razón social:</strong> ${emisor.razonSocial}</p>
-            <p><strong>Domicilio:</strong> ${emisor.domicilio}</p>
-            <p><strong>Condición frente al IVA:</strong> ${emisor.condicionIVA}</p>
-          </div>
-
-          <div class="bill-type">
-            ${tipoFactura}
-            <small>Cod. ${codigoComprobante}</small>
-          </div>
-
-          <div class="factura-info">
-            <div class="text-lg">Factura</div>
-            <p><strong>Nro:</strong> ${ptoVta}-${nroComp}</p>
-            <p><strong>Fecha de emisión:</strong> ${fecha}</p>
-            <p><strong>CUIT:</strong> ${emisor.cuit}</p>
-            <p><strong>Ingresos Brutos:</strong> ${emisor.iibb}</p>
-            <p><strong>Inicio de actividades:</strong> ${inicioActividades}</p>
-          </div>
-        </header>
-
-        <!-- MAIN -->
-        <main>
-          <section class="client-section">
-            <div class="client-row">
-              <p><strong>Período Desde:</strong> ${fecha}</p>
-              <p><strong>Hasta:</strong> ${fecha}</p>
-              <p><strong>Vto. de pago:</strong> ${fecha}</p>
-            </div>
-
-            <div class="client-row">
-              <p><strong>CUIL/CUIT:</strong> ${facturaInfo.DocNro}</p>
-              <p><strong>Razón social:</strong> ${razonSocial}</p>
-            </div>
-
-            <div class="client-row">
-              <p><strong>Condición frente al IVA:</strong> ${condicionIVA}</p>
-              <p><strong>Domicilio:</strong> ${domicilio}</p>
-            </div>
-
-            <p><strong>Condición de venta:</strong> Efectivo</p>
-          </section>
-
-          <section class="details-section">
-            <div class="details-header">
-              <p>Código</p>
-              <p>Descripción</p>
-              <p>Cantidad</p>
-              <p>Unidad</p>
-              <p>Subtotal</p>
-            </div>
-            ${articulosDefault}
-          </section>
-        </main>
-
-        <!-- FOOTER -->
-        <footer>
-
-          ${regimenTransparenciaHTML
-      ? `<div class="regimen-transparencia">${regimenTransparenciaHTML}</div>`
-      : ''}
-
-          <div class="footer-upper">
-            <div class="footer-left">
-              <div>
-                <img src="${qrImageUrl}" alt="QR Code" />
-              </div>
-              <div>
-                <div><strong>CAE Nº:</strong> ${facturaInfo.CAE}</div>
-                <div><strong>Vto. CAE:</strong> ${fechaVtoCAE}</div>
-                ${arcaLogoPath
-      ? `<img src="${arcaLogoPath}" alt="AFIP Logo" />
-                <small>Comprobante Autorizado</small>`
-      : `<small>Comprobante Autorizado</small>`}
-              </div>
-            </div>
-
-            <div class="footer-right">
-              ${totalesHTML}
-            </div>
-          </div>
-
-        </footer>
-      </div>
-    </body>
-
-    </html>`
+<table class="bill-footer">
+<tr class="bill-row row-footer-combined">
+<td class="footer-qr">
+<div>
+<img id="qrcode" src="${qrImageUrl}" alt="QR Code">
+</div>
+</td>
+<td class="footer-cae">
+<div>
+<div style="margin-bottom: 5px;">
+<strong>CAE Nº:</strong> ${facturaInfo.CAE}
+</div>
+<div style="margin-bottom: 15px;">
+<strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+</div>
+${arcaLogoPath ? `<div style="margin-top: 10px; text-align: left;">
+<img src="${arcaLogoPath}" alt="AFIP Logo" style="max-width: 140px; display: block; margin-bottom: 3px;">
+<strong style="font-size: 10px;">Comprobante Autorizado</strong>
+</div>` : '<div style="margin-top: 10px;"><strong style="font-size: 10px;">Comprobante Autorizado</strong></div>'}
+</div>
+</td>
+<td class="footer-totals">
+<div>
+${totalesHTML}
+</div>
+</td>
+</tr>
+</table>
+</div>
+</body>
+</html>`
 }

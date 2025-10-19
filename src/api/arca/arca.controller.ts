@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, Inject, UsePipes, ValidationPipe } 
 import { ArcaService } from './arca.service';
 import { CreateArcaDto } from './dto/create-arca.dto';
 import { CreateCertDevDto } from './dto/create-cert-dev.dto';
+import { AuthWebServiceDevDto } from './dto/auth-web-service-dev.dto';
 
 @Controller('arca')
 export class ArcaController {
@@ -46,6 +47,15 @@ export class ArcaController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   crearCertificadoDev(@Body() data: CreateCertDevDto) {
     return this.arcaService.crearCertificadoDev(data);
+  }
+
+  /**
+   * Autorizar web service de desarrollo
+   */
+  @Post('autorizar-web-service-dev')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  autorizarWebServiceDev(@Body() data: AuthWebServiceDevDto) {
+    return this.arcaService.autorizarWebServiceDev(data);
   }
 
   /**

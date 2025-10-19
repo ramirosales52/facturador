@@ -6,7 +6,7 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@render/components/ui/dialog'
-import { Search, Save, Building2, Shield } from 'lucide-react'
+import { Search, Save, Building2, Shield, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { CONDICIONES_IVA_EMISOR } from '@render/constants/afip'
 
@@ -59,6 +59,7 @@ export function ConfiguracionEmisor({
 
   const [conectandoARCA, setConectandoARCA] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogError, setDialogError] = useState<string | null>(null)
   const [credencialesAFIP, setCredencialesAFIP] = useState({
     username: '',
     password: '',
@@ -74,6 +75,19 @@ export function ConfiguracionEmisor({
       // Si ya hay un CUIT, significa que el certificado fue creado anteriormente
       if (datosIniciales.cuit) {
         setCertificadoCreado(true)
+      }
+    }
+    
+    // Cargar estado del certificado desde localStorage
+    const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
+    const cuitGuardado = localStorage.getItem('cuitARCA')
+    
+    if (certificadoGuardado === 'true' && cuitGuardado) {
+      setCertificadoCreado(true)
+      setCuitARCA(cuitGuardado)
+      // Solo actualizar formData si no hay datosIniciales
+      if (!datosIniciales?.cuit) {
+        setFormData(prev => ({ ...prev, cuit: cuitGuardado }))
       }
     }
   }, [datosIniciales])
@@ -129,19 +143,18 @@ export function ConfiguracionEmisor({
 
   const handleConectarARCA = async () => {
     if (!credencialesAFIP.username || !credencialesAFIP.password) {
-      toast.error('Complete todos los campos de credenciales AFIP', { id: 'toast-conectar-arca-error' })
+      setDialogError('Complete todos los campos de credenciales AFIP')
       return
     }
 
     // Verificar que window.electron esté disponible
     if (typeof window === 'undefined' || !window.electron || typeof window.electron.getBackendPort !== 'function') {
-      toast.error('Error: La aplicación no está completamente cargada', { id: 'toast-conectar-arca-error' })
+      setDialogError('Error: La aplicación no está completamente cargada')
       return
     }
 
     setConectandoARCA(true)
-    setDialogOpen(false)
-    toast.loading('Generando certificado...', { id: 'toast-conectar-arca-loading' })
+    setDialogError(null)
 
     try {
       const backendPort = await window.electron.getBackendPort()
@@ -154,8 +167,9 @@ export function ConfiguracionEmisor({
       const result = response.data
 
       if (result.success) {
+        setDialogOpen(false)
         toast.success('¡Certificado creado exitosamente!', {
-          id: 'toast-conectar-arca-loading',
+          id: 'toast-conectar-arca-success',
           description: `Guardado en: ${result.certDir}`,
           duration: 6000,
         })
@@ -166,8 +180,13 @@ export function ConfiguracionEmisor({
         setCertificadoCreado(true)
         setFormData(prev => ({ ...prev, cuit: cuitStr }))
         
-        // Limpiar credenciales
+        // Guardar estado del certificado en localStorage
+        localStorage.setItem('certificadoARCACreado', 'true')
+        localStorage.setItem('cuitARCA', cuitStr)
+        
+        // Limpiar credenciales y error
         setCredencialesAFIP({ username: '', password: '' })
+        setDialogError(null)
         
         // Buscar automáticamente los datos del CUIT
         if (onBuscarCUIT) {
@@ -204,21 +223,50 @@ export function ConfiguracionEmisor({
           }
         }
       } else {
-        toast.error('Error al crear certificado', {
-          id: 'toast-conectar-arca-loading',
-          description: result.error || 'Error desconocido'
-        })
+        // Mostrar error en el dialog sin cerrarlo
+        setDialogError(result.error || 'Error desconocido')
       }
     } catch (error: any) {
       console.error('Error completo:', error)
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Error desconocido'
-      toast.error('Error al conectar con ARCA', {
-        id: 'toast-conectar-arca-loading',
-        description: errorMsg
-      })
+      // Extraer el mensaje de error más específico
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido'
+      setDialogError(errorMsg)
     } finally {
       setConectandoARCA(false)
     }
+  }
+
+  const handleDesconectarARCA = () => {
+    // Limpiar estado del certificado
+    setCertificadoCreado(false)
+    setCuitARCA('')
+    setFormData({
+      cuit: '',
+      razonSocial: '',
+      domicilio: '',
+      condicionIVA: '1',
+      iibb: '',
+      inicioActividades: '',
+      puntoVenta: 1,
+    })
+    setDatosOriginales({
+      cuit: '',
+      razonSocial: '',
+      domicilio: '',
+      condicionIVA: '1',
+      iibb: '',
+      inicioActividades: '',
+      puntoVenta: 1,
+    })
+    
+    // Limpiar localStorage
+    localStorage.removeItem('certificadoARCACreado')
+    localStorage.removeItem('cuitARCA')
+    localStorage.removeItem('datosEmisor')
+    
+    toast.success('Certificado ARCA desconectado', {
+      description: 'Puede crear un nuevo certificado cuando lo necesite'
+    })
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -243,74 +291,114 @@ export function ConfiguracionEmisor({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Botón Conectar con ARCA */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+          {!certificadoCreado ? (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  disabled={conectandoARCA}
+                  className="w-full text-white font-semibold"
+                  style={{ backgroundColor: '#242c50' }}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Conectar con <strong className="ml-1">ARCA</strong>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Conectar con ARCA</DialogTitle>
+                  <DialogDescription>
+                    Ingrese sus credenciales de AFIP para generar el certificado de desarrollo. El CUIT ingresado será usado como CUIT del emisor.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  {dialogError && (
+                    <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600 font-medium">{dialogError}</p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="afip-username">CUIT / Usuario AFIP</Label>
+                    <Input
+                      id="afip-username"
+                      type="text"
+                      value={credencialesAFIP.username}
+                      onChange={(e) => {
+                        setCredencialesAFIP(prev => ({ ...prev, username: e.target.value }))
+                        setDialogError(null) // Limpiar error al editar
+                      }}
+                      placeholder="20409378472"
+                      disabled={conectandoARCA}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Este será el CUIT de su empresa
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="afip-password">Contraseña AFIP</Label>
+                    <Input
+                      id="afip-password"
+                      type="password"
+                      value={credencialesAFIP.password}
+                      onChange={(e) => {
+                        setCredencialesAFIP(prev => ({ ...prev, password: e.target.value }))
+                        setDialogError(null) // Limpiar error al editar
+                      }}
+                      placeholder="••••••••"
+                      disabled={conectandoARCA}
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false)
+                      setDialogError(null)
+                    }}
+                    disabled={conectandoARCA}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleConectarARCA}
+                    disabled={!credencialesAFIP.username || !credencialesAFIP.password || conectandoARCA}
+                    className="text-white font-semibold"
+                    style={{ backgroundColor: '#242c50' }}
+                  >
+                    {conectandoARCA ? 'Generando...' : 'Generar Certificado'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="space-y-2">
               <Button
                 type="button"
-                disabled={conectandoARCA || certificadoCreado}
+                disabled
                 className="w-full text-white font-semibold"
                 style={{ backgroundColor: '#242c50' }}
               >
                 <Shield className="h-4 w-4 mr-2" />
-                {certificadoCreado ? 'Conectado' : 'Conectar con '}
-                {!certificadoCreado && <strong className="ml-1">ARCA</strong>}
+                Conectado
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Conectar con ARCA</DialogTitle>
-                <DialogDescription>
-                  Ingrese sus credenciales de AFIP para generar el certificado de desarrollo. El CUIT ingresado será usado como CUIT del emisor.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="afip-username">CUIT / Usuario AFIP</Label>
-                  <Input
-                    id="afip-username"
-                    type="text"
-                    value={credencialesAFIP.username}
-                    onChange={(e) => setCredencialesAFIP(prev => ({ ...prev, username: e.target.value }))}
-                    placeholder="20409378472"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Este será el CUIT de su empresa
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="afip-password">Contraseña AFIP</Label>
-                  <Input
-                    id="afip-password"
-                    type="password"
-                    value={credencialesAFIP.password}
-                    onChange={(e) => setCredencialesAFIP(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleConectarARCA}
-                  disabled={!credencialesAFIP.username || !credencialesAFIP.password}
-                  className="text-white font-semibold"
-                  style={{ backgroundColor: '#242c50' }}
-                >
-                  Generar Certificado
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDesconectarARCA}
+                className="w-full text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Desconectar ARCA
+              </Button>
+            </div>
+          )}
           
           <p className="text-xs text-gray-500 text-center">
             {certificadoCreado 
