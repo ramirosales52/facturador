@@ -5,6 +5,10 @@ import { findAvailablePort } from './utils/port-finder';
 import { extraerCUITDeArgumentos } from './utils/cuit-validator';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { config } from 'dotenv';
+
+// Cargar variables de entorno desde .env
+config();
 
 // Store simple sin dependencias
 const storePath = join(app.getPath('userData'), 'config.json');
