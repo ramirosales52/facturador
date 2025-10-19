@@ -313,12 +313,6 @@ export function ConfiguracionEmisor({
                 </DialogHeader>
                 
                 <div className="space-y-4 py-4">
-                  {dialogError && (
-                    <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-sm text-red-600 font-medium">{dialogError}</p>
-                    </div>
-                  )}
-                  
                   <div className="space-y-2">
                     <Label htmlFor="afip-username">CUIT / Usuario AFIP</Label>
                     <Input
@@ -351,6 +345,12 @@ export function ConfiguracionEmisor({
                       disabled={conectandoARCA}
                     />
                   </div>
+
+                  {dialogError && (
+                    <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600 font-medium">{dialogError}</p>
+                    </div>
+                  )}
                 </div>
                 
                 <DialogFooter>
