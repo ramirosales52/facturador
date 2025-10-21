@@ -1,68 +1,154 @@
-import { existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
-import puppeteer from 'puppeteer'
 import { ArcaConfig } from './arca.config'
 import { CreateArcaDto } from './dto/create-arca.dto'
 
 @Injectable()
 export class ArcaService {
   private afip: Afip
+  private cuitActual?: number
 
   constructor() {
-    // Configuración para ambiente de desarrollo/homologación
+    console.log('ℹ️  CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
+  }
+
+  configurarCUIT(cuit: number) {
+    this.cuitActual = cuit
+    const { certContent, keyContent } = this.loadCertificates(cuit)
+
     const config: any = {
-      CUIT: ArcaConfig.CUIT,
+      CUIT: cuit,
       production: ArcaConfig.production,
+      cert: certContent,
+      key: keyContent,
     }
 
-    // Intentar usar certificados de desarrollo desde el directorio de usuario
-    const certsDir = join(homedir(), 'afip-certs')
-    const certPathDev = join(certsDir, `${ArcaConfig.CUIT}_dev.crt`)
-    const keyPathDev = join(certsDir, `${ArcaConfig.CUIT}_dev.key`)
-
-    // Primero intentar certificados de desarrollo
-    if (existsSync(certPathDev) && existsSync(keyPathDev)) {
-      console.log('Usando certificados de desarrollo:', certPathDev)
-      config.cert = certPathDev
-      config.key = keyPathDev
-    } 
-    // Si no, intentar con los certificados configurados
-    else if (ArcaConfig.cert && existsSync(ArcaConfig.cert) && ArcaConfig.key && existsSync(ArcaConfig.key)) {
-      console.log('Usando certificados configurados:', ArcaConfig.cert)
-      config.cert = ArcaConfig.cert
-      config.key = ArcaConfig.key
-    }
-    else {
-      console.log('⚠️  No se encontraron certificados. Usando configuración sin certificados (solo para desarrollo con CUIT de prueba)')
+    if (ArcaConfig.production) {
+      config.access_token = this.getAccessToken()
     }
 
     this.afip = new Afip(config)
+    console.log(`✅ AFIP SDK configurado con CUIT: ${cuit}`)
+  }
+
+  getCUITActual(): number | undefined {
+    return this.cuitActual
+  }
+
+  private getAccessToken(): string {
+    const token = process.env.AFIP_SDK_ACCESS_TOKEN
+    if (!token) {
+      throw new Error('AFIP_SDK_ACCESS_TOKEN es obligatorio en producción')
+    }
+    return token
+  }
+
+  private getCertsDir(): string {
+    return join(homedir(), 'afip-certs')
+  }
+
+  private getCertPaths(cuit: number): { certPath: string; keyPath: string } {
+    const certsDir = this.getCertsDir()
+    const suffix = ArcaConfig.production ? 'prod' : 'dev'
+    return {
+      certPath: join(certsDir, `${cuit}_${suffix}.crt`),
+      keyPath: join(certsDir, `${cuit}_${suffix}.key`),
+    }
+  }
+
+  private loadCertificates(cuit: number): { certContent: string; keyContent: string } {
+    const { certPath, keyPath } = this.getCertPaths(cuit)
+
+    if (!existsSync(certPath) || !existsSync(keyPath)) {
+      throw new Error(`No se encontraron certificados para CUIT ${cuit}`)
+    }
+
+    return {
+      certContent: readFileSync(certPath, 'utf8'),
+      keyContent: readFileSync(keyPath, 'utf8'),
+    }
+  }
+
+  private ensureAfipConfigured(): void {
+    if (!this.afip) {
+      throw new Error('AFIP SDK no está configurado. Configure el CUIT primero.')
+    }
+  }
+
+  private handleError(error: any, defaultMessage: string): { success: false; error: string } {
+    console.error(`${defaultMessage}:`, error)
+
+    let errorMessage = defaultMessage
+    if (error.data?.data?.message) {
+      errorMessage = error.data.data.message
+    } else if (error.data?.data_errors?.params) {
+      errorMessage = `Error de validación: ${JSON.stringify(error.data.data_errors.params)}`
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    return { success: false, error: errorMessage }
   }
 
   /**
    * Consultar datos de un contribuyente por CUIT
+   * NOTA: Esta funcionalidad requiere servicios de padrón que pueden no estar disponibles
+   * para todos los CUITs. Si falla, el usuario debe ingresar los datos manualmente.
    */
   async consultarContribuyente(cuit: number) {
     try {
-      const data = await this.afip.RegisterScopeFive.getTaxpayerDetails(cuit)
-      
+      if (!this.afip) {
+        throw new Error('AFIP SDK no está configurado. Configure el CUIT primero.')
+      }
+
+      const ws = this.afip.WebService('ws_sr_padron_a13')
+      const token = await ws.getTokenAuthorization()
+
+      // Realizar la consulta a AFIP
+      const response = await ws.executeRequest('getPersona', {
+        token: token.token,
+        sign: token.sign,
+        cuitRepresentada: this.cuitActual,
+        idPersona: cuit
+      })
+
+      // Validar que haya datos
+      const persona = response?.personaReturn?.persona
+      if (!persona) {
+        return {
+          success: false,
+          error: 'No se encontraron datos para el CUIT especificado',
+        }
+      }
+
+      // Obtener domicilio
+      const domicilio = persona.domicilio?.[0] ?? {}
+
+      // Construir datos para el front
+      const datosContribuyente = {
+        cuit: persona.idPersona,
+        razonSocial: `${persona.nombre ?? ''} ${persona.apellido ?? ''}`.trim(),
+        domicilio: `${domicilio.direccion ?? domicilio.calle ?? ''}, ${domicilio.localidad ?? ''}, ${domicilio.descripcionProvincia ?? ''}, CP: ${domicilio.codigoPostal ?? ''}`.replace(/^, |, $/g, ''),
+        tipoPersona: persona.tipoPersona,
+        tipoDocumento: persona.tipoDocumento,
+        numeroDocumento: persona.numeroDocumento,
+        estadoClave: persona.estadoClave
+      }
+
       return {
         success: true,
-        data: {
-          razonSocial: data.razonSocial || `${data.apellido} ${data.nombre}`,
-          domicilio: data.domicilioFiscal?.direccion,
-          localidad: data.domicilioFiscal?.localidad,
-          provincia: data.domicilioFiscal?.provincia,
-          condicionIVA: this.determinarCondicionIVA(data),
-          tipoPersona: data.tipoPersona,
-        },
+        data: datosContribuyente
       }
-    }
-    catch (error) {
-      return this.handleError(error)
+
+    } catch (error: any) {
+      console.error('Error al consultar contribuyente:', error)
+      return {
+        success: false,
+        error: error.message ?? 'Error al consultar CUIT'
+      }
     }
   }
 
@@ -207,9 +293,9 @@ export class ArcaService {
     try {
       // Generar URL según especificaciones de AFIP
       // https://www.afip.gob.ar/fe/qr/?p=parametros
-      
+
       // IMPORTANTE: El CAE debe ser número según especificación de AFIP
-      const codAutNumerico = typeof facturaData.codAut === 'string' 
+      const codAutNumerico = typeof facturaData.codAut === 'string'
         ? Number.parseInt(facturaData.codAut, 10)
         : facturaData.codAut
 
@@ -255,13 +341,13 @@ export class ArcaService {
       const fs = await import('node:fs/promises')
       const buffer = await fs.readFile(imagePath)
       const base64 = buffer.toString('base64')
-      
+
       // Detectar el tipo de imagen por extensión
       let mimeType = 'image/png'
       if (imagePath.toLowerCase().endsWith('.jpg') || imagePath.toLowerCase().endsWith('.jpeg')) {
         mimeType = 'image/jpeg'
       }
-      
+
       return `data:${mimeType};base64,${base64}`
     }
     catch (error) {
@@ -277,18 +363,18 @@ export class ArcaService {
     try {
       const https = await import('node:https')
       const http = await import('node:http')
-      
+
       return new Promise((resolve, reject) => {
         const protocol = url.startsWith('https') ? https : http
-        
+
         protocol.get(url, (response) => {
           if (response.statusCode !== 200) {
             reject(new Error(`Failed to download image: ${response.statusCode}`))
             return
           }
-          
+
           const chunks: Buffer[] = []
-          response.on('data', (chunk) => chunks.push(chunk))
+          response.on('data', chunk => chunks.push(chunk))
           response.on('end', () => {
             const buffer = Buffer.concat(chunks)
             const base64 = buffer.toString('base64')
@@ -308,22 +394,22 @@ export class ArcaService {
    * Crear certificado de desarrollo para ARCA
    * Utiliza las automatizaciones del SDK de AFIP
    */
-  async crearCertificadoDev(data: { cuit: string; username: string; password: string }) {
+  async crearCertificadoDev(data: { cuit: string, username: string, password: string }) {
     try {
-      console.log('Iniciando creación de certificado con datos:', { 
+      console.log('Iniciando creación de certificado con datos:', {
         cuit: data.username, // El CUIT debe ser el del username
         username: data.username,
-        hasPassword: !!data.password 
-      });
+        hasPassword: !!data.password,
+      })
 
       // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN;
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
       if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno');
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
       }
-      
-      const afipInstance = new Afip({ 
-        access_token: accessToken
+
+      const afipInstance = new Afip({
+        access_token: accessToken,
       })
 
       // Datos para la automatización - IMPORTANTE: cuit debe ser el mismo que username
@@ -331,21 +417,21 @@ export class ArcaService {
         cuit: data.username, // Usar el username como CUIT
         username: data.username,
         password: data.password,
-        alias: 'afipsdkcert'
+        alias: 'afipsdkcert',
       }
 
-      console.log('Ejecutando automatización create-cert-dev con datos:', automationData);
+      console.log('Ejecutando automatización create-cert-dev con datos:', automationData)
 
       // Ejecutar la automatización create-cert-dev
       // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
       const result = await afipInstance.CreateAutomation('create-cert-dev', automationData, true)
 
-      console.log('Resultado de la automatización:', { 
-        id: result.id, 
+      console.log('Resultado de la automatización:', {
+        id: result.id,
         status: result.status,
         hasCert: !!result.data?.cert,
-        hasKey: !!result.data?.key
-      });
+        hasKey: !!result.data?.key,
+      })
 
       // Verificar que la automatización se completó exitosamente
       if (result.status !== 'complete') {
@@ -358,7 +444,7 @@ export class ArcaService {
 
       // Guardar el certificado y la clave
       const certsDir = join(homedir(), 'afip-certs')
-      
+
       // Crear el directorio si no existe
       if (!existsSync(certsDir)) {
         mkdirSync(certsDir, { recursive: true })
@@ -368,40 +454,109 @@ export class ArcaService {
       // Guardar con el CUIT del username
       const certPath = join(certsDir, `${data.username}_dev.crt`)
       const keyPath = join(certsDir, `${data.username}_dev.key`)
-      
+
       await fs.writeFile(certPath, result.data.cert)
       await fs.writeFile(keyPath, result.data.key)
 
-      console.log('Certificados guardados exitosamente en:', certPath);
+      console.log('Certificados guardados exitosamente en:', certPath)
+
+      // AUTORIZAR AUTOMÁTICAMENTE LOS SERVICIOS NECESARIOS
+      console.log('Autorizando servicios necesarios...')
+
+      const serviciosNecesarios = [
+        {
+          service: 'wsfe',
+          name: 'Web Service Factura Electrónica',
+          required: true
+        },
+        {
+          service: 'ws_sr_padron_a13',
+          name: 'Consulta de Padrón A13',
+          required: true
+        },
+      ]
+
+      const serviciosAutorizados = []
+      const serviciosConError = []
+
+      for (const servicio of serviciosNecesarios) {
+        try {
+          console.log(`Autorizando servicio: ${servicio.service}`)
+
+          const authData = {
+            cuit: data.username,
+            username: data.username,
+            password: data.password,
+            alias: 'afipsdkcert',
+            service: servicio.service,
+          }
+
+          // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+          const authResult = await afipInstance.CreateAutomation('auth-web-service-dev', authData, true)
+
+          if (authResult.status === 'complete') {
+            console.log(`✅ Servicio ${servicio.service} autorizado exitosamente`)
+            serviciosAutorizados.push(servicio.service)
+          }
+          else {
+            console.log(`⚠️  Servicio ${servicio.service} no se pudo autorizar: ${authResult.status}`)
+            if (!servicio.required) {
+              console.log(`   (Servicio opcional - la aplicación funcionará sin él)`)
+            }
+            serviciosConError.push(servicio.service)
+          }
+        }
+        catch (error: any) {
+          console.error(`❌ Error al autorizar ${servicio.service}:`, error.message)
+          if (!servicio.required) {
+            console.log(`   (Servicio opcional - la aplicación funcionará sin él)`)
+          }
+          serviciosConError.push(servicio.service)
+        }
+      }
+
+      // Configurar el CUIT en el servicio
+      this.configurarCUIT(Number.parseInt(data.username))
+
+      // Construir mensaje apropiado
+      let message = 'Certificado creado exitosamente'
+      if (serviciosAutorizados.includes('wsfe')) {
+        message += ' y listo para facturar'
+      }
 
       return {
         success: true,
-        message: 'Certificado de desarrollo creado exitosamente',
+        message,
         certPath,
         keyPath,
         certDir: certsDir,
+        serviciosAutorizados,
+        serviciosConError: serviciosConError.length > 0 ? serviciosConError : undefined,
       }
-    } catch (error: any) {
-      console.error('Error en crearCertificadoDev:', error);
-      
+    }
+    catch (error: any) {
+      console.error('Error en crearCertificadoDev:', error)
+
       // Intentar extraer más información del error del SDK
       if (error.data?.data_errors) {
-        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2));
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2))
       }
-      
+
       // Construir mensaje de error más descriptivo
-      let errorMessage = 'Error al crear certificado';
-      
+      let errorMessage = 'Error al crear certificado'
+
       // Priorizar mensaje del servidor AFIP si está disponible
       if (error.data?.data?.message) {
-        errorMessage = error.data.data.message;
-      } else if (error.data?.data_errors?.params) {
-        const paramErrors = error.data.data_errors.params;
-        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`;
-      } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = error.data.data.message
       }
-      
+      else if (error.data?.data_errors?.params) {
+        const paramErrors = error.data.data_errors.params
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`
+      }
+      else if (error.message) {
+        errorMessage = error.message
+      }
+
       return {
         success: false,
         error: errorMessage,
@@ -433,7 +588,7 @@ export class ArcaService {
       const qrResult = await this.generateQR({
         ver: 1,
         fecha,
-        cuit: ArcaConfig.CUIT,
+        cuit: this.cuitActual || 0, // Usar CUIT actual o 0 si no está configurado
         ptoVta: facturaInfo.PtoVta,
         tipoCmp: facturaInfo.CbteTipo,
         nroCmp: facturaInfo.CbteDesde,
@@ -449,13 +604,13 @@ export class ArcaService {
       // Verificar que se generó el QR correctamente
       if (!qrResult.success || !qrResult.qrUrl) {
         const errorMsg = 'error' in qrResult ? qrResult.error : 'Error desconocido al generar QR'
-        throw new Error('Error al generar QR: ' + errorMsg)
+        throw new Error(`Error al generar QR: ${errorMsg}`)
       }
 
       // Generar URL del QR code como imagen y convertirla a base64
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResult.qrUrl || '')}`
       const qrImageBase64 = await this.urlToBase64(qrImageUrl)
-      
+
       if (!qrImageBase64) {
         throw new Error('Error al descargar y convertir el código QR')
       }
@@ -464,45 +619,46 @@ export class ArcaService {
       // En desarrollo: dist/main -> src/render/assets
       // En producción (empaquetado): buscar en resources/assets
       const projectRoot = join(__dirname, '../..')
-      
+
       // Intentar diferentes rutas según el entorno
       let logoPathRaw: string
       let arcaLogoPathRaw: string
-      
+
       // En app empaquetada (process.resourcesPath existe cuando está empaquetado)
       const isPackaged = process.resourcesPath !== undefined
-      
+
       if (isPackaged) {
         // En app empaquetada, assets están en app.asar/assets o app.asar.unpacked/assets
         const assetsPath = join(process.resourcesPath, 'app.asar', 'assets')
         logoPathRaw = join(assetsPath, 'logo.png')
         arcaLogoPathRaw = join(assetsPath, 'ARCA.png')
-        
+
         console.log('App empaquetada, buscando en:', assetsPath)
-      } else {
+      }
+      else {
         // En desarrollo
         logoPathRaw = join(projectRoot, 'src/render/assets/logo.png')
         arcaLogoPathRaw = join(projectRoot, 'src/render/assets/ARCA.png')
-        
+
         console.log('App en desarrollo, buscando en:', projectRoot)
       }
-      
+
       console.log('Logo path:', logoPathRaw)
       console.log('ARCA logo path:', arcaLogoPathRaw)
       console.log('Logo exists:', existsSync(logoPathRaw))
       console.log('ARCA exists:', existsSync(arcaLogoPathRaw))
-      
+
       const logoBase64 = await this.imageToBase64(logoPathRaw)
       const arcaLogoBase64 = await this.imageToBase64(arcaLogoPathRaw)
 
       // Importar y usar la función de generación de HTML desde facturaTemplate
       const { generarHTMLFactura } = await import('@render/factura/components/facturaTemplate')
       const html = generarHTMLFactura(
-        facturaInfo, 
-        qrImageBase64, 
-        ArcaConfig.CUIT, 
-        logoBase64 || undefined, 
-        arcaLogoBase64 || undefined
+        facturaInfo,
+        qrImageBase64,
+        this.cuitActual || 0, // Usar CUIT actual
+        logoBase64 || undefined,
+        arcaLogoBase64 || undefined,
       )
 
       // Nombre del archivo
@@ -513,13 +669,14 @@ export class ArcaService {
       let outputDir: string
       if (facturaInfo.customPath && existsSync(facturaInfo.customPath)) {
         outputDir = facturaInfo.customPath
-      } else {
+      }
+      else {
         // En Windows: C:\Users\[usuario]\Desktop
         // En Linux/Mac: /home/[usuario]/Desktop
         const desktopPath = join(homedir(), 'Desktop')
         outputDir = desktopPath
       }
-      
+
       // Crear el directorio si no existe
       if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true })
@@ -535,7 +692,7 @@ export class ArcaService {
       })
 
       const page = await browser.newPage()
-      
+
       // Configurar el contenido HTML
       await page.setContent(html, { waitUntil: 'networkidle0' })
 
@@ -576,30 +733,30 @@ export class ArcaService {
    * Autorizar web service de desarrollo
    * Utiliza las automatizaciones del SDK de AFIP para autorizar un web service
    */
-  async autorizarWebServiceDev(data: { 
+  async autorizarWebServiceDev(data: {
     cuit: string
     username: string
     password: string
     alias: string
-    service: string 
+    service: string
   }) {
     try {
-      console.log('Iniciando autorización de web service con datos:', { 
+      console.log('Iniciando autorización de web service con datos:', {
         cuit: data.cuit,
         username: data.username,
         alias: data.alias,
         service: data.service,
-        hasPassword: !!data.password 
-      });
+        hasPassword: !!data.password,
+      })
 
       // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN;
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
       if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno');
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
       }
-      
-      const afipInstance = new Afip({ 
-        access_token: accessToken
+
+      const afipInstance = new Afip({
+        access_token: accessToken,
       })
 
       // Datos para la automatización
@@ -608,20 +765,20 @@ export class ArcaService {
         username: data.username,
         password: data.password,
         alias: data.alias,
-        service: data.service
+        service: data.service,
       }
 
-      console.log('Ejecutando automatización auth-web-service-dev con datos:', automationData);
+      console.log('Ejecutando automatización auth-web-service-dev con datos:', automationData)
 
       // Ejecutar la automatización auth-web-service-dev
       // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
       const result = await afipInstance.CreateAutomation('auth-web-service-dev', automationData, true)
 
-      console.log('Resultado de la automatización:', { 
-        id: result.id, 
+      console.log('Resultado de la automatización:', {
+        id: result.id,
         status: result.status,
-        data: result.data
-      });
+        data: result.data,
+      })
 
       // Verificar que la automatización se completó exitosamente
       if (result.status !== 'complete') {
@@ -637,24 +794,293 @@ export class ArcaService {
         message: 'Web service autorizado exitosamente',
         data: result.data,
       }
-    } catch (error: any) {
-      console.error('Error en autorizarWebServiceDev:', error);
-      
+    }
+    catch (error: any) {
+      console.error('Error en autorizarWebServiceDev:', error)
+
       // Intentar extraer más información del error del SDK
       if (error.data?.data_errors) {
-        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2));
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2))
       }
-      
+
       // Construir mensaje de error más descriptivo
-      let errorMessage = 'Error al autorizar web service';
-      
+      let errorMessage = 'Error al autorizar web service'
+
       if (error.data?.data_errors?.params) {
-        const paramErrors = error.data.data_errors.params;
-        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`;
-      } else if (error.message) {
-        errorMessage = error.message;
+        const paramErrors = error.data.data_errors.params
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`
       }
-      
+      else if (error.message) {
+        errorMessage = error.message
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Crear certificado de producción para ARCA
+   * Utiliza las automatizaciones del SDK de AFIP
+   */
+  async crearCertificadoProd(data: { cuit: string, username: string, password: string, alias: string }) {
+    try {
+      console.log('Iniciando creación de certificado de PRODUCCIÓN con datos:', {
+        cuit: data.username,
+        username: data.username,
+        alias: data.alias,
+        hasPassword: !!data.password,
+      })
+
+      // Configurar Afip con el access_token desde variable de entorno
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
+      if (!accessToken) {
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
+      }
+
+      const afipInstance = new Afip({
+        access_token: accessToken,
+      })
+
+      // Datos para la automatización
+      const automationData = {
+        cuit: data.username,
+        username: data.username,
+        password: data.password,
+        alias: data.alias,
+      }
+
+      console.log('Ejecutando automatización create-cert-prod con datos:', automationData)
+
+      // Ejecutar la automatización create-cert-prod
+      // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+      const result = await afipInstance.CreateAutomation('create-cert-prod', automationData, true)
+
+      console.log('Resultado de la automatización:', {
+        id: result.id,
+        status: result.status,
+        hasCert: !!result.data?.cert,
+        hasKey: !!result.data?.key,
+      })
+
+      // Verificar que la automatización se completó exitosamente
+      if (result.status !== 'complete') {
+        throw new Error(`La automatización no se completó correctamente. Estado: ${result.status}`)
+      }
+
+      if (!result.data?.cert || !result.data?.key) {
+        throw new Error('La automatización no devolvió certificado o clave')
+      }
+
+      // Guardar el certificado y la clave
+      const certsDir = join(homedir(), 'afip-certs')
+
+      // Crear el directorio si no existe
+      if (!existsSync(certsDir)) {
+        mkdirSync(certsDir, { recursive: true })
+      }
+
+      const fs = await import('node:fs/promises')
+      // Guardar con el CUIT del username y marcado como producción
+      const certPath = join(certsDir, `${data.username}_prod.crt`)
+      const keyPath = join(certsDir, `${data.username}_prod.key`)
+
+      await fs.writeFile(certPath, result.data.cert)
+      await fs.writeFile(keyPath, result.data.key)
+
+      console.log('Certificados de PRODUCCIÓN guardados exitosamente en:', certPath)
+
+      // AUTORIZAR AUTOMÁTICAMENTE LOS SERVICIOS NECESARIOS
+      console.log('Autorizando servicios necesarios en PRODUCCIÓN...')
+
+      const serviciosNecesarios = [
+        {
+          service: 'wsfe',
+          name: 'Web Service Factura Electrónica',
+          required: true
+        },
+        {
+          service: 'ws_sr_padron_a13',
+          name: 'Consulta de Padrón A13',
+          required: true
+        },
+      ]
+
+      const serviciosAutorizados = []
+      const serviciosConError = []
+
+      for (const servicio of serviciosNecesarios) {
+        try {
+          console.log(`Autorizando servicio de producción: ${servicio.service}`)
+
+          const authData = {
+            cuit: data.username,
+            username: data.username,
+            password: data.password,
+            alias: data.alias,
+            service: servicio.service,
+          }
+
+          // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+          const authResult = await afipInstance.CreateAutomation('auth-web-service-prod', authData, true)
+
+          if (authResult.status === 'complete') {
+            console.log(`✅ Servicio de producción ${servicio.service} autorizado exitosamente`)
+            serviciosAutorizados.push(servicio.service)
+          }
+          else {
+            console.log(`⚠️  Servicio ${servicio.service} no se pudo autorizar: ${authResult.status}`)
+            if (!servicio.required) {
+              console.log(`   (Servicio opcional - la aplicación funcionará sin él)`)
+            }
+            serviciosConError.push(servicio.service)
+          }
+        }
+        catch (error: any) {
+          console.error(`❌ Error al autorizar ${servicio.service}:`, error.message)
+          if (!servicio.required) {
+            console.log(`   (Servicio opcional - la aplicación funcionará sin él)`)
+          }
+          serviciosConError.push(servicio.service)
+        }
+      }
+
+      // Configurar el CUIT en el servicio
+      this.configurarCUIT(Number.parseInt(data.username))
+
+      // Construir mensaje apropiado
+      let message = 'Certificado de producción creado exitosamente'
+      if (serviciosAutorizados.includes('wsfe')) {
+        message += ' y listo para facturar'
+      }
+
+      return {
+        success: true,
+        message,
+        certPath,
+        keyPath,
+        certDir: certsDir,
+        serviciosAutorizados,
+        serviciosConError: serviciosConError.length > 0 ? serviciosConError : undefined,
+      }
+    }
+    catch (error: any) {
+      console.error('Error en crearCertificadoProd:', error)
+
+      // Intentar extraer más información del error del SDK
+      if (error.data?.data_errors) {
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2))
+      }
+
+      // Construir mensaje de error más descriptivo
+      let errorMessage = 'Error al crear certificado de producción'
+
+      // Priorizar mensaje del servidor AFIP si está disponible
+      if (error.data?.data?.message) {
+        errorMessage = error.data.data.message
+      }
+      else if (error.data?.data_errors?.params) {
+        const paramErrors = error.data.data_errors.params
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`
+      }
+      else if (error.message) {
+        errorMessage = error.message
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Autorizar web service de producción
+   * Utiliza las automatizaciones del SDK de AFIP para autorizar un web service
+   */
+  async autorizarWebServiceProd(data: {
+    cuit: string
+    username: string
+    password: string
+    alias: string
+    service: string
+  }) {
+    try {
+      console.log('Iniciando autorización de web service de PRODUCCIÓN con datos:', {
+        cuit: data.cuit,
+        username: data.username,
+        alias: data.alias,
+        service: data.service,
+        hasPassword: !!data.password,
+      })
+
+      // Configurar Afip con el access_token desde variable de entorno
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
+      if (!accessToken) {
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
+      }
+
+      const afipInstance = new Afip({
+        access_token: accessToken,
+      })
+
+      // Datos para la automatización
+      const automationData = {
+        cuit: data.cuit,
+        username: data.username,
+        password: data.password,
+        alias: data.alias,
+        service: data.service,
+      }
+
+      console.log('Ejecutando automatización auth-web-service-prod con datos:', automationData)
+
+      // Ejecutar la automatización auth-web-service-prod
+      // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+      const result = await afipInstance.CreateAutomation('auth-web-service-prod', automationData, true)
+
+      console.log('Resultado de la automatización:', {
+        id: result.id,
+        status: result.status,
+        data: result.data,
+      })
+
+      // Verificar que la automatización se completó exitosamente
+      if (result.status !== 'complete') {
+        throw new Error(`La automatización no se completó correctamente. Estado: ${result.status}`)
+      }
+
+      if (result.data?.status !== 'created') {
+        throw new Error('La autorización no se completó correctamente')
+      }
+
+      return {
+        success: true,
+        message: 'Web service de producción autorizado exitosamente',
+        data: result.data,
+      }
+    }
+    catch (error: any) {
+      console.error('Error en autorizarWebServiceProd:', error)
+
+      // Intentar extraer más información del error del SDK
+      if (error.data?.data_errors) {
+        console.error('Errores de validación del SDK:', JSON.stringify(error.data.data_errors, null, 2))
+      }
+
+      // Construir mensaje de error más descriptivo
+      let errorMessage = 'Error al autorizar web service de producción'
+
+      if (error.data?.data_errors?.params) {
+        const paramErrors = error.data.data_errors.params
+        errorMessage = `Error de validación: ${JSON.stringify(paramErrors)}`
+      }
+      else if (error.message) {
+        errorMessage = error.message
+      }
+
       return {
         success: false,
         error: errorMessage,
@@ -667,7 +1093,7 @@ export class ArcaService {
    */
   getConfig() {
     return {
-      cuit: ArcaConfig.CUIT,
+      cuit: this.cuitActual, // Devolver CUIT actual (o undefined si no está configurado)
       production: ArcaConfig.production,
     }
   }

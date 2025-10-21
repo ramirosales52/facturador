@@ -1,21 +1,26 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { useArca } from '../hooks/useArca';
-import { toast } from 'sonner';
+import type { FormEvent } from 'react'
+import type {
+  Articulo,
+  FacturaResultadoData,
+  FormData,
+} from './components'
+import type { DatosEmisor } from './components/ConfiguracionEmisor'
+import type { FacturaPDFData } from './components/facturaTemplate'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { ALICUOTAS_IVA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
+import { useArca } from '../hooks/useArca'
+import { agruparIVAParaAFIP, agruparIVAPorAlicuota, calcularSubtotal, calcularTotalesFactura, getNombreCondicionIVA } from '../utils/calculos'
 import {
   FacturaForm,
   FacturaResultado,
-  FormData,
-  FacturaResultadoData,
-  Articulo,
-} from './components';
-import { generarHTMLFactura, FacturaPDFData } from './components/facturaTemplate';
-import { ConfiguracionEmisor, DatosEmisor } from './components/ConfiguracionEmisor';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs';
-import { calcularTotalesFactura, agruparIVAParaAFIP, agruparIVAPorAlicuota, getNombreCondicionIVA, calcularSubtotal } from '../utils/calculos';
-import { DEFAULTS, TIPOS_COMPROBANTE, ALICUOTAS_IVA } from '../constants/afip';
+} from './components'
+import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
+import { generarHTMLFactura } from './components/facturaTemplate'
 
-const CrearFactura = () => {
-  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente } = useArca();
+function CrearFactura() {
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente } = useArca()
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: DEFAULTS.TIPO_FACTURA,
@@ -30,7 +35,7 @@ const CrearFactura = () => {
     ImpIVA: '0.00',
     ImpTotal: '0.00',
     IVAGlobal: '5', // 21% por defecto
-  });
+  })
 
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
     cuit: '', // Iniciar vacío - se llena al crear certificado ARCA
@@ -40,16 +45,16 @@ const CrearFactura = () => {
     iibb: '',
     inicioActividades: '',
     puntoVenta: DEFAULTS.PUNTO_VENTA,
-  });
+  })
 
-  const [resultado, setResultado] = useState<FacturaResultadoData | null>(null);
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [htmlPreview, setHtmlPreview] = useState<string | null>(null);
-  const [loadingContribuyente, setLoadingContribuyente] = useState(false);
-  const [loadingEmisor, setLoadingEmisor] = useState(false);
-  const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false);
-  const [pdfSavePath, setPdfSavePath] = useState<string>('');
+  const [resultado, setResultado] = useState<FacturaResultadoData | null>(null)
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [htmlPreview, setHtmlPreview] = useState<string | null>(null)
+  const [loadingContribuyente, setLoadingContribuyente] = useState(false)
+  const [loadingEmisor, setLoadingEmisor] = useState(false)
+  const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
+  const [pdfSavePath, setPdfSavePath] = useState<string>('')
 
   // Cargar carpeta guardada al inicio
   useEffect(() => {
@@ -63,12 +68,13 @@ const CrearFactura = () => {
             setPdfSavePath(savedPath)
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error al cargar carpeta guardada:', error)
       }
     }
     loadSavedPath()
-  }, []);
+  }, [])
 
   /**
    * Seleccionar carpeta para guardar PDFs
@@ -80,55 +86,57 @@ const CrearFactura = () => {
         // @ts-ignore
         const result = await window.electron.dialog.showOpenDialog({
           properties: ['openDirectory'],
-          title: 'Seleccionar carpeta para guardar PDFs'
+          title: 'Seleccionar carpeta para guardar PDFs',
         })
-        
+
         if (!result.canceled && result.filePaths.length > 0) {
           const selectedPath = result.filePaths[0]
           setPdfSavePath(selectedPath)
-          
+
           // Guardar la preferencia
           // @ts-ignore
           if (window.electron?.store?.set) {
             // @ts-ignore
             await window.electron.store.set('pdfSavePath', selectedPath)
           }
-          
+
           toast.success('Carpeta seleccionada correctamente', { id: 'seleccionar-carpeta' })
         }
-      } else {
+      }
+      else {
         toast.info('Función disponible solo en la aplicación empaquetada', { id: 'seleccionar-carpeta' })
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error al seleccionar carpeta:', error)
       toast.error('Error al seleccionar carpeta', { id: 'seleccionar-carpeta' })
     }
-  };
+  }
 
   const recalcularTotales = (articulos: Articulo[]): void => {
-    const totales = calcularTotalesFactura(articulos);
-    
-    setFormData((prev) => ({
+    const totales = calcularTotalesFactura(articulos)
+
+    setFormData(prev => ({
       ...prev,
       ImpNeto: totales.neto.toFixed(2),
       ImpIVA: totales.iva.toFixed(2),
       ImpTotal: totales.total.toFixed(2),
-    }));
-  };
+    }))
+  }
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    
+    setFormData(prev => ({ ...prev, [field]: value }))
+
     // Si es Factura B y se cambió el IVA Global, actualizar todos los artículos
     if (field === 'IVAGlobal' && formData.TipoFactura === 'B') {
       const articulosActualizados = formData.Articulos.map(articulo => ({
         ...articulo,
         alicuotaIVA: value,
-      }));
-      setFormData((prev) => ({ ...prev, Articulos: articulosActualizados, [field]: value }));
-      recalcularTotales(articulosActualizados);
+      }))
+      setFormData(prev => ({ ...prev, Articulos: articulosActualizados, [field]: value }))
+      recalcularTotales(articulosActualizados)
     }
-  };
+  }
 
   const handleArticuloAdd = (): void => {
     const nuevoArticulo: Articulo = {
@@ -139,24 +147,24 @@ const CrearFactura = () => {
       precioUnitario: undefined,
       // Para Factura B usar el IVA global seleccionado
       alicuotaIVA: formData.TipoFactura === 'B' && formData.IVAGlobal ? formData.IVAGlobal : DEFAULTS.ALICUOTA_IVA_DEFAULT,
-    };
-    const nuevosArticulos = [...formData.Articulos, nuevoArticulo];
-    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
-    recalcularTotales(nuevosArticulos);
-  };
+    }
+    const nuevosArticulos = [...formData.Articulos, nuevoArticulo]
+    setFormData(prev => ({ ...prev, Articulos: nuevosArticulos }))
+    recalcularTotales(nuevosArticulos)
+  }
 
   const handleArticuloRemove = (index: number): void => {
-    const nuevosArticulos = formData.Articulos.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
-    recalcularTotales(nuevosArticulos);
-  };
+    const nuevosArticulos = formData.Articulos.filter((_, i) => i !== index)
+    setFormData(prev => ({ ...prev, Articulos: nuevosArticulos }))
+    recalcularTotales(nuevosArticulos)
+  }
 
   const handleArticuloChange = (index: number, field: keyof Articulo, value: string | number): void => {
-    const nuevosArticulos = [...formData.Articulos];
-    nuevosArticulos[index] = { ...nuevosArticulos[index], [field]: value };
-    setFormData((prev) => ({ ...prev, Articulos: nuevosArticulos }));
-    recalcularTotales(nuevosArticulos);
-  };
+    const nuevosArticulos = [...formData.Articulos]
+    nuevosArticulos[index] = { ...nuevosArticulos[index], [field]: value }
+    setFormData(prev => ({ ...prev, Articulos: nuevosArticulos }))
+    recalcularTotales(nuevosArticulos)
+  }
 
   const limpiarFormulario = (): void => {
     setFormData({
@@ -169,37 +177,37 @@ const CrearFactura = () => {
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
-    });
-    setResultado(null);
-    setQrUrl(null);
-    setPdfUrl(null);
-    setHtmlPreview(null);
-  };
+    })
+    setResultado(null)
+    setQrUrl(null)
+    setPdfUrl(null)
+    setHtmlPreview(null)
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    clearError();
-    setResultado(null);
-    setQrUrl(null);
-    setPdfUrl(null);
-    setHtmlPreview(null);
+    e.preventDefault()
+    clearError()
+    setResultado(null)
+    setQrUrl(null)
+    setPdfUrl(null)
+    setHtmlPreview(null)
 
     // Validar que haya datos del emisor
     if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
       toast.error('Configure los datos del emisor primero', {
         id: 'validar-emisor',
-        description: 'Vaya a la pestaña "Configuración" y complete los datos'
+        description: 'Vaya a la pestaña "Configuración" y complete los datos',
       })
       return
     }
 
     // Usar utilidad para agrupar IVA
-    const ivaArray = agruparIVAParaAFIP(formData.Articulos);
+    const ivaArray = agruparIVAParaAFIP(formData.Articulos)
 
-    const cbteTipo = formData.TipoFactura === 'A' ? TIPOS_COMPROBANTE.FACTURA_A : TIPOS_COMPROBANTE.FACTURA_B;
-    const docTipo = parseInt(formData.DocTipo);
-    const docNro = formData.DocTipo === '99' ? 0 : parseInt(formData.DocNro);
-    const concepto = parseInt(formData.Concepto);
+    const cbteTipo = formData.TipoFactura === 'A' ? TIPOS_COMPROBANTE.FACTURA_A : TIPOS_COMPROBANTE.FACTURA_B
+    const docTipo = Number.parseInt(formData.DocTipo)
+    const docNro = formData.DocTipo === '99' ? 0 : Number.parseInt(formData.DocNro)
+    const concepto = Number.parseInt(formData.Concepto)
 
     const facturaData = {
       PtoVta: datosEmisor.puntoVenta,
@@ -207,21 +215,21 @@ const CrearFactura = () => {
       Concepto: concepto,
       DocTipo: docTipo,
       DocNro: docNro,
-      ImpTotal: parseFloat(formData.ImpTotal),
-      ImpNeto: parseFloat(formData.ImpNeto),
-      ImpIVA: parseFloat(formData.ImpIVA),
+      ImpTotal: Number.parseFloat(formData.ImpTotal),
+      ImpNeto: Number.parseFloat(formData.ImpNeto),
+      ImpIVA: Number.parseFloat(formData.ImpIVA),
       Iva: ivaArray,
-    };
+    }
 
-    const response = await crearFactura(facturaData);
-    setResultado(response);
+    const response = await crearFactura(facturaData)
+    setResultado(response)
 
     // Si la factura se creó exitosamente, generar QR automáticamente
     if (response.success && response.data) {
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
-        cuit: parseInt(datosEmisor.cuit),
+        cuit: Number.parseInt(datosEmisor.cuit),
         ptoVta: response.data.PtoVta,
         tipoCmp: response.data.CbteTipo,
         nroCmp: response.data.CbteDesde,
@@ -232,23 +240,23 @@ const CrearFactura = () => {
         nroDocRec: response.data.DocNro,
         tipoCodAut: 'E',
         codAut: response.data.CAE,
-      };
+      }
 
-      const qrResponse = await generarQR(qrData);
+      const qrResponse = await generarQR(qrData)
       if (qrResponse.success && qrResponse.qrUrl) {
-        setQrUrl(qrResponse.qrUrl);
-        
+        setQrUrl(qrResponse.qrUrl)
+
         // Generar vista previa HTML
-        const articulosPDF = formData.Articulos.map(articulo => {
-          const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
-          const subtotalSinIVA = calcularSubtotal(articulo);
-          const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100);
-          
+        const articulosPDF = formData.Articulos.map((articulo) => {
+          const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+          const subtotalSinIVA = calcularSubtotal(articulo)
+          const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
+
           // Para Factura B, el subtotal mostrado debe incluir el IVA
-          const subtotalMostrar = formData.TipoFactura === 'B' 
-            ? subtotalSinIVA + ivaArticulo 
-            : subtotalSinIVA;
-          
+          const subtotalMostrar = formData.TipoFactura === 'B'
+            ? subtotalSinIVA + ivaArticulo
+            : subtotalSinIVA
+
           return {
             codigo: articulo.codigo || '',
             descripcion: articulo.descripcion,
@@ -258,22 +266,22 @@ const CrearFactura = () => {
             alicuotaIVA: articulo.alicuotaIVA,
             porcentajeIVA: alicuota?.porcentaje || 0,
             subtotal: subtotalMostrar,
-          };
-        });
+          }
+        })
 
         const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos).map(iva => ({
           alicuota: iva.id,
           porcentaje: iva.porcentaje,
           baseImponible: iva.baseImponible,
           importeIVA: iva.importeIVA,
-        }));
+        }))
 
-        const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura);
+        const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
 
         const pdfData: FacturaPDFData = {
           ...response.data,
-          ImpNeto: parseFloat(formData.ImpNeto),
-          ImpIVA: parseFloat(formData.ImpIVA),
+          ImpNeto: Number.parseFloat(formData.ImpNeto),
+          ImpIVA: Number.parseFloat(formData.ImpIVA),
           TipoFactura: formData.TipoFactura,
           CondicionIVA: condicionIVANombre,
           RazonSocial: formData.RazonSocial,
@@ -284,12 +292,13 @@ const CrearFactura = () => {
             cuit: datosEmisor.cuit,
             razonSocial: datosEmisor.razonSocial,
             domicilio: datosEmisor.domicilio,
-            condicionIVA: datosEmisor.condicionIVA === '1' ? 'Responsable Inscripto' : 
-                          datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+            condicionIVA: datosEmisor.condicionIVA === '1'
+              ? 'Responsable Inscripto'
+              : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
             iibb: datosEmisor.iibb || 'Exento',
             inicioActividades: datosEmisor.inicioActividades,
           },
-        };
+        }
 
         // Generar vista previa HTML
         // Para la vista previa en el navegador, cargamos los logos como base64
@@ -305,7 +314,8 @@ const CrearFactura = () => {
             reader.onloadend = () => resolve(reader.result as string)
             reader.readAsDataURL(blob)
           })
-        } catch (error) {
+        }
+        catch (error) {
           console.error('Error cargando logo para vista previa:', error)
         }
 
@@ -319,15 +329,16 @@ const CrearFactura = () => {
             reader.onloadend = () => resolve(reader.result as string)
             reader.readAsDataURL(blob)
           })
-        } catch (error) {
+        }
+        catch (error) {
           console.error('Error cargando logo ARCA para vista previa:', error)
         }
 
-        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview);
-        setHtmlPreview(htmlContent);
+        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, Number.parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview)
+        setHtmlPreview(htmlContent)
       }
     }
-  };
+  }
 
   const handleConsultarContribuyente = async (): Promise<void> => {
     if (!formData.DocNro) {
@@ -336,20 +347,21 @@ const CrearFactura = () => {
     }
 
     clearError()
-    
+
     // Dismissar TODOS los toasts anteriores para evitar solapamiento
     toast.dismiss()
-    
+
     // Pequeño delay para que la animación de cierre termine
     await new Promise(resolve => setTimeout(resolve, 150))
-    
+
     setLoadingContribuyente(true)
-    
+
     // Crear un toast de loading con ID único para esta búsqueda
     const toastId = toast.loading('Consultando datos en AFIP...')
 
     try {
       const response = await consultarContribuyente(formData.DocNro)
+      console.log(response)
 
       if (response.success && response.data) {
         if (response.data.razonSocial) {
@@ -365,32 +377,35 @@ const CrearFactura = () => {
         // Actualizar el toast de loading a success
         toast.success(
           `Encontrado: ${response.data.razonSocial}`,
-          { 
+          {
             id: toastId,
-            description: `${response.data.localidad}, ${response.data.provincia}`,
+            description: `${response.data.domicilio}`,
             duration: 4000,
-          }
+          },
         )
-      } else {
+      }
+      else {
         // Actualizar el toast de loading a error
         toast.error(
           'CUIT no encontrado',
-          { 
+          {
             id: toastId,
-            description: response.error || 'No se encontraron datos en AFIP'
-          }
+            description: response.error || 'No se encontraron datos en AFIP',
+          },
         )
       }
-    } catch (err) {
+    }
+    catch (err) {
       toast.error(
         'Error al consultar contribuyente',
-        { id: toastId }
+        { id: toastId },
       )
-    } finally {
+    }
+    finally {
       setLoadingContribuyente(false)
       clearError()
     }
-  };
+  }
 
   const handleBuscarEmisor = async (cuit: string) => {
     setLoadingEmisor(true)
@@ -398,17 +413,18 @@ const CrearFactura = () => {
       const response = await consultarContribuyente(cuit)
       setLoadingEmisor(false)
       return response
-    } catch (err) {
+    }
+    catch (err) {
       setLoadingEmisor(false)
       return { success: false, error: 'Error al consultar' }
     }
-  };
+  }
 
   const handleGuardarEmisor = (datos: DatosEmisor) => {
     setDatosEmisor(datos)
     // Guardar en localStorage para persistencia
     localStorage.setItem('datosEmisor', JSON.stringify(datos))
-  };
+  }
 
   // Cargar datos del emisor al iniciar
   useEffect(() => {
@@ -416,11 +432,12 @@ const CrearFactura = () => {
     if (datosGuardados) {
       try {
         setDatosEmisor(JSON.parse(datosGuardados))
-      } catch (e) {
+      }
+      catch (e) {
         console.error('Error al cargar datos del emisor')
       }
     }
-  }, []);
+  }, [])
 
   // Cargar CUIT desde línea de comandos al iniciar
   useEffect(() => {
@@ -429,38 +446,40 @@ const CrearFactura = () => {
         // Verificar si window.electron existe (solo en Electron)
         if (window.electron && window.electron.getCommandLineCuit) {
           const cuitFromCli = await window.electron.getCommandLineCuit()
-          
+
           if (cuitFromCli) {
             console.log('CUIT recibido desde línea de comandos:', cuitFromCli)
-            
+
             // Solo actualizar el formulario con el CUIT, sin búsqueda automática
             handleInputChange('DocNro', cuitFromCli)
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error al obtener CUIT desde línea de comandos:', error)
       }
     }
 
     cargarCuitDesdeComandoLinea()
-  }, []);
+  }, [])
 
   const handleDescargarPDF = async (): Promise<void> => {
-    if (!resultado?.data) return;
+    if (!resultado?.data)
+      return
 
-    toast.loading('Generando PDF...', { id: 'pdf-generation' });
+    toast.loading('Generando PDF...', { id: 'pdf-generation' })
 
     // Preparar artículos para el PDF usando utilidades
-    const articulosPDF = formData.Articulos.map(articulo => {
-      const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA);
-      const subtotalSinIVA = calcularSubtotal(articulo);
-      const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100);
-      
+    const articulosPDF = formData.Articulos.map((articulo) => {
+      const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+      const subtotalSinIVA = calcularSubtotal(articulo)
+      const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
+
       // Para Factura B, el subtotal mostrado debe incluir el IVA
-      const subtotalMostrar = formData.TipoFactura === 'B' 
-        ? subtotalSinIVA + ivaArticulo 
-        : subtotalSinIVA;
-      
+      const subtotalMostrar = formData.TipoFactura === 'B'
+        ? subtotalSinIVA + ivaArticulo
+        : subtotalSinIVA
+
       return {
         codigo: articulo.codigo || '',
         descripcion: articulo.descripcion,
@@ -470,8 +489,8 @@ const CrearFactura = () => {
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
         subtotal: subtotalMostrar,
-      };
-    });
+      }
+    })
 
     // Usar utilidad para agrupar IVAs
     const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos).map(iva => ({
@@ -479,10 +498,10 @@ const CrearFactura = () => {
       porcentaje: iva.porcentaje,
       baseImponible: iva.baseImponible,
       importeIVA: iva.importeIVA,
-    }));
+    }))
 
     // Obtener nombre de condición IVA usando utilidad
-    const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura);
+    const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
 
     // Crear datos extendidos para el PDF
     const pdfData = {
@@ -497,34 +516,36 @@ const CrearFactura = () => {
         cuit: datosEmisor.cuit,
         razonSocial: datosEmisor.razonSocial,
         domicilio: datosEmisor.domicilio,
-        condicionIVA: datosEmisor.condicionIVA === '1' ? 'Responsable Inscripto' : 
-                      datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+        condicionIVA: datosEmisor.condicionIVA === '1'
+          ? 'Responsable Inscripto'
+          : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
         iibb: datosEmisor.iibb || 'Exento',
         inicioActividades: datosEmisor.inicioActividades,
       },
       // Agregar carpeta de destino personalizada
       customPath: pdfSavePath || undefined,
-    };
+    }
 
-    const pdfResponse = await generarPDF(pdfData);
+    const pdfResponse = await generarPDF(pdfData)
 
     if (pdfResponse.success && pdfResponse.filePath) {
-      setPdfUrl(pdfResponse.filePath);
+      setPdfUrl(pdfResponse.filePath)
       toast.success(
         'PDF generado exitosamente',
         {
           id: 'pdf-generation',
           description: pdfResponse.message || 'El archivo está guardado en tu escritorio',
           duration: 3000,
-        }
-      );
-    } else {
+        },
+      )
+    }
+    else {
       toast.error(
         `Error al generar PDF: ${pdfResponse.error}`,
-        { id: 'pdf-generation' }
-      );
+        { id: 'pdf-generation' },
+      )
     }
-  };
+  }
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
@@ -538,7 +559,7 @@ const CrearFactura = () => {
           <TabsTrigger value="facturar">Crear Factura</TabsTrigger>
           <TabsTrigger value="configuracion">Configuración Emisor</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="facturar">
           <FacturaForm
             formData={formData}
@@ -581,7 +602,7 @@ const CrearFactura = () => {
         </TabsContent>
       </Tabs>
     </div>
-  );
-};
+  )
+}
 
-export default CrearFactura;
+export default CrearFactura

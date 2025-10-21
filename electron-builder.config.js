@@ -21,29 +21,29 @@ const config = {
     {
       from: 'src/render/assets',
       to: 'assets',
-      filter: ['**/*']
+      filter: ['**/*'],
     },
     {
       from: 'node_modules',
       to: 'node_modules',
       filter: [
-        '**/*'
-      ]
-    }
+        '**/*',
+      ],
+    },
   ],
   win: {
     target: 'nsis',
-    icon: 'build/icon.ico'
+    icon: 'build/icon.ico',
   },
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
-    createStartMenuShortcut: true
+    createStartMenuShortcut: true,
   },
   extraMetadata: {
-    main: 'dist/main/index.js'
-  }
+    main: 'dist/main/index.js',
+  },
 }
 
 module.exports = config

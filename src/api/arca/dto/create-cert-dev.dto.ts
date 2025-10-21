@@ -1,15 +1,15 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator'
 
 export class CreateCertDevDto {
   @IsString()
   @IsNotEmpty({ message: 'El CUIT es requerido' })
-  cuit: string;
+  cuit: string
 
   @IsString()
   @IsNotEmpty({ message: 'El usuario es requerido' })
-  username: string;
+  username: string
 
   @IsString()
   @IsNotEmpty({ message: 'La contraseña es requerida' })
-  password: string;
+  password: string
 }

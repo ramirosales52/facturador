@@ -1,29 +1,17 @@
 /**
  * Configuración del SDK de AFIP/ARCA
  * 
- * Para obtener los certificados de producción:
- * 1. Ingresar a https://www.afip.gob.ar/ws/documentacion/certificados.asp
- * 2. Generar un certificado de producción
- * 3. Guardar el certificado (.crt) y la clave privada (.key) en una carpeta segura
+ * IMPORTANTE: El CUIT se configura desde la interfaz de usuario,
+ * no desde variables de entorno.
  */
 
 export const ArcaConfig = {
-  // CUIT - Se puede configurar desde variable de entorno
-  CUIT: process.env.AFIP_CUIT ? parseInt(process.env.AFIP_CUIT) : 20409378472,
-  
   // Ambiente: false = homologación/testing, true = producción
-  production: false,
-  
-  // Rutas a los archivos de certificado
-  // IMPORTANTE: Por seguridad, estos archivos NO deben estar en el repositorio
-  // Usar variables de entorno para configurar las rutas
-  cert: process.env.AFIP_CERT_PATH || 'certificates/certificate.crt',
-  key: process.env.AFIP_KEY_PATH || 'certificates/private_key.key',
-  
-  // Configuración alternativa: pasar el contenido directamente
-  // certContent: process.env.AFIP_CERT_CONTENT,
-  // keyContent: process.env.AFIP_KEY_CONTENT,
-};
+  // Usar getter para leer en tiempo de ejecución, no en tiempo de importación
+  get production() {
+    return process.env.AFIP_PRODUCTION === 'true'
+  },
+}
 
 /**
  * Tipos de comprobantes más comunes
@@ -39,7 +27,7 @@ export const TiposComprobante = {
   NOTA_DEBITO_C: 12,
   NOTA_CREDITO_C: 13,
   FACTURA_E: 19,
-};
+}
 
 /**
  * Tipos de documento
@@ -57,7 +45,7 @@ export const TiposDocumento = {
   DNI: 96,
   PASAPORTE: 94,
   CONSUMIDOR_FINAL: 99,
-};
+}
 
 /**
  * Tipos de IVA
@@ -67,7 +55,7 @@ export const TiposIVA = {
   IVA_10_5: 4,
   IVA_21: 5,
   IVA_27: 6,
-};
+}
 
 /**
  * Conceptos
@@ -76,7 +64,7 @@ export const Conceptos = {
   PRODUCTOS: 1,
   SERVICIOS: 2,
   PRODUCTOS_Y_SERVICIOS: 3,
-};
+}
 
 /**
  * Condiciones frente al IVA
@@ -96,4 +84,4 @@ export const CondicionesIVA = {
   PEQUENO_CONTRIBUYENTE_EVENTUAL: 12,
   MONOTRIBUTISTA_SOCIAL: 13,
   PEQUENO_CONTRIBUYENTE_EVENTUAL_SOCIAL: 14,
-};
+}

@@ -1,13 +1,13 @@
 import type { ChangeEvent, FormEvent } from 'react'
-import { useState } from 'react'
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
-import { Search, X, Edit3 } from 'lucide-react'
-import { ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { Edit3, Search, X } from 'lucide-react'
+import { useState } from 'react'
 
 export interface Articulo {
   codigo?: string
@@ -34,8 +34,7 @@ export interface FormData {
 }
 
 // Re-exportar constantes para compatibilidad con código existente
-export { ALICUOTAS_IVA, CONDICIONES_IVA, TIPOS_DOCUMENTO, CONCEPTOS, UNIDADES_MEDIDA }
-
+export { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA }
 
 interface FacturaFormProps {
   formData: FormData
@@ -75,16 +74,19 @@ export function FacturaForm({
 
   return (
     <Card>
-      <CardHeader className='flex justify-between'>
+      <CardHeader className="flex justify-between">
         <div>
-          <CardTitle>Factura {formData.TipoFactura}</CardTitle>
+          <CardTitle>
+            Factura
+            {formData.TipoFactura}
+          </CardTitle>
           <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
           <Select
             value={formData.TipoFactura}
-            onValueChange={(value) => onInputChange('TipoFactura', value)}
+            onValueChange={value => onInputChange('TipoFactura', value)}
           >
             <SelectTrigger id="TipoFactura">
               <SelectValue />
@@ -109,13 +111,13 @@ export function FacturaForm({
               <Label htmlFor="DocTipo" className="text-xs">Tipo Doc.</Label>
               <Select
                 value={formData.DocTipo}
-                onValueChange={(value) => onInputChange('DocTipo', value)}
+                onValueChange={value => onInputChange('DocTipo', value)}
               >
                 <SelectTrigger id="DocTipo">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIPOS_DOCUMENTO.map((tipo) => (
+                  {TIPOS_DOCUMENTO.map(tipo => (
                     <SelectItem key={tipo.id} value={tipo.id}>
                       {tipo.nombre}
                     </SelectItem>
@@ -127,8 +129,9 @@ export function FacturaForm({
             {/* CUIT/DNI con botones de búsqueda y editar */}
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-xs">
-                {formData.DocTipo === '99' ? 'Sin Documento' :
-                  formData.DocTipo === '96' ? 'DNI' : 'CUIT'}
+                {formData.DocTipo === '99'
+                  ? 'Sin Documento'
+                  : formData.DocTipo === '96' ? 'DNI' : 'CUIT'}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -167,18 +170,18 @@ export function FacturaForm({
           </div>
 
           {/* Segunda fila: Concepto, Condición IVA (B), IVA (B) */}
-          <div className={`flex gap-4`}>
+          <div className="flex gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="Concepto" className="text-xs">Concepto</Label>
               <Select
                 value={formData.Concepto}
-                onValueChange={(value) => onInputChange('Concepto', value)}
+                onValueChange={value => onInputChange('Concepto', value)}
               >
                 <SelectTrigger id="Concepto">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONCEPTOS.map((concepto) => (
+                  {CONCEPTOS.map(concepto => (
                     <SelectItem key={concepto.id} value={concepto.id}>
                       {concepto.nombre}
                     </SelectItem>
@@ -194,7 +197,7 @@ export function FacturaForm({
                   <Label htmlFor="CondicionIVA" className="text-xs">Condición IVA</Label>
                   <Select
                     value={formData.CondicionIVA}
-                    onValueChange={(value) => onInputChange('CondicionIVA', value)}
+                    onValueChange={value => onInputChange('CondicionIVA', value)}
                   >
                     <SelectTrigger id="CondicionIVA">
                       <SelectValue placeholder="Seleccione" />
@@ -210,7 +213,7 @@ export function FacturaForm({
                   <Label htmlFor="IVAGlobal" className="text-xs">IVA</Label>
                   <Select
                     value={formData.IVAGlobal || '5'}
-                    onValueChange={(value) => onInputChange('IVAGlobal', value)}
+                    onValueChange={value => onInputChange('IVAGlobal', value)}
                   >
                     <SelectTrigger id="IVAGlobal">
                       <SelectValue />
@@ -271,7 +274,7 @@ export function FacturaForm({
             {formData.Articulos.map((articulo, index) => {
               // Calcular subtotal e IVA
               const subtotal = articulo.cantidad * articulo.precioUnitario
-              const alicuota = ALICUOTAS_IVA.find((a) => a.id === articulo.alicuotaIVA)
+              const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
               const ivaImporte = (subtotal * (alicuota?.porcentaje || 0)) / 100
               const totalConIVA = subtotal + ivaImporte
 
@@ -279,16 +282,15 @@ export function FacturaForm({
                 <div key={index} className="border p-3 rounded-lg space-y-2 bg-gray-50">
                   {/* Primera fila: Descripción y botón eliminar */}
                   <div className="flex gap-2">
-                    <div className='flex-1 space-y-2'>
+                    <div className="flex-1 space-y-2">
                       <Label htmlFor={`descripcion-${index}`} className="text-xs">Descripción</Label>
                       <Input
                         id={`descripcion-${index}`}
                         type="text"
                         value={articulo.descripcion}
-                        className='bg-white'
+                        className="bg-white"
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          onArticuloChange(index, 'descripcion', e.target.value)
-                        }
+                          onArticuloChange(index, 'descripcion', e.target.value)}
                         placeholder="Descripción del artículo"
                         required
                       />
@@ -308,17 +310,16 @@ export function FacturaForm({
 
                   {/* Segunda fila: Código, Cantidad, Unidad, Precio juntos + Subtotal separado a la derecha */}
                   <div className="flex justify-between">
-                    <div className='flex gap-2'>
+                    <div className="flex gap-2">
                       <div className="space-y-1 w-32">
                         <Label htmlFor={`codigo-${index}`} className="text-xs">Código (opcional)</Label>
                         <Input
                           id={`codigo-${index}`}
                           type="text"
                           value={articulo.codigo || ''}
-                          className='bg-white'
+                          className="bg-white"
                           onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            onArticuloChange(index, 'codigo', e.target.value)
-                          }
+                            onArticuloChange(index, 'codigo', e.target.value)}
                           placeholder="001"
                         />
                       </div>
@@ -330,11 +331,10 @@ export function FacturaForm({
                           type="number"
                           step="0.01"
                           min="0.01"
-                          className='bg-white'
+                          className="bg-white"
                           value={articulo.cantidad}
                           onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            onArticuloChange(index, 'cantidad', e.target.value === "" ? null : parseFloat(e.target.value))
-                          }
+                            onArticuloChange(index, 'cantidad', e.target.value === '' ? null : Number.parseFloat(e.target.value))}
                           required
                         />
                       </div>
@@ -343,13 +343,13 @@ export function FacturaForm({
                         <Label htmlFor={`unidad-${index}`} className="text-xs">Unidad</Label>
                         <Select
                           value={articulo.unidadMedida}
-                          onValueChange={(value) => onArticuloChange(index, 'unidadMedida', value)}
+                          onValueChange={value => onArticuloChange(index, 'unidadMedida', value)}
                         >
-                          <SelectTrigger id={`unidad-${index}`} className='bg-white'>
+                          <SelectTrigger id={`unidad-${index}`} className="bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {UNIDADES_MEDIDA.map((unidad) => (
+                            {UNIDADES_MEDIDA.map(unidad => (
                               <SelectItem key={unidad.id} value={unidad.id}>
                                 {unidad.nombre}
                               </SelectItem>
@@ -365,12 +365,11 @@ export function FacturaForm({
                           type="number"
                           step="0.01"
                           min="0"
-                          placeholder='$'
-                          className='bg-white'
+                          placeholder="$"
+                          className="bg-white"
                           value={articulo.precioUnitario}
                           onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            onArticuloChange(index, 'precioUnitario', e.target.value === "" ? null : parseFloat(e.target.value))
-                          }
+                            onArticuloChange(index, 'precioUnitario', e.target.value === '' ? null : Number.parseFloat(e.target.value))}
                           required
                         />
                       </div>
@@ -380,16 +379,16 @@ export function FacturaForm({
                           <Label htmlFor={`iva-${index}`} className="text-xs">Alícuota IVA</Label>
                           <Select
                             value={articulo.alicuotaIVA}
-                            onValueChange={(value) => onArticuloChange(index, 'alicuotaIVA', value)}
+                            onValueChange={value => onArticuloChange(index, 'alicuotaIVA', value)}
                           >
                             <SelectTrigger
                               id={`iva-${index}`}
-                              className='bg-white'
+                              className="bg-white"
                             >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {ALICUOTAS_IVA.map((alicuota) => (
+                              {ALICUOTAS_IVA.map(alicuota => (
                                 <SelectItem key={alicuota.id} value={alicuota.id}>
                                   {alicuota.nombre}
                                 </SelectItem>
@@ -400,11 +399,11 @@ export function FacturaForm({
                       )}
                     </div>
 
-
                     <div className="min-w-36 space-y-1">
                       <Label className="text-xs">Subtotal</Label>
                       <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
-                        ${totalConIVA ? totalConIVA.toFixed(2) : "0.00"}
+                        $
+                        {totalConIVA ? totalConIVA.toFixed(2) : '0.00'}
                       </div>
                     </div>
                   </div>
@@ -435,11 +434,13 @@ export function FacturaForm({
 
             <div className="space-y-1">
               <Label htmlFor="ImpIVA" className="text-xs">
-                IVA {formData.TipoFactura === 'B' && formData.IVAGlobal 
+                IVA
+                {' '}
+                {formData.TipoFactura === 'B' && formData.IVAGlobal
                   ? `(${ALICUOTAS_IVA.find(a => a.id === formData.IVAGlobal)?.porcentaje || 0}%)`
                   : formData.TipoFactura === 'A' && formData.Articulos.length > 0
-                  ? `(${ALICUOTAS_IVA.find(a => a.id === formData.Articulos[0]?.alicuotaIVA)?.porcentaje || 0}%)`
-                  : ''}
+                    ? `(${ALICUOTAS_IVA.find(a => a.id === formData.Articulos[0]?.alicuotaIVA)?.porcentaje || 0}%)`
+                    : ''}
               </Label>
               <Input
                 id="ImpIVA"

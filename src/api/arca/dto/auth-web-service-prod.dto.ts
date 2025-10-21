@@ -1,6 +1,9 @@
 import { IsNotEmpty, IsString } from 'class-validator'
 
-export class AuthWebServiceDevDto {
+/**
+ * DTO para autorizar web service de producción en ARCA
+ */
+export class AuthWebServiceProdDto {
   @IsString()
   @IsNotEmpty()
   cuit: string

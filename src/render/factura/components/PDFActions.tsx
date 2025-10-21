@@ -1,5 +1,5 @@
 import { Button } from '@render/components/ui/button'
-import { Copy, FolderOpen, FileText, FolderInput } from 'lucide-react'
+import { Copy, FileText, FolderInput, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PDFActionsProps {
@@ -21,19 +21,21 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
   }
 
   const abrirCarpeta = async (): Promise<void> => {
-    if (!pdfUrl) return
-    
+    if (!pdfUrl)
+      return
+
     try {
       // Obtener la carpeta del archivo
       const carpeta = pdfUrl.substring(0, pdfUrl.lastIndexOf('/'))
-      
+
       // Usar el API de Electron para abrir la carpeta
       // @ts-ignore - Electron API
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
         await window.electron.shell.openPath(carpeta)
         toast.success('Abriendo carpeta del PDF', { id: 'abrir-carpeta-pdf' })
-      } else {
+      }
+      else {
         // Fallback para desarrollo
         toast.info('Función disponible solo en la aplicación empaquetada', { id: 'abrir-carpeta-pdf' })
       }

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
 import { Button } from '@render/components/ui/button'
 import { Eye, EyeOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface PDFPreviewProps {
   htmlContent: string
@@ -22,7 +22,7 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
         // Leer la imagen del QR y convertirla a base64
         const response = await fetch(qrUrl)
         const blob = await response.blob()
-        
+
         const reader = new FileReader()
         reader.onloadend = () => {
           const base64data = reader.result as string
@@ -31,7 +31,8 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
           setHtmlConQR(htmlModificado)
         }
         reader.readAsDataURL(blob)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error al convertir QR a base64:', error)
         setHtmlConQR(htmlContent)
       }
@@ -42,13 +43,15 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
 
   return (
     <div className="mt-4">
-      <Button 
-        onClick={() => setMostrarPreview(!mostrarPreview)} 
-        variant="outline" 
+      <Button
+        onClick={() => setMostrarPreview(!mostrarPreview)}
+        variant="outline"
         className="w-full"
       >
         {mostrarPreview ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-        {mostrarPreview ? 'Ocultar' : 'Mostrar'} Vista Previa HTML
+        {mostrarPreview ? 'Ocultar' : 'Mostrar'}
+        {' '}
+        Vista Previa HTML
       </Button>
 
       {mostrarPreview && (
@@ -57,7 +60,7 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
             Vista previa del PDF (formato HTML)
           </div>
           <div className="bg-white overflow-auto" style={{ maxHeight: '800px' }}>
-            <iframe 
+            <iframe
               srcDoc={htmlConQR}
               title="PDF Preview"
               className="w-full border-0"

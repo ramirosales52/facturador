@@ -1,6 +1,9 @@
 import { IsNotEmpty, IsString } from 'class-validator'
 
-export class AuthWebServiceDevDto {
+/**
+ * DTO para crear certificado de producción en ARCA
+ */
+export class CreateCertProdDto {
   @IsString()
   @IsNotEmpty()
   cuit: string
@@ -16,8 +19,4 @@ export class AuthWebServiceDevDto {
   @IsString()
   @IsNotEmpty()
   alias: string
-
-  @IsString()
-  @IsNotEmpty()
-  service: string // ID del web service a autorizar (ej: 'wsfe' para factura electrónica)
 }

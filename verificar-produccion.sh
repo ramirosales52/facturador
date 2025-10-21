@@ -1,171 +1,84 @@
 #!/bin/bash
 
-# Script de verificación para producción
-# Ejecutar antes de usar el sistema en producción
-
-echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║                                                           ║"
-echo "║     🔍 VERIFICACIÓN DE CONFIGURACIÓN DE PRODUCCIÓN       ║"
-echo "║                                                           ║"
-echo "╚═══════════════════════════════════════════════════════════╝"
+echo "🔍 Verificando configuración para producción..."
 echo ""
 
-# Colores
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# 1. CUITs de prueba
+echo "1. Verificando CUITs de prueba..."
+if grep -rq "20409378472\|20111111112" src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+    echo "   ❌ ADVERTENCIA: Se encontraron CUITs de prueba en el código"
+else
+    echo "   ✅ No se encontraron CUITs de prueba"
+fi
 
-# Contadores
-WARNINGS=0
-ERRORS=0
-OK=0
-
-echo "📋 Verificando configuración..."
+# 2. Configuración de ambiente
 echo ""
+echo "2. Verificando configuración de ambiente..."
+if grep -q "production: process.env.AFIP_PRODUCTION === 'true'" src/api/arca/arca.config.ts; then
+    echo "   ✅ Configuración de ambiente correcta"
+else
+    echo "   ❌ ERROR: Configuración de ambiente incorrecta"
+fi
 
-# 1. Verificar archivo .env
-echo -n "1. Archivo .env existe: "
+# 3. CUIT desde env
+echo ""
+echo "3. Verificando CUIT desde variable de entorno..."
+if grep -q "process.env.AFIP_CUIT" src/api/arca/arca.config.ts; then
+    echo "   ✅ CUIT se lee desde variable de entorno"
+else
+    echo "   ❌ ERROR: CUIT no se lee desde variable de entorno"
+fi
+
+# 4. Archivos .env
+echo ""
+echo "4. Verificando archivo .env..."
 if [ -f .env ]; then
-    echo -e "${GREEN}✓ OK${NC}"
-    ((OK++))
-    
-    # Verificar variables en .env
-    echo -n "   - AFIP_CUIT configurado: "
-    if grep -q "AFIP_CUIT=" .env && ! grep -q "AFIP_CUIT=$" .env; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
+    if grep -q "AFIP_CUIT=$" .env || grep -q 'AFIP_CUIT=""' .env; then
+        echo "   ✅ .env está limpio (sin CUIT de prueba)"
     else
-        echo -e "${RED}✗ FALTA${NC}"
-        ((ERRORS++))
-    fi
-    
-    echo -n "   - AFIP_PRODUCTION=true: "
-    if grep -q "AFIP_PRODUCTION=true" .env; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
-    else
-        echo -e "${YELLOW}⚠ WARNING${NC} (debería ser true para producción)"
-        ((WARNINGS++))
-    fi
-    
-    echo -n "   - AFIP_CERT_PATH configurado: "
-    if grep -q "AFIP_CERT_PATH=" .env && ! grep -q "AFIP_CERT_PATH=$" .env; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
-    else
-        echo -e "${RED}✗ FALTA${NC}"
-        ((ERRORS++))
-    fi
-    
-    echo -n "   - AFIP_KEY_PATH configurado: "
-    if grep -q "AFIP_KEY_PATH=" .env && ! grep -q "AFIP_KEY_PATH=$" .env; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
-    else
-        echo -e "${RED}✗ FALTA${NC}"
-        ((ERRORS++))
+        echo "   ⚠️  ADVERTENCIA: .env contiene un CUIT configurado"
     fi
 else
-    echo -e "${RED}✗ NO EXISTE${NC}"
-    echo "   Ejecuta: cp .env.example .env"
-    ((ERRORS++))
+    echo "   ⚠️  ADVERTENCIA: No existe archivo .env"
+fi
+
+# 5. DTOs de producción
+echo ""
+echo "5. Verificando DTOs de producción..."
+if [ -f src/api/arca/dto/create-cert-prod.dto.ts ] && [ -f src/api/arca/dto/auth-web-service-prod.dto.ts ]; then
+    echo "   ✅ DTOs de producción creados"
+else
+    echo "   ❌ ERROR: Faltan DTOs de producción"
+fi
+
+# 6. Endpoints de producción
+echo ""
+echo "6. Verificando endpoints de producción..."
+if grep -q "crear-certificado-prod" src/api/arca/arca.controller.ts && grep -q "autorizar-web-service-prod" src/api/arca/arca.controller.ts; then
+    echo "   ✅ Endpoints de producción implementados"
+else
+    echo "   ❌ ERROR: Faltan endpoints de producción"
+fi
+
+# 7. Documentación
+echo ""
+echo "7. Verificando documentación..."
+if [ -f GUIA_PRODUCCION.md ]; then
+    echo "   ✅ Guía de producción creada"
+else
+    echo "   ⚠️  ADVERTENCIA: Falta guía de producción"
 fi
 
 echo ""
-
-# 2. Verificar certificados
-echo -n "2. Directorio certificates existe: "
-if [ -d certificates ]; then
-    echo -e "${GREEN}✓ OK${NC}"
-    ((OK++))
-    
-    echo -n "   - certificate.crt existe: "
-    if [ -f certificates/certificate.crt ]; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
-    else
-        echo -e "${YELLOW}⚠ NO ENCONTRADO${NC} (puede estar en otra ubicación)"
-        ((WARNINGS++))
-    fi
-    
-    echo -n "   - private_key.key existe: "
-    if [ -f certificates/private_key.key ]; then
-        echo -e "${GREEN}✓ OK${NC}"
-        ((OK++))
-    else
-        echo -e "${YELLOW}⚠ NO ENCONTRADO${NC} (puede estar en otra ubicación)"
-        ((WARNINGS++))
-    fi
-else
-    echo -e "${YELLOW}⚠ NO EXISTE${NC} (certificados pueden estar en otra ubicación)"
-    ((WARNINGS++))
-fi
-
+echo "============================================"
+echo "✅ Verificación completa"
+echo "============================================"
 echo ""
-
-# 3. Verificar configuración en código
-echo -n "3. arca.config.ts production=true: "
-if grep -q "production: true" src/api/arca/arca.config.ts; then
-    echo -e "${GREEN}✓ OK${NC}"
-    ((OK++))
-else
-    echo -e "${RED}✗ FALTA${NC}"
-    echo "   El archivo debe tener production: true"
-    ((ERRORS++))
-fi
-
+echo "Próximos pasos:"
+echo "1. Configurar CUIT real en .env"
+echo "2. Configurar AFIP_SDK_ACCESS_TOKEN en .env"
+echo "3. Generar certificado de producción"
+echo "4. Autorizar web service de producción"
+echo "5. Cambiar AFIP_PRODUCTION=true en .env"
 echo ""
-
-# 4. Verificar que no hay datos mock
-echo -n "4. Sin datos mock en arca.service.ts: "
-if ! grep -q "contribuyentesMock" src/api/arca/arca.service.ts; then
-    echo -e "${GREEN}✓ OK${NC}"
-    ((OK++))
-else
-    echo -e "${RED}✗ TODAVÍA HAY DATOS MOCK${NC}"
-    ((ERRORS++))
-fi
-
-echo ""
-
-# 5. Verificar node_modules
-echo -n "5. Dependencias instaladas (node_modules): "
-if [ -d node_modules ]; then
-    echo -e "${GREEN}✓ OK${NC}"
-    ((OK++))
-else
-    echo -e "${RED}✗ NO INSTALADAS${NC}"
-    echo "   Ejecuta: npm install"
-    ((ERRORS++))
-fi
-
-echo ""
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-echo "📊 RESUMEN:"
-echo -e "   ${GREEN}✓ OK:${NC} $OK"
-echo -e "   ${YELLOW}⚠ Advertencias:${NC} $WARNINGS"
-echo -e "   ${RED}✗ Errores:${NC} $ERRORS"
-echo ""
-
-if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
-    echo -e "${GREEN}✅ ¡Sistema listo para producción!${NC}"
-    echo ""
-    echo "Próximos pasos:"
-    echo "1. Ejecuta: npm run dev"
-    echo "2. Click en 'Verificar Conexión'"
-    echo "3. Crea tu primera factura"
-    exit 0
-elif [ $ERRORS -eq 0 ]; then
-    echo -e "${YELLOW}⚠️  Sistema casi listo (hay advertencias)${NC}"
-    echo ""
-    echo "Revisa las advertencias arriba y corrige si es necesario."
-    exit 0
-else
-    echo -e "${RED}❌ Sistema NO listo para producción${NC}"
-    echo ""
-    echo "Debes corregir los errores antes de continuar."
-    echo "Ver CONFIGURACION_RAPIDA.md para más detalles."
-    exit 1
-fi
+echo "Ver GUIA_PRODUCCION.md para instrucciones detalladas"

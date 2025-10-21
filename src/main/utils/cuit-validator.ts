@@ -4,12 +4,12 @@
  */
 export function extraerCUITDeArgumentos(args: string[]): string | null {
   for (const arg of args) {
-    const cuitLimpio = arg.replace(/[^0-9]/g, '');
-    
+    const cuitLimpio = arg.replace(/\D/g, '')
+
     if (/^\d{11}$/.test(cuitLimpio)) {
-      return cuitLimpio;
+      return cuitLimpio
     }
   }
-  
-  return null;
+
+  return null
 }

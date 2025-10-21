@@ -1,6 +1,6 @@
-import { Navigate, Route, Routes } from "react-router"
-import { Toaster } from "sonner"
-import CrearFactura from "./factura/CrearFactura"
+import { Navigate, Route, Routes } from 'react-router'
+import { Toaster } from 'sonner'
+import CrearFactura from './factura/CrearFactura'
 
 function App() {
   return (

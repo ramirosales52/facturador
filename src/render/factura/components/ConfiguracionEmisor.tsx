@@ -1,14 +1,15 @@
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react'
-import axios from 'axios'
+import type { ChangeEvent, FormEvent } from 'react'
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@render/components/ui/dialog'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@render/components/ui/dialog'
-import { Search, Save, Building2, Shield, XCircle } from 'lucide-react'
-import { toast } from 'sonner'
 import { CONDICIONES_IVA_EMISOR } from '@render/constants/afip'
+import axios from 'axios'
+import { Building2, Save, Search, Shield, XCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 export interface DatosEmisor {
   cuit: string
@@ -42,7 +43,7 @@ export function ConfiguracionEmisor({
       iibb: '',
       inicioActividades: '',
       puntoVenta: 1,
-    }
+    },
   )
 
   const [datosOriginales, setDatosOriginales] = useState<DatosEmisor>(
@@ -54,7 +55,7 @@ export function ConfiguracionEmisor({
       iibb: '',
       inicioActividades: '',
       puntoVenta: 1,
-    }
+    },
   )
 
   const [conectandoARCA, setConectandoARCA] = useState(false)
@@ -68,6 +69,27 @@ export function ConfiguracionEmisor({
   const [certificadoCreado, setCertificadoCreado] = useState(false)
 
   useEffect(() => {
+    const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
+    const cuitGuardado = localStorage.getItem('cuitARCA')
+
+    if (certificadoGuardado === 'true' && cuitGuardado) {
+      setCertificadoCreado(true)
+      setCuitARCA(cuitGuardado)
+
+      // Llamar al backend para inicializar AFIP SDK con el CUIT guardado
+      const backendPort = window.electron.getBackendPort()
+      console.log("a", backendPort)
+      axios.post(`http://localhost:3000/arca/configurar-cuit`, {
+        cuit: cuitGuardado
+      }).then(() => {
+        console.log('AFIP SDK inicializado automáticamente')
+      }).catch(err => {
+        console.error('Error al inicializar AFIP SDK automáticamente', err)
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     if (datosIniciales) {
       setFormData(datosIniciales)
       setDatosOriginales(datosIniciales)
@@ -77,11 +99,11 @@ export function ConfiguracionEmisor({
         setCertificadoCreado(true)
       }
     }
-    
+
     // Cargar estado del certificado desde localStorage
     const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
     const cuitGuardado = localStorage.getItem('cuitARCA')
-    
+
     if (certificadoGuardado === 'true' && cuitGuardado) {
       setCertificadoCreado(true)
       setCuitARCA(cuitGuardado)
@@ -98,19 +120,20 @@ export function ConfiguracionEmisor({
   }
 
   const handleInputChange = (field: keyof DatosEmisor, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleBuscarCUIT = async () => {
     if (!cuitARCA || cuitARCA.trim() === '') {
-      toast.error('Debe crear el certificado ARCA primero', { 
+      toast.error('Debe crear el certificado ARCA primero', {
         id: 'toast-buscar-cuit-error',
-        description: 'El CUIT se obtiene al conectar con ARCA'
+        description: 'El CUIT se obtiene al conectar con ARCA',
       })
       return
     }
 
-    if (!onBuscarCUIT) return
+    if (!onBuscarCUIT)
+      return
 
     toast.loading('Consultando datos en AFIP...', { id: 'toast-buscar-cuit-loading' })
 
@@ -118,7 +141,7 @@ export function ConfiguracionEmisor({
       const response = await onBuscarCUIT(cuitARCA)
 
       if (response.success && response.data) {
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           razonSocial: response.data.razonSocial || prev.razonSocial,
           domicilio: response.data.domicilio || prev.domicilio,
@@ -126,17 +149,19 @@ export function ConfiguracionEmisor({
 
         toast.success(`Datos encontrados: ${response.data.razonSocial}`, {
           id: 'toast-buscar-cuit-loading',
-          description: `${response.data.localidad}, ${response.data.provincia}`,
+          description: `${response.data.domicilio}`,
           duration: 4000,
         })
-      } else {
+      }
+      else {
         // No se encontraron datos - mostrar error sin actualizar campos
         toast.error('CUIT no encontrado', {
           id: 'toast-buscar-cuit-loading',
-          description: response.error || 'No se encontraron datos en AFIP'
+          description: response.error || 'No se encontraron datos en AFIP',
         })
       }
-    } catch (err) {
+    }
+    catch (err) {
       toast.error('Error al consultar AFIP', { id: 'toast-buscar-cuit-loading' })
     }
   }
@@ -158,45 +183,48 @@ export function ConfiguracionEmisor({
 
     try {
       const backendPort = await window.electron.getBackendPort()
-      const response = await axios.post(`http://localhost:${backendPort}/arca/crear-certificado-dev`, {
-        cuit: credencialesAFIP.username, // El CUIT debe ser el mismo que el username
+      const response = await axios.post(`http://localhost:${backendPort}/arca/crear-certificado-prod`, {
+        cuit: credencialesAFIP.username,
         username: credencialesAFIP.username,
         password: credencialesAFIP.password,
+        alias: 'afipsdk',
       })
 
       const result = response.data
 
       if (result.success) {
         setDialogOpen(false)
-        toast.success('¡Certificado creado exitosamente!', {
+        toast.success('¡Certificado de PRODUCCIÓN creado exitosamente!', {
           id: 'toast-conectar-arca-success',
-          description: `Guardado en: ${result.certDir}`,
-          duration: 6000,
+          description: result.serviciosAutorizados
+            ? `Servicios autorizados: ${result.serviciosAutorizados.join(', ')}`
+            : `Guardado en: ${result.certDir}`,
+          duration: 8000,
         })
-        
+
         // Actualizar el CUIT del emisor con el username
         const cuitStr = credencialesAFIP.username
         setCuitARCA(cuitStr)
         setCertificadoCreado(true)
         setFormData(prev => ({ ...prev, cuit: cuitStr }))
-        
+
         // Guardar estado del certificado en localStorage
         localStorage.setItem('certificadoARCACreado', 'true')
         localStorage.setItem('cuitARCA', cuitStr)
-        
+
         // Limpiar credenciales y error
         setCredencialesAFIP({ username: '', password: '' })
         setDialogError(null)
-        
+
         // Buscar automáticamente los datos del CUIT
         if (onBuscarCUIT) {
           toast.loading('Consultando datos en AFIP...', { id: 'toast-buscar-auto-loading' })
-          
+
           try {
             const busquedaResponse = await onBuscarCUIT(cuitStr)
-            
+
             if (busquedaResponse.success && busquedaResponse.data) {
-              setFormData((prev) => ({
+              setFormData(prev => ({
                 ...prev,
                 cuit: cuitStr,
                 razonSocial: busquedaResponse.data.razonSocial || prev.razonSocial,
@@ -205,33 +233,38 @@ export function ConfiguracionEmisor({
 
               toast.success(`Datos encontrados: ${busquedaResponse.data.razonSocial}`, {
                 id: 'toast-buscar-auto-loading',
-                description: `${busquedaResponse.data.localidad}, ${busquedaResponse.data.provincia}`,
+                description: `${busquedaResponse.data.domicilio}`,
                 duration: 4000,
               })
-            } else {
+            }
+            else {
               toast.info('Complete manualmente los datos del emisor', {
                 id: 'toast-buscar-auto-loading',
-                description: 'No se encontraron datos automáticos en AFIP'
+                description: 'No se encontraron datos automáticos en AFIP',
               })
             }
-          } catch (err) {
+          }
+          catch (err) {
             console.error('Error al buscar CUIT:', err)
             toast.info('Complete manualmente los datos del emisor', {
               id: 'toast-buscar-auto-loading',
-              description: 'No se pudieron obtener datos de AFIP'
+              description: 'No se pudieron obtener datos de AFIP',
             })
           }
         }
-      } else {
+      }
+      else {
         // Mostrar error en el dialog sin cerrarlo
         setDialogError(result.error || 'Error desconocido')
       }
-    } catch (error: any) {
+    }
+    catch (error: any) {
       console.error('Error completo:', error)
       // Extraer el mensaje de error más específico
       const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido'
       setDialogError(errorMsg)
-    } finally {
+    }
+    finally {
       setConectandoARCA(false)
     }
   }
@@ -258,14 +291,14 @@ export function ConfiguracionEmisor({
       inicioActividades: '',
       puntoVenta: 1,
     })
-    
+
     // Limpiar localStorage
     localStorage.removeItem('certificadoARCACreado')
     localStorage.removeItem('cuitARCA')
     localStorage.removeItem('datosEmisor')
-    
+
     toast.success('Certificado ARCA desconectado', {
-      description: 'Puede crear un nuevo certificado cuando lo necesite'
+      description: 'Puede crear un nuevo certificado cuando lo necesite',
     })
   }
 
@@ -301,7 +334,9 @@ export function ConfiguracionEmisor({
                   style={{ backgroundColor: '#242c50' }}
                 >
                   <Shield className="h-4 w-4 mr-2" />
-                  Conectar con <strong className="ml-1">ARCA</strong>
+                  Conectar con
+                  {' '}
+                  <strong className="ml-1">ARCA</strong>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -311,7 +346,7 @@ export function ConfiguracionEmisor({
                     Ingrese sus credenciales de AFIP para generar el certificado de desarrollo. El CUIT ingresado será usado como CUIT del emisor.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="afip-username">CUIT / Usuario AFIP</Label>
@@ -323,14 +358,14 @@ export function ConfiguracionEmisor({
                         setCredencialesAFIP(prev => ({ ...prev, username: e.target.value }))
                         setDialogError(null) // Limpiar error al editar
                       }}
-                      placeholder="20409378472"
+                      placeholder="Ej: 20123456789"
                       disabled={conectandoARCA}
                     />
                     <p className="text-xs text-gray-500">
                       Este será el CUIT de su empresa
                     </p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="afip-password">Contraseña AFIP</Label>
                     <Input
@@ -352,7 +387,7 @@ export function ConfiguracionEmisor({
                     </div>
                   )}
                 </div>
-                
+
                 <DialogFooter>
                   <Button
                     type="button"
@@ -399,12 +434,11 @@ export function ConfiguracionEmisor({
               </Button>
             </div>
           )}
-          
+
           <p className="text-xs text-gray-500 text-center">
-            {certificadoCreado 
+            {certificadoCreado
               ? 'Certificado de desarrollo creado correctamente'
-              : 'Crea automáticamente el certificado de desarrollo para facturación electrónica'
-            }
+              : 'Crea automáticamente el certificado de desarrollo para facturación electrónica'}
           </p>
 
           {/* Separador - Solo mostrar si el certificado fue creado */}
@@ -433,7 +467,7 @@ export function ConfiguracionEmisor({
                   <Input
                     id="cuit-emisor"
                     type="text"
-                    value={cuitARCA || ''} 
+                    value={cuitARCA || ''}
                     readOnly
                     disabled
                     placeholder="Conecte con ARCA primero"
@@ -446,7 +480,7 @@ export function ConfiguracionEmisor({
                       disabled={!cuitARCA || cuitARCA.trim() === '' || loadingBusqueda}
                       variant="outline"
                       size="default"
-                      title={!cuitARCA || cuitARCA.trim() === '' ? "Primero debe conectar con ARCA" : "Buscar datos en AFIP"}
+                      title={!cuitARCA || cuitARCA.trim() === '' ? 'Primero debe conectar con ARCA' : 'Buscar datos en AFIP'}
                     >
                       {loadingBusqueda ? '...' : <Search className="h-4 w-4" />}
                     </Button>
@@ -467,8 +501,7 @@ export function ConfiguracionEmisor({
                   type="text"
                   value={formData.razonSocial}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('razonSocial', e.target.value)
-                  }
+                    handleInputChange('razonSocial', e.target.value)}
                   placeholder="Nombre de tu empresa"
                   required
                 />
@@ -484,8 +517,7 @@ export function ConfiguracionEmisor({
                   type="text"
                   value={formData.domicilio}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('domicilio', e.target.value)
-                  }
+                    handleInputChange('domicilio', e.target.value)}
                   placeholder="Calle, número, localidad"
                   required
                 />
@@ -498,13 +530,13 @@ export function ConfiguracionEmisor({
                 </Label>
                 <Select
                   value={formData.condicionIVA}
-                  onValueChange={(value) => handleInputChange('condicionIVA', value)}
+                  onValueChange={value => handleInputChange('condicionIVA', value)}
                 >
                   <SelectTrigger id="condicion-iva-emisor">
                     <SelectValue placeholder="Seleccione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONDICIONES_IVA_EMISOR.map((cond) => (
+                    {CONDICIONES_IVA_EMISOR.map(cond => (
                       <SelectItem key={cond.id} value={cond.id}>
                         {cond.nombre}
                       </SelectItem>
@@ -523,8 +555,7 @@ export function ConfiguracionEmisor({
                   type="text"
                   value={formData.iibb}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('iibb', e.target.value)
-                  }
+                    handleInputChange('iibb', e.target.value)}
                   placeholder="Ej: 123-456789-0 o Exento"
                 />
               </div>
@@ -539,8 +570,7 @@ export function ConfiguracionEmisor({
                   type="date"
                   value={formData.inicioActividades}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('inicioActividades', e.target.value)
-                  }
+                    handleInputChange('inicioActividades', e.target.value)}
                   required
                 />
               </div>
@@ -557,8 +587,7 @@ export function ConfiguracionEmisor({
                   max="9999"
                   value={formData.puntoVenta}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('puntoVenta', parseInt(e.target.value) || 1)
-                  }
+                    handleInputChange('puntoVenta', Number.parseInt(e.target.value) || 1)}
                   placeholder="1"
                   required
                 />

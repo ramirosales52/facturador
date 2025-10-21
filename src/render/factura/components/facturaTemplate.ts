@@ -120,7 +120,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   }).join('')
 
   // Si no hay artículos, mostrar una fila por defecto
-  const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0 ? `
+  const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0
+    ? `
     <tr>
       <td>001</td>
       <td>Producto/Servicio</td>
@@ -128,10 +129,11 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>Unidad</td>
       <td>$${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
     </tr>
-  ` : articulosHTML
+  `
+    : articulosHTML
 
   // Generar filas de IVA agrupado
-  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map(iva => {
+  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map((iva) => {
     const label = tipoFactura === 'B' ? `IVA contenido (${iva.porcentaje}%)` : `IVA ${iva.porcentaje}%`
     return `
     <div class="text-right margin-b-10">
@@ -141,14 +143,17 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   }).join('')
 
   // Si no hay IVAs agrupados, mostrar el IVA simple
-  const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0 ? `
+  const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0
+    ? `
     <div class="text-right margin-b-10">
       <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA 21%'}: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
-  ` : ivasHTML
+  `
+    : ivasHTML
 
   // Generar la sección de totales según el tipo de factura
-  const totalesHTML = tipoFactura === 'A' ? `
+  const totalesHTML = tipoFactura === 'A'
+    ? `
     <div class="text-right margin-b-10">
       <strong>Subtotal: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
     </div>
@@ -156,21 +161,24 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     <div class="text-right">
       <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
-  ` : `
+  `
+    : `
     <div class="text-right">
       <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
-  const regimenTransparenciaHTML = tipoFactura === 'B' ? `
+  const regimenTransparenciaHTML = tipoFactura === 'B'
+    ? `
     <div class="regimen-transparencia">
       <div style="margin-bottom: 3px;">
         <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
       </div>
       ${ivasDefault}
     </div>
-  ` : ''
+  `
+    : ''
 
   return `<!doctype html>
     <html>
@@ -424,11 +432,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                 </div>
               </div>
               <div class="text-center" style="padding: 10px 0">
-                ${logoPath ? `<img
+                ${logoPath
+                  ? `<img
                   src="${logoPath}"
                   alt="Logo"
                   style="max-width: 280px; max-height: 110px"
-                />` : `
+                />`
+                  : `
                 <div class="text-lg">${emisor.razonSocial}</div>
                 `}
               </div>
@@ -522,7 +532,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                 <div style="margin-bottom: 15px">
                   <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
                 </div>
-                ${arcaLogoPath ? `
+                ${arcaLogoPath
+                  ? `
                 <div style="margin-top: 10px">
                   <img
                     src="${arcaLogoPath}"
@@ -531,7 +542,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                   />
                   <strong style="font-size: 10px">Comprobante Autorizado</strong>
                 </div>
-                ` : '<div style="margin-top: 10px"><strong style="font-size: 10px">Comprobante Autorizado</strong></div>'}
+                `
+                  : '<div style="margin-top: 10px"><strong style="font-size: 10px">Comprobante Autorizado</strong></div>'}
               </div>
             </div>
             <div class="footer-totals">
@@ -542,4 +554,3 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       </body>
     </html>`
 }
-
