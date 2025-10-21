@@ -9,7 +9,7 @@ export const ArcaConfig = {
   // Ambiente: false = homologación/testing, true = producción
   // Usar getter para leer en tiempo de ejecución, no en tiempo de importación
   get production() {
-    return process.env.AFIP_PRODUCTION === 'true'
+    return process.env.AFIP_PRODUCTION === 'false'
   },
 }
 

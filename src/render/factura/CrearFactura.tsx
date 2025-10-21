@@ -7,6 +7,7 @@ import type {
 import type { DatosEmisor } from './components/ConfiguracionEmisor'
 import type { FacturaPDFData } from './components/facturaTemplate'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs'
+import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_VENTA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
@@ -57,10 +58,11 @@ function CrearFactura() {
   const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
   const [pdfSavePath, setPdfSavePath] = useState<string>('')
 
-  // Cargar carpeta guardada al inicio
+  // Inicializar AFIP y cargar configuración al inicio
   useEffect(() => {
-    const loadSavedPath = async () => {
+    const inicializar = async () => {
       try {
+        // 1. Cargar carpeta guardada de PDFs
         // @ts-ignore
         if (window.electron?.store?.get) {
           // @ts-ignore
@@ -69,12 +71,27 @@ function CrearFactura() {
             setPdfSavePath(savedPath)
           }
         }
+
+        // 2. Inicializar AFIP SDK si hay certificado guardado
+        const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
+        const cuitGuardado = localStorage.getItem('cuitARCA')
+
+        if (certificadoGuardado === 'true' && cuitGuardado) {
+          const backendPort = await window.electron.getBackendPort()
+          console.log('Inicializando AFIP SDK con CUIT:', cuitGuardado)
+
+          await axios.post(`http://localhost:${backendPort}/arca/configurar-cuit`, {
+            cuit: cuitGuardado,
+          })
+
+          console.log('✅ AFIP SDK inicializado automáticamente')
+        }
       }
       catch (error) {
-        console.error('Error al cargar carpeta guardada:', error)
+        console.error('Error al inicializar:', error)
       }
     }
-    loadSavedPath()
+    inicializar()
   }, [])
 
   /**
@@ -195,13 +212,13 @@ function CrearFactura() {
     setHtmlPreview(null)
 
     // Validar que haya datos del emisor
-    if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
-      toast.error('Configure los datos del emisor primero', {
-        id: 'validar-emisor',
-        description: 'Vaya a la pestaña "Configuración" y complete los datos',
-      })
-      return
-    }
+    // if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
+    //   toast.error('Configure los datos del emisor primero', {
+    //     id: 'validar-emisor',
+    //     description: 'Vaya a la pestaña "Configuración" y complete los datos',
+    //   })
+    //   return
+    // }
 
     // Usar utilidad para agrupar IVA
     const ivaArray = agruparIVAParaAFIP(formData.Articulos)
@@ -383,15 +400,6 @@ function CrearFactura() {
         // Auto-mostrar la sección de datos del cliente
         setMostrarDatosCliente(true)
 
-        // Actualizar el toast de loading a success
-        toast.success(
-          `Encontrado: ${response.data.razonSocial}`,
-          {
-            id: toastId,
-            description: `${response.data.domicilio}`,
-            duration: 4000,
-          },
-        )
       }
       else {
         // Actualizar el toast de loading a error
@@ -564,7 +572,7 @@ function CrearFactura() {
     <div className="container mx-auto p-4 max-w-4xl">
       <div className="mb-4">
         <h1 className="text-2xl font-bold mb-1">Facturación Electrónica</h1>
-        <p className="text-sm text-gray-600">Crear facturas A y B con artículos detallados</p>
+        <p className="text-sm text-gray-600">Crear facturas A y B</p>
       </div>
 
       <Tabs defaultValue="facturar" className="mt-4">

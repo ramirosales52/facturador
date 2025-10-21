@@ -6,8 +6,9 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { CONDICIONES_IVA_EMISOR } from '@render/constants/afip'
+import { useArca } from '@render/hooks/useArca'
 import axios from 'axios'
-import { Building2, Save, Search, Shield, XCircle } from 'lucide-react'
+import { Building2, Save, Search, Shield, XCircle, Store, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -34,6 +35,7 @@ export function ConfiguracionEmisor({
   datosIniciales,
   loadingBusqueda,
 }: ConfiguracionEmisorProps) {
+  const { getPuntosVentaHabilitados } = useArca()
   const [formData, setFormData] = useState<DatosEmisor>(
     datosIniciales || {
       cuit: '', // Iniciar vacío
@@ -67,7 +69,10 @@ export function ConfiguracionEmisor({
   })
   const [cuitARCA, setCuitARCA] = useState<string>('') // Iniciar vacío
   const [certificadoCreado, setCertificadoCreado] = useState(false)
+  const [puntosVenta, setPuntosVenta] = useState<any[]>([])
+  const [cargandoPuntosVenta, setCargandoPuntosVenta] = useState(false)
 
+  // Cargar estado del certificado desde localStorage
   useEffect(() => {
     const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
     const cuitGuardado = localStorage.getItem('cuitARCA')
@@ -75,24 +80,7 @@ export function ConfiguracionEmisor({
     if (certificadoGuardado === 'true' && cuitGuardado) {
       setCertificadoCreado(true)
       setCuitARCA(cuitGuardado)
-
-      // Función asíncrona dentro del useEffect
-      const inicializarAfip = async () => {
-        try {
-          const backendPort = await window.electron.getBackendPort() // <-- await aquí
-          console.log("Backend en puerto:", backendPort)
-
-          await axios.post(`http://localhost:${backendPort}/arca/configurar-cuit`, {
-            cuit: cuitGuardado
-          })
-
-          console.log('AFIP SDK inicializado automáticamente')
-        } catch (err) {
-          console.error('Error al inicializar AFIP SDK automáticamente', err)
-        }
-      }
-
-      inicializarAfip() // llamar la función async
+      // Nota: La inicialización de AFIP se hace ahora en CrearFactura al cargar la app
     }
   }, [])
 
@@ -153,12 +141,6 @@ export function ConfiguracionEmisor({
           razonSocial: response.data.razonSocial || prev.razonSocial,
           domicilio: response.data.domicilio || prev.domicilio,
         }))
-
-        toast.success(`Datos encontrados: ${response.data.razonSocial}`, {
-          id: 'toast-buscar-cuit-loading',
-          description: `${response.data.domicilio}`,
-          duration: 4000,
-        })
       }
       else {
         // No se encontraron datos - mostrar error sin actualizar campos
@@ -170,6 +152,45 @@ export function ConfiguracionEmisor({
     }
     catch (err) {
       toast.error('Error al consultar AFIP', { id: 'toast-buscar-cuit-loading' })
+    }
+  }
+
+  const handleConsultarPuntosVenta = async () => {
+    if (!certificadoCreado) {
+      toast.error('Debe crear el certificado ARCA primero', {
+        description: 'El certificado es necesario para consultar AFIP',
+      })
+      return
+    }
+
+    setCargandoPuntosVenta(true)
+    toast.loading('Consultando puntos de venta habilitados...', { id: 'toast-puntos-venta' })
+
+    try {
+      const response = await getPuntosVentaHabilitados()
+      console.log('Respuesta puntos de venta:', response)
+
+      if (response.success && response.data) {
+        setPuntosVenta(response.data)
+        toast.success(`Se encontraron ${response.data.length} puntos de venta`, {
+          id: 'toast-puntos-venta',
+          description: 'Seleccione uno del desplegable',
+          duration: 4000,
+        })
+      }
+      else {
+        toast.error('Error al consultar puntos de venta', {
+          id: 'toast-puntos-venta',
+          description: response.error || 'No se pudieron obtener los datos',
+        })
+      }
+    }
+    catch (err) {
+      console.error('Error en handleConsultarPuntosVenta:', err)
+      toast.error('Error al consultar AFIP', { id: 'toast-puntos-venta' })
+    }
+    finally {
+      setCargandoPuntosVenta(false)
     }
   }
 
@@ -201,11 +222,8 @@ export function ConfiguracionEmisor({
 
       if (result.success) {
         setDialogOpen(false)
-        toast.success('¡Certificado de PRODUCCIÓN creado exitosamente!', {
+        toast.success('Conectado', {
           id: 'toast-conectar-arca-success',
-          description: result.serviciosAutorizados
-            ? `Servicios autorizados: ${result.serviciosAutorizados.join(', ')}`
-            : `Guardado en: ${result.certDir}`,
           duration: 8000,
         })
 
@@ -237,12 +255,6 @@ export function ConfiguracionEmisor({
                 razonSocial: busquedaResponse.data.razonSocial || prev.razonSocial,
                 domicilio: busquedaResponse.data.domicilio || prev.domicilio,
               }))
-
-              toast.success(`Datos encontrados: ${busquedaResponse.data.razonSocial}`, {
-                id: 'toast-buscar-auto-loading',
-                description: `${busquedaResponse.data.domicilio}`,
-                duration: 4000,
-              })
             }
             else {
               toast.info('Complete manualmente los datos del emisor', {
@@ -584,22 +596,70 @@ export function ConfiguracionEmisor({
 
               {/* Punto de Venta */}
               <div className="space-y-1.5">
-                <Label htmlFor="punto-venta" className="text-sm">
-                  Punto de Venta
-                </Label>
-                <Input
-                  id="punto-venta"
-                  type="number"
-                  min="1"
-                  max="9999"
-                  value={formData.puntoVenta}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange('puntoVenta', Number.parseInt(e.target.value) || 1)}
-                  placeholder="1"
-                  required
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="punto-venta" className="text-sm">
+                    Punto de Venta
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleConsultarPuntosVenta}
+                    disabled={!certificadoCreado || cargandoPuntosVenta}
+                    className="h-7 text-xs"
+                  >
+                    <Store className="h-3 w-3 mr-1" />
+                    {cargandoPuntosVenta ? 'Consultando...' : 'Consultar puntos de venta'}
+                  </Button>
+                </div>
+                <div className="flex gap-2 items-center">
+                  {puntosVenta.length > 0 ? (
+                    <>
+                      <Select
+                        value={String(formData.puntoVenta)}
+                        onValueChange={(value) => handleInputChange('puntoVenta', Number.parseInt(value))}
+                      >
+                        <SelectTrigger id="punto-venta" className="w-32">
+                          <SelectValue placeholder="Seleccione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {puntosVenta.map((pv: any) => (
+                            <SelectItem key={pv.Nro} value={String(pv.Nro)}>
+                              {pv.Nro}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPuntosVenta([])}
+                        className="h-8 w-8 p-0"
+                        title="Editar manualmente"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Input
+                      id="punto-venta"
+                      type="number"
+                      min="1"
+                      max="9999"
+                      value={formData.puntoVenta}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        handleInputChange('puntoVenta', Number.parseInt(e.target.value) || 1)}
+                      placeholder="1"
+                      className="w-32"
+                      required
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-gray-500">
-                  Número de 4 dígitos habilitado en AFIP
+                  {puntosVenta.length > 0
+                    ? 'Seleccione un punto de venta habilitado en AFIP'
+                    : 'Consulte AFIP para ver puntos de venta habilitados'}
                 </p>
               </div>
 

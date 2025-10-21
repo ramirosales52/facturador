@@ -78,8 +78,7 @@ export function FacturaForm({
       <CardHeader className="flex justify-between">
         <div>
           <CardTitle>
-            Factura
-            {formData.TipoFactura}
+            Factura {formData.TipoFactura}
           </CardTitle>
           <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
         </div>
@@ -127,12 +126,16 @@ export function FacturaForm({
               </Select>
             </div>
 
-            {/* CUIT/DNI con botones de búsqueda y editar */}
+            {/* CUIT/CUIL/DNI con botones de búsqueda y editar */}
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-xs">
                 {formData.DocTipo === '99'
                   ? 'DNI (opcional)'
-                  : formData.DocTipo === '96' ? 'DNI' : 'CUIT'}
+                  : formData.DocTipo === '96'
+                    ? 'DNI'
+                    : formData.DocTipo === '86'
+                      ? 'CUIL'
+                      : 'CUIT'}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -140,7 +143,11 @@ export function FacturaForm({
                   type="text"
                   value={formData.DocNro}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('DocNro', e.target.value)}
-                  placeholder={formData.DocTipo === '99' ? 'Sin documento' : formData.DocTipo === '96' ? '12345678' : '20123456789'}
+                  placeholder={formData.DocTipo === '99'
+                    ? 'Sin documento'
+                    : formData.DocTipo === '96'
+                      ? '12345678'
+                      : '20123456789'}
                   required={formData.DocTipo !== '99'}
                   className="flex-1"
                 />

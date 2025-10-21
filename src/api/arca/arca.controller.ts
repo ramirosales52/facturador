@@ -43,6 +43,14 @@ export class ArcaController {
   }
 
   /**
+   * Obtener puntos de venta habilitados
+   */
+  @Get('puntos-venta')
+  getPuntosVentaHabilitados() {
+    return this.arcaService.getPuntosVentaHabilitados()
+  }
+
+  /**
    * Crear certificado de desarrollo para ARCA
    */
   @Post('crear-certificado-dev')

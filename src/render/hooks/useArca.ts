@@ -158,6 +158,19 @@ export function useArca() {
     }
   }
 
+  const getPuntosVentaHabilitados = async (): Promise<{ success: boolean, data?: any[], error?: string }> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const response = await axios.get(`${apiUrl}/puntos-venta`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener puntos de venta'
+      return { success: false, error: errorMsg }
+    }
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -170,5 +183,6 @@ export function useArca() {
     generarQR,
     generarPDF,
     consultarContribuyente,
+    getPuntosVentaHabilitados,
   }
 }

@@ -3,6 +3,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
+import puppeteer from 'puppeteer'
 import { ArcaConfig } from './arca.config'
 import { CreateArcaDto } from './dto/create-arca.dto'
 
@@ -12,25 +13,27 @@ export class ArcaService {
   private cuitActual?: number
 
   constructor() {
+    this.afip = new Afip({ CUIT: 20409378472 });
     console.log('ℹ️  CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
   }
 
   configurarCUIT(cuit: number) {
-    this.cuitActual = cuit
-    const { certContent, keyContent } = this.loadCertificates(cuit)
+    this.cuitActual = 20409378472
+    this.afip = new Afip({ CUIT: 20409378472 });
+    // const { certContent, keyContent } = this.loadCertificates(cuit)
 
-    const config: any = {
-      CUIT: cuit,
-      production: ArcaConfig.production,
-      cert: certContent,
-      key: keyContent,
-    }
+    // const config: any = {
+    //   CUIT: cuit,
+    //   production: ArcaConfig.production,
+    //   cert: certContent,
+    //   key: keyContent,
+    // }
 
-    if (ArcaConfig.production) {
-      config.access_token = this.getAccessToken()
-    }
+    // if (ArcaConfig.production) {
+    //   config.access_token = this.getAccessToken()
+    // }
 
-    this.afip = new Afip(config)
+    // this.afip = new Afip(config)
     console.log(`✅ AFIP SDK configurado con CUIT: ${cuit}`)
   }
 
@@ -141,6 +144,48 @@ export class ArcaService {
   }
 
   /**
+   * Obtener los puntos de venta habilitados
+   */
+  async getPuntosVentaHabilitados() {
+    try {
+      if (!this.afip) {
+        throw new Error('AFIP SDK no está configurado. Configure el CUIT primero.')
+      }
+      const ws = this.afip.WebService("wsfe");
+      const token = await ws.getTokenAuthorization()
+
+      const data = {
+        "Auth": {
+          "Token": token.token,
+          "Sign": token.sign,
+          "Cuit": this.cuitActual
+        }
+      };
+
+      // Realizamos la llamada al metodo del web service
+      const response = await ws.executeRequest("FEParamGetPtosVenta", data);
+
+      // Mostramos la respuesta por consola
+      console.log('📋 Puntos de venta obtenidos de AFIP:', JSON.stringify(response, null, 2));
+
+      const puntosVenta = response?.FEParamGetPtosVentaResult?.ResultGet?.PtoVenta || []
+
+      return {
+        success: true,
+        data: puntosVenta
+      }
+    }
+    catch (error: any) {
+      // En caso de error lo mostramos por consola
+      console.error('❌ Error al obtener puntos de venta:', error);
+      return {
+        success: false,
+        error: error.message || 'Error al obtener puntos de venta'
+      }
+    }
+  }
+
+  /**
    * Determinar condición IVA según impuestos inscriptos
    */
   private determinarCondicionIVA(data: any): number {
@@ -192,9 +237,18 @@ export class ArcaService {
    */
   async create(createArcaDto: CreateArcaDto) {
     try {
+      console.log('🔵 Iniciando creación de factura...')
+      console.log('  - AFIP SDK inicializado:', !!this.afip)
+      console.log('  - CUIT actual:', this.cuitActual)
+
+      if (!this.afip) {
+        throw new Error('AFIP SDK no está configurado. Por favor configure el CUIT primero.')
+      }
+
       // Obtener el último número de comprobante
       const ptoVta = createArcaDto.PtoVta || 1
       const cbteTipo = createArcaDto.CbteTipo || 11
+      console.log(`  - Consultando último comprobante: PtoVta=${ptoVta}, CbteTipo=${cbteTipo}`)
       const lastVoucher = await this.afip.ElectronicBilling.getLastVoucher(ptoVta, cbteTipo)
 
       // Usar DocTipo y Concepto del DTO si vienen, si no usar por defecto
