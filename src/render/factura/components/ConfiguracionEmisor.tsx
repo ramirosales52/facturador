@@ -76,16 +76,23 @@ export function ConfiguracionEmisor({
       setCertificadoCreado(true)
       setCuitARCA(cuitGuardado)
 
-      // Llamar al backend para inicializar AFIP SDK con el CUIT guardado
-      const backendPort = window.electron.getBackendPort()
-      console.log("a", backendPort)
-      axios.post(`http://localhost:3000/arca/configurar-cuit`, {
-        cuit: cuitGuardado
-      }).then(() => {
-        console.log('AFIP SDK inicializado automáticamente')
-      }).catch(err => {
-        console.error('Error al inicializar AFIP SDK automáticamente', err)
-      })
+      // Función asíncrona dentro del useEffect
+      const inicializarAfip = async () => {
+        try {
+          const backendPort = await window.electron.getBackendPort() // <-- await aquí
+          console.log("Backend en puerto:", backendPort)
+
+          await axios.post(`http://localhost:${backendPort}/arca/configurar-cuit`, {
+            cuit: cuitGuardado
+          })
+
+          console.log('AFIP SDK inicializado automáticamente')
+        } catch (err) {
+          console.error('Error al inicializar AFIP SDK automáticamente', err)
+        }
+      }
+
+      inicializarAfip() // llamar la función async
     }
   }, [])
 
