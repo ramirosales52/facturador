@@ -32,6 +32,8 @@ export interface FacturaPDFData {
   CondicionIVA?: string
   RazonSocial?: string
   Domicilio?: string
+  Concepto?: string
+  CondicionVenta?: string
   Articulos?: ArticuloFactura[]
   IVAsAgrupados?: IVAAgrupado[]
   DatosEmisor?: {
@@ -84,6 +86,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
   const razonSocial = facturaInfo.RazonSocial || 'Cliente'
   const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
+  const concepto = facturaInfo.Concepto || 'Productos'
+  const condicionVenta = facturaInfo.CondicionVenta || 'Efectivo'
 
   // Datos del emisor
   const emisor = facturaInfo.DatosEmisor || {
@@ -252,6 +256,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             width: 150px;
             height: 150px;
             display: block;
+            object-fit: contain;
           }
 
           .footer-cae {
@@ -495,7 +500,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     <strong>Domicilio: </strong>${domicilio}
                   </p>
                 </div>
-                <p><strong>Condicion de venta: </strong>Efectivo</p>
+                <p class="margin-b-0"><strong>Condicion de venta: </strong>${condicionVenta}</p>
+                <p><strong>Concepto: </strong>${concepto}</p>
               </div>
             </td>
           </tr>

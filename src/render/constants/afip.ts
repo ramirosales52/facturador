@@ -35,6 +35,15 @@ export const CONCEPTOS = [
   { id: '3', nombre: 'Productos y Servicios' },
 ] as const
 
+export const CONDICIONES_VENTA = [
+  { id: 'efectivo', nombre: 'Efectivo' },
+  { id: 'transferencia', nombre: 'Transferencia' },
+  { id: 'debito', nombre: 'Débito' },
+  { id: 'credito', nombre: 'Crédito' },
+  { id: 'cuenta_corriente', nombre: 'Cuenta Corriente' },
+  { id: 'otra', nombre: 'Otra' },
+] as const
+
 export const ALICUOTAS_IVA = [
   { id: '3', nombre: '0%', porcentaje: 0 },
   { id: '4', nombre: '10.5%', porcentaje: 10.5 },

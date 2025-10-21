@@ -88,19 +88,24 @@ ipcMain.handle('get-backend-port', () => {
   return BACKEND_PORT
 })
 
-// IPC para shell.openPath - Abrir carpeta en el explorador
-ipcMain.handle('shell-open-path', async (_event, path: string) => {
+// IPC para shell.showItemInFolder - Abrir carpeta y seleccionar archivo
+ipcMain.handle('shell-open-path', async (_event, filePath: string) => {
   try {
-    // En Windows, usar shell.openPath para abrir la carpeta
-    const result = await shell.openPath(path)
-    if (result) {
-      // Si devuelve algo es porque hubo error
-      console.error('Error al abrir carpeta:', result)
+    if (!filePath) {
+      console.error('Ruta no válida')
+      return 'Ruta no válida'
     }
-    return result
+
+    // Normalizar la ruta
+    const normalizedPath = filePath.replace(/\//g, '\\')
+
+    // Abrir el explorador en la carpeta y seleccionar el archivo
+    shell.showItemInFolder(normalizedPath)
+
+    return 'ok'
   }
   catch (error) {
-    console.error('Error en shell.openPath:', error)
+    console.error('Error al abrir carpeta:', error)
     return String(error)
   }
 })

@@ -72,27 +72,6 @@ export class ArcaService {
     }
   }
 
-  private ensureAfipConfigured(): void {
-    if (!this.afip) {
-      throw new Error('AFIP SDK no está configurado. Configure el CUIT primero.')
-    }
-  }
-
-  private handleError(error: any, defaultMessage: string): { success: false; error: string } {
-    console.error(`${defaultMessage}:`, error)
-
-    let errorMessage = defaultMessage
-    if (error.data?.data?.message) {
-      errorMessage = error.data.data.message
-    } else if (error.data?.data_errors?.params) {
-      errorMessage = `Error de validación: ${JSON.stringify(error.data.data_errors.params)}`
-    } else if (error.message) {
-      errorMessage = error.message
-    }
-
-    return { success: false, error: errorMessage }
-  }
-
   /**
    * Consultar datos de un contribuyente por CUIT
    * NOTA: Esta funcionalidad requiere servicios de padrón que pueden no estar disponibles
@@ -145,9 +124,18 @@ export class ArcaService {
 
     } catch (error: any) {
       console.error('Error al consultar contribuyente:', error)
+
+      // Extraer el mensaje más específico del error
+      let errorMessage = 'Error al consultar CUIT'
+      if (error.data?.message) {
+        errorMessage = error.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       return {
         success: false,
-        error: error.message ?? 'Error al consultar CUIT'
+        error: errorMessage
       }
     }
   }
@@ -174,7 +162,25 @@ export class ArcaService {
    * Helper para manejar errores de forma consistente
    */
   private handleError(error: unknown): { success: false, error: string } {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    let errorMessage = 'Error desconocido'
+
+    if (error && typeof error === 'object') {
+      const err = error as any
+
+      // Intentar obtener el mensaje más específico
+      if (err.data?.message) {
+        errorMessage = err.data.message
+      } else if (err.data?.data?.message) {
+        errorMessage = err.data.data.message
+      } else if (err.data?.data_errors?.params) {
+        errorMessage = `Error de validación: ${JSON.stringify(err.data.data_errors.params)}`
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message
+    }
+
     return {
       success: false,
       error: errorMessage,
@@ -720,12 +726,8 @@ export class ArcaService {
       }
     }
     catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       console.error('Error al generar PDF:', error)
-      return {
-        success: false,
-        error: errorMessage,
-      }
+      return this.handleError(error)
     }
   }
 

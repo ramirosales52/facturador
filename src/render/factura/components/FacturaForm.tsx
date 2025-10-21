@@ -5,7 +5,7 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
-import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
 import { Edit3, Search, X } from 'lucide-react'
 import { useState } from 'react'
 
@@ -24,6 +24,7 @@ export interface FormData {
   DocNro: string
   Concepto: string
   CondicionIVA: string
+  CondicionVenta: string
   RazonSocial?: string
   Domicilio?: string
   Articulos: Articulo[]
@@ -34,7 +35,7 @@ export interface FormData {
 }
 
 // Re-exportar constantes para compatibilidad con código existente
-export { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA }
+export { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA }
 
 interface FacturaFormProps {
   formData: FormData
@@ -130,7 +131,7 @@ export function FacturaForm({
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-xs">
                 {formData.DocTipo === '99'
-                  ? 'Sin Documento'
+                  ? 'DNI (opcional)'
                   : formData.DocTipo === '96' ? 'DNI' : 'CUIT'}
               </Label>
               <div className="flex gap-2">
@@ -139,9 +140,8 @@ export function FacturaForm({
                   type="text"
                   value={formData.DocNro}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('DocNro', e.target.value)}
-                  placeholder={formData.DocTipo === '99' ? '0' : formData.DocTipo === '96' ? '12345678' : '20123456789'}
+                  placeholder={formData.DocTipo === '99' ? 'Sin documento' : formData.DocTipo === '96' ? '12345678' : '20123456789'}
                   required={formData.DocTipo !== '99'}
-                  disabled={formData.DocTipo === '99'}
                   className="flex-1"
                 />
                 {onConsultarContribuyente && formData.DocTipo === '80' && (
@@ -169,7 +169,7 @@ export function FacturaForm({
             </div>
           </div>
 
-          {/* Segunda fila: Concepto, Condición IVA (B), IVA (B) */}
+          {/* Segunda fila: Concepto, Condición de Venta, Condición IVA (B), IVA (B) */}
           <div className="flex gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="Concepto" className="text-xs">Concepto</Label>
@@ -184,6 +184,25 @@ export function FacturaForm({
                   {CONCEPTOS.map(concepto => (
                     <SelectItem key={concepto.id} value={concepto.id}>
                       {concepto.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="CondicionVenta" className="text-xs">Condición de Venta</Label>
+              <Select
+                value={formData.CondicionVenta}
+                onValueChange={value => onInputChange('CondicionVenta', value)}
+              >
+                <SelectTrigger id="CondicionVenta">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONDICIONES_VENTA.map(condicion => (
+                    <SelectItem key={condicion.id} value={condicion.id}>
+                      {condicion.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>

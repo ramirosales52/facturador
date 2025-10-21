@@ -9,7 +9,7 @@ import type { FacturaPDFData } from './components/facturaTemplate'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ALICUOTAS_IVA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
+import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_VENTA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
 import { useArca } from '../hooks/useArca'
 import { agruparIVAParaAFIP, agruparIVAPorAlicuota, calcularSubtotal, calcularTotalesFactura, getNombreCondicionIVA } from '../utils/calculos'
 import {
@@ -28,6 +28,7 @@ function CrearFactura() {
     DocNro: '',
     Concepto: DEFAULTS.CONCEPTO,
     CondicionIVA: DEFAULTS.CONDICION_IVA,
+    CondicionVenta: 'efectivo',
     RazonSocial: '',
     Domicilio: '',
     Articulos: [],
@@ -173,6 +174,7 @@ function CrearFactura() {
       DocNro: '',
       Concepto: DEFAULTS.CONCEPTO,
       CondicionIVA: DEFAULTS.CONDICION_IVA,
+      CondicionVenta: 'efectivo',
       Articulos: [],
       ImpNeto: '0.00',
       ImpIVA: '0.00',
@@ -277,6 +279,8 @@ function CrearFactura() {
         }))
 
         const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
+        const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
 
         const pdfData: FacturaPDFData = {
           ...response.data,
@@ -286,6 +290,8 @@ function CrearFactura() {
           CondicionIVA: condicionIVANombre,
           RazonSocial: formData.RazonSocial,
           Domicilio: formData.Domicilio,
+          Concepto: conceptoNombre,
+          CondicionVenta: condicionVentaNombre,
           Articulos: articulosPDF,
           IVAsAgrupados: ivasAgrupados,
           DatosEmisor: {
@@ -334,7 +340,10 @@ function CrearFactura() {
           console.error('Error cargando logo ARCA para vista previa:', error)
         }
 
-        const htmlContent = generarHTMLFactura(pdfData, qrResponse.qrUrl, Number.parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview)
+        // Generar imagen del QR para la vista previa
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResponse.qrUrl)}`
+
+        const htmlContent = generarHTMLFactura(pdfData, qrImageUrl, Number.parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview)
         setHtmlPreview(htmlContent)
       }
     }
@@ -502,6 +511,8 @@ function CrearFactura() {
 
     // Obtener nombre de condición IVA usando utilidad
     const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
+    const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
+    const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
 
     // Crear datos extendidos para el PDF
     const pdfData = {
@@ -510,6 +521,8 @@ function CrearFactura() {
       CondicionIVA: condicionIVANombre,
       RazonSocial: formData.RazonSocial,
       Domicilio: formData.Domicilio,
+      Concepto: conceptoNombre,
+      CondicionVenta: condicionVentaNombre,
       Articulos: articulosPDF,
       IVAsAgrupados: ivasAgrupados,
       DatosEmisor: {

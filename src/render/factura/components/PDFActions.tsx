@@ -25,14 +25,11 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       return
 
     try {
-      // Obtener la carpeta del archivo
-      const carpeta = pdfUrl.substring(0, pdfUrl.lastIndexOf('/'))
-
-      // Usar el API de Electron para abrir la carpeta
+      // Usar el API de Electron para abrir la carpeta y seleccionar el archivo
       // @ts-ignore - Electron API
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
-        await window.electron.shell.openPath(carpeta)
+        await window.electron.shell.openPath(pdfUrl)
         toast.success('Abriendo carpeta del PDF', { id: 'abrir-carpeta-pdf' })
       }
       else {
