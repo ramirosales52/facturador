@@ -270,11 +270,7 @@ function CrearFactura() {
           const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
           const subtotalSinIVA = calcularSubtotal(articulo)
           const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
-
-          // Para Factura B, el subtotal mostrado debe incluir el IVA
-          const subtotalMostrar = formData.TipoFactura === 'B'
-            ? subtotalSinIVA + ivaArticulo
-            : subtotalSinIVA
+          const subtotalConIVA = subtotalSinIVA + ivaArticulo
 
           return {
             codigo: articulo.codigo || '',
@@ -284,7 +280,7 @@ function CrearFactura() {
             precioUnitario: articulo.precioUnitario,
             alicuotaIVA: articulo.alicuotaIVA,
             porcentajeIVA: alicuota?.porcentaje || 0,
-            subtotal: subtotalMostrar,
+            subtotal: subtotalConIVA,
           }
         })
 
@@ -491,11 +487,7 @@ function CrearFactura() {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
       const subtotalSinIVA = calcularSubtotal(articulo)
       const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
-
-      // Para Factura B, el subtotal mostrado debe incluir el IVA
-      const subtotalMostrar = formData.TipoFactura === 'B'
-        ? subtotalSinIVA + ivaArticulo
-        : subtotalSinIVA
+      const subtotalConIVA = subtotalSinIVA + ivaArticulo
 
       return {
         codigo: articulo.codigo || '',
@@ -505,7 +497,7 @@ function CrearFactura() {
         precioUnitario: articulo.precioUnitario,
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
-        subtotal: subtotalMostrar,
+        subtotal: subtotalConIVA,
       }
     })
 

@@ -107,33 +107,58 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar filas de artículos
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
     const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
+    const precioUnitarioSinIVA = articulo.precioUnitario
 
-    // Para Factura B, el subtotal incluye el IVA
-    // Para Factura A, el subtotal es sin IVA
-    const subtotalMostrar = tipoFactura === 'B' ? subtotal : subtotal
-
-    return `
-    <tr>
-      <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
-      <td>${articulo.descripcion}</td>
-      <td>${articulo.cantidad.toFixed(2)}</td>
-      <td>${articulo.unidadMedida || 'Unidad'}</td>
-      <td>$${subtotalMostrar.toFixed(2)}</td>
-    </tr>
-    `
+    if (tipoFactura === 'A') {
+      // Factura A: mostrar Precio Unit., IVA%, Subtotal (con IVA)
+      return `
+      <tr>
+        <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
+        <td>${articulo.descripcion}</td>
+        <td>${articulo.cantidad.toFixed(2)}</td>
+        <td>${articulo.unidadMedida || 'Unidad'}</td>
+        <td>$${precioUnitarioSinIVA.toFixed(2)}</td>
+        <td>${articulo.porcentajeIVA}%</td>
+        <td>$${subtotal.toFixed(2)}</td>
+      </tr>
+      `
+    } else {
+      // Factura B: mostrar Precio, Subtotal (con IVA)
+      return `
+      <tr>
+        <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
+        <td>${articulo.descripcion}</td>
+        <td>${articulo.cantidad.toFixed(2)}</td>
+        <td>${articulo.unidadMedida || 'Unidad'}</td>
+        <td>$${subtotal.toFixed(2)}</td>
+      </tr>
+      `
+    }
   }).join('')
 
   // Si no hay artículos, mostrar una fila por defecto
   const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0
-    ? `
+    ? (tipoFactura === 'A' 
+        ? `
     <tr>
       <td>001</td>
       <td>Producto/Servicio</td>
       <td>1.00</td>
       <td>Unidad</td>
       <td>$${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
+      <td>21%</td>
+      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
     </tr>
   `
+        : `
+    <tr>
+      <td>001</td>
+      <td>Producto/Servicio</td>
+      <td>1.00</td>
+      <td>Unidad</td>
+      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
+    </tr>
+  `)
     : articulosHTML
 
   // Generar filas de IVA agrupado
@@ -506,6 +531,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     <td>Descripción</td>
                     <td>Cantidad</td>
                     <td>Unidad</td>
+                    ${tipoFactura === 'A' ? '<td>Precio Unit.</td><td>IVA %</td>' : ''}
                     <td>Subtotal</td>
                   </tr>
                   ${articulosDefault}
