@@ -12,6 +12,10 @@ export class ArcaService {
   private afip: Afip
   private cuitActual?: number
 
+  constructor() {
+    console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
+  }
+
   configurarCUIT(cuit: number) {
     this.cuitActual = cuit
     const { certContent, keyContent } = this.loadCertificates(cuit)

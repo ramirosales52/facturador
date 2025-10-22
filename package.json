@@ -1,9 +1,9 @@
 {
-  "name": "vite-react-nestjs-electron",
+  "name": "facturador",
   "version": "0.0.1",
   "private": true,
   "packageManager": "npm@11.6.0",
-  "description": "Vite + React + Electron + Nest",
+  "description": "Facturación electrónica con ARCA",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "rimraf dist && vite",
