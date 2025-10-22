@@ -121,7 +121,6 @@ export function ConfiguracionEmisor({
   const handleBuscarCUIT = async () => {
     if (!cuitARCA || cuitARCA.trim() === '') {
       toast.error('Debe crear el certificado ARCA primero', {
-        id: 'toast-buscar-cuit-error',
         description: 'El CUIT se obtiene al conectar con ARCA',
       })
       return
@@ -130,11 +129,14 @@ export function ConfiguracionEmisor({
     if (!onBuscarCUIT)
       return
 
-    const toastId = 'toast-buscar-cuit-loading'
-    toast.loading('Consultando datos en AFIP...', { id: toastId })
+    const toastIdLoading = `toast-buscar-cuit-${Date.now()}`
+    toast.loading('Consultando datos en AFIP...', { id: toastIdLoading })
 
     try {
       const response = await onBuscarCUIT(cuitARCA)
+
+      // Dismiss el toast de loading
+      toast.dismiss(toastIdLoading)
 
       if (response.success && response.data) {
         setFormData(prev => ({
@@ -143,20 +145,20 @@ export function ConfiguracionEmisor({
           domicilio: response.data.domicilio || prev.domicilio,
         }))
         toast.success('Datos obtenidos correctamente', {
-          id: toastId,
           description: 'La información se cargó desde AFIP',
         })
       }
       else {
         // No se encontraron datos - mostrar error sin actualizar campos
         toast.error('CUIT no encontrado', {
-          id: toastId,
           description: response.error || 'No se encontraron datos en AFIP',
         })
       }
     }
     catch (err) {
-      toast.error('Error al consultar AFIP', { id: toastId })
+      // Dismiss el toast de loading
+      toast.dismiss(toastIdLoading)
+      toast.error('Error al consultar AFIP')
     }
   }
 
@@ -248,10 +250,14 @@ export function ConfiguracionEmisor({
 
         // Buscar automáticamente los datos del CUIT
         if (onBuscarCUIT) {
-          toast.loading('Consultando datos en AFIP...', { id: 'toast-buscar-auto-loading' })
+          const toastIdLoading = `toast-buscar-auto-loading-${Date.now()}`
+          toast.loading('Consultando datos en AFIP...', { id: toastIdLoading })
 
           try {
             const busquedaResponse = await onBuscarCUIT(cuitStr)
+
+            // Dismiss el toast de loading
+            toast.dismiss(toastIdLoading)
 
             if (busquedaResponse.success && busquedaResponse.data) {
               setFormData(prev => ({
@@ -260,18 +266,21 @@ export function ConfiguracionEmisor({
                 razonSocial: busquedaResponse.data.razonSocial || prev.razonSocial,
                 domicilio: busquedaResponse.data.domicilio || prev.domicilio,
               }))
+              toast.success('Datos del emisor cargados correctamente', {
+                description: 'La información se obtuvo desde AFIP',
+              })
             }
             else {
               toast.info('Complete manualmente los datos del emisor', {
-                id: 'toast-buscar-auto-loading',
                 description: 'No se encontraron datos automáticos en AFIP',
               })
             }
           }
           catch (err) {
             console.error('Error al buscar CUIT:', err)
+            // Dismiss el toast de loading
+            toast.dismiss(toastIdLoading)
             toast.info('Complete manualmente los datos del emisor', {
-              id: 'toast-buscar-auto-loading',
               description: 'No se pudieron obtener datos de AFIP',
             })
           }

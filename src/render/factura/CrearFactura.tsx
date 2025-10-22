@@ -382,11 +382,15 @@ function CrearFactura() {
     setLoadingContribuyente(true)
 
     // Crear un toast de loading con ID único para esta búsqueda
-    const toastId = toast.loading('Consultando datos en AFIP...')
+    const toastIdLoading = `consultar-contribuyente-${Date.now()}`
+    toast.loading('Consultando datos en AFIP...', { id: toastIdLoading })
 
     try {
       const response = await consultarContribuyente(formData.DocNro)
       console.log(response)
+
+      // Dismiss el toast de loading
+      toast.dismiss(toastIdLoading)
 
       if (response.success && response.data) {
         if (response.data.razonSocial) {
@@ -399,31 +403,22 @@ function CrearFactura() {
         // Auto-mostrar la sección de datos del cliente
         setMostrarDatosCliente(true)
 
-        // Actualizar el toast de loading a success
-        toast.success(
-          'Datos obtenidos correctamente',
-          {
-            id: toastId,
-            description: 'La información se cargó desde AFIP',
-          },
-        )
+        // Mostrar toast de success
+        toast.success('Datos obtenidos correctamente', {
+          description: 'La información se cargó desde AFIP',
+        })
       }
       else {
-        // Actualizar el toast de loading a error
-        toast.error(
-          'CUIT no encontrado',
-          {
-            id: toastId,
-            description: response.error || 'No se encontraron datos en AFIP',
-          },
-        )
+        // Mostrar toast de error
+        toast.error('CUIT no encontrado', {
+          description: response.error || 'No se encontraron datos en AFIP',
+        })
       }
     }
     catch (err) {
-      toast.error(
-        'Error al consultar contribuyente',
-        { id: toastId },
-      )
+      // Dismiss el toast de loading
+      toast.dismiss(toastIdLoading)
+      toast.error('Error al consultar contribuyente')
     }
     finally {
       setLoadingContribuyente(false)
