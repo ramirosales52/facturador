@@ -11,15 +11,25 @@ import { findAvailablePort } from './utils/port-finder'
 // 1. Desde el directorio del proyecto (desarrollo)
 config()
 
-// 2. Desde el directorio userData (producción)
+// 2. Si está empaquetado, buscar .env en app.asar.unpacked
+if (app.isPackaged) {
+  const resourcesPath = process.resourcesPath
+  const envPathUnpacked = join(resourcesPath, 'app.asar.unpacked', '.env')
+  
+  if (existsSync(envPathUnpacked)) {
+    config({ path: envPathUnpacked })
+    console.log('✓ Variables de entorno cargadas desde:', envPathUnpacked)
+  } else {
+    console.log('⚠ No se encontró .env en app.asar.unpacked')
+  }
+}
+
+// 3. Desde el directorio userData (para permitir personalización del usuario)
 const userDataPath = app.getPath('userData')
 const envPathUserData = join(userDataPath, '.env')
 if (existsSync(envPathUserData)) {
   config({ path: envPathUserData })
-  console.log('✓ Variables de entorno cargadas desde:', envPathUserData)
-}
-else {
-  console.log('ℹ No se encontró .env en userData, usando variables del sistema')
+  console.log('✓ Variables de entorno cargadas desde userData:', envPathUserData)
 }
 
 // Store simple sin dependencias

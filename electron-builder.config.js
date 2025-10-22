@@ -14,11 +14,13 @@ const config = {
   buildDependenciesFromSource: false,
   // Comprimir con asar para reducir tamaño
   asar: true,
+  asarUnpack: ['.env'],
   files: [
     'dist/main/**/*',
     'dist/preload/**/*',
     'dist/render/**/*',
     'package.json',
+    '.env',
     '!**/*.map',
     '!**/README.md',
     '!**/LICENSE*',
