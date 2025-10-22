@@ -504,14 +504,23 @@ export class ArcaService {
       }
 
       const fs = await import('node:fs/promises')
+      const fsSync = await import('node:fs')
       // Guardar con el CUIT del username
       const certPath = join(certsDir, `${data.username}_dev.crt`)
       const keyPath = join(certsDir, `${data.username}_dev.key`)
 
-      await fs.writeFile(certPath, result.data.cert)
-      await fs.writeFile(keyPath, result.data.key)
+      await fs.writeFile(certPath, result.data.cert, { flush: true })
+      await fs.writeFile(keyPath, result.data.key, { flush: true })
 
       console.log('Certificados guardados exitosamente en:', certPath)
+
+      // Verificar que los archivos existan antes de continuar
+      if (!fsSync.existsSync(certPath) || !fsSync.existsSync(keyPath)) {
+        throw new Error('Error: Los certificados no se guardaron correctamente')
+      }
+
+      // Pequeño delay para asegurar que el sistema de archivos se sincronice
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // AUTORIZAR AUTOMÁTICAMENTE LOS SERVICIOS NECESARIOS
       console.log('Autorizando servicios necesarios...')
@@ -932,14 +941,23 @@ export class ArcaService {
       }
 
       const fs = await import('node:fs/promises')
+      const fsSync = await import('node:fs')
       // Guardar con el CUIT del username y marcado como producción
       const certPath = join(certsDir, `${data.username}_prod.crt`)
       const keyPath = join(certsDir, `${data.username}_prod.key`)
 
-      await fs.writeFile(certPath, result.data.cert)
-      await fs.writeFile(keyPath, result.data.key)
+      await fs.writeFile(certPath, result.data.cert, { flush: true })
+      await fs.writeFile(keyPath, result.data.key, { flush: true })
 
       console.log('Certificados de PRODUCCIÓN guardados exitosamente en:', certPath)
+
+      // Verificar que los archivos existan antes de continuar
+      if (!fsSync.existsSync(certPath) || !fsSync.existsSync(keyPath)) {
+        throw new Error('Error: Los certificados no se guardaron correctamente')
+      }
+
+      // Pequeño delay para asegurar que el sistema de archivos se sincronice
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // AUTORIZAR AUTOMÁTICAMENTE LOS SERVICIOS NECESARIOS
       console.log('Autorizando servicios necesarios en PRODUCCIÓN...')
