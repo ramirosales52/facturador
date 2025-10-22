@@ -456,7 +456,7 @@ export function ConfiguracionEmisor({
 
           <p className="text-xs text-gray-500 text-center">
             {certificadoCreado
-              ? 'Certificado de creado correctamente'
+              ? 'Certificado creado correctamente'
               : 'Crea automáticamente el certificado para la facturación'}
           </p>
 
@@ -505,9 +505,6 @@ export function ConfiguracionEmisor({
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
-                  El CUIT está vinculado con el certificado de ARCA creado
-                </p>
               </div>
 
               {/* Razón Social */}
