@@ -284,6 +284,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
           .footer-cae {
             display: flex;
+            min-height: 120px;
             flex-direction: column;
             justify-content: space-between;
           }
