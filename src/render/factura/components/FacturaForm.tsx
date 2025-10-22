@@ -231,6 +231,7 @@ export function FacturaForm({
                     <SelectContent>
                       <SelectItem value="4">IVA Sujeto Exento</SelectItem>
                       <SelectItem value="5">Consumidor Final</SelectItem>
+                      <SelectItem value="6">Responsable Monotributo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -384,6 +385,30 @@ export function FacturaForm({
                         </Select>
                       </div>
 
+                      {formData.TipoFactura === 'A' && (
+                        <div className="space-y-1 w-24">
+                          <Label htmlFor={`iva-porcentaje-${index}`} className="text-xs">IVA %</Label>
+                          <Select
+                            value={articulo.alicuotaIVA}
+                            onValueChange={value => onArticuloChange(index, 'alicuotaIVA', value)}
+                          >
+                            <SelectTrigger
+                              id={`iva-porcentaje-${index}`}
+                              className="bg-white"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ALICUOTAS_IVA.map(alicuota => (
+                                <SelectItem key={alicuota.id} value={alicuota.id}>
+                                  {alicuota.porcentaje}%
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
                       <div className="space-y-1 w-28">
                         <Label htmlFor={`precio-${index}`} className="text-xs">Precio</Label>
                         <Input
@@ -399,37 +424,16 @@ export function FacturaForm({
                           required
                         />
                       </div>
-
-                      {formData.TipoFactura === 'A' && (
-                        <div className="space-y-1">
-                          <Label htmlFor={`iva-${index}`} className="text-xs">Alícuota IVA</Label>
-                          <Select
-                            value={articulo.alicuotaIVA}
-                            onValueChange={value => onArticuloChange(index, 'alicuotaIVA', value)}
-                          >
-                            <SelectTrigger
-                              id={`iva-${index}`}
-                              className="bg-white"
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ALICUOTAS_IVA.map(alicuota => (
-                                <SelectItem key={alicuota.id} value={alicuota.id}>
-                                  {alicuota.nombre}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
                     </div>
 
                     <div className="min-w-36 space-y-1">
                       <Label className="text-xs">Subtotal</Label>
                       <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
                         $
-                        {totalConIVA ? totalConIVA.toFixed(2) : '0.00'}
+                        {formData.TipoFactura === 'A' 
+                          ? (subtotal ? subtotal.toFixed(2) : '0.00')
+                          : (totalConIVA ? totalConIVA.toFixed(2) : '0.00')
+                        }
                       </div>
                     </div>
                   </div>

@@ -12,12 +12,26 @@ const config = {
   npmRebuild: false,
   nodeGypRebuild: false,
   buildDependenciesFromSource: false,
+  // Comprimir con asar para reducir tamaño
+  asar: true,
   files: [
     'dist/main/**/*',
     'dist/preload/**/*',
     'dist/render/**/*',
     'package.json',
-    '.env.example',
+    '!**/*.map',
+    '!**/README.md',
+    '!**/LICENSE*',
+    '!**/CHANGELOG.md',
+    '!**/*.d.ts',
+    '!**/test/**',
+    '!**/tests/**',
+    '!**/*.spec.js',
+    '!**/*.test.js',
+    '!**/docs/**',
+    '!**/example/**',
+    '!**/examples/**',
+    '!**/.github/**',
     {
       from: 'src/render/assets',
       to: 'assets',
@@ -27,12 +41,51 @@ const config = {
       from: 'node_modules',
       to: 'node_modules',
       filter: [
-        '**/*',
+        // Backend dependencies
+        '@afipsdk/**/*',
+        '@nestjs/common/**/*',
+        '@nestjs/core/**/*',
+        '@nestjs/mapped-types/**/*',
+        '@nestjs/microservices/**/*',
+        '@nestjs/platform-express/**/*',
+        '@doubleshot/nest-electron/**/*',
+        'axios/**/*',
+        'class-transformer/**/*',
+        'class-validator/**/*',
+        'reflect-metadata/**/*',
+        'rxjs/**/*',
+        
+        // Puppeteer (generación de PDF)
+        'puppeteer/**/*',
+        'puppeteer-core/**/*',
+        
+        // Frontend (solo producción)
+        'react/**/*',
+        'react-dom/**/*',
+        'react-router/**/*',
+        
+        // Excluir archivos innecesarios
+        '!**/*.map',
+        '!**/README.md',
+        '!**/LICENSE*',
+        '!**/CHANGELOG.md',
+        '!**/*.d.ts',
+        '!**/test/**',
+        '!**/tests/**',
+        '!**/*.spec.js',
+        '!**/*.test.js',
+        '!**/docs/**',
+        '!**/example/**',
+        '!**/examples/**',
+        '!**/.github/**',
       ],
     },
   ],
   win: {
-    target: 'nsis',
+    target: [{
+      target: 'nsis',
+      arch: ['x64']
+    }],
     icon: 'build/icon.ico',
   },
   nsis: {
@@ -40,10 +93,13 @@ const config = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
+    differentialPackage: true,
   },
   extraMetadata: {
     main: 'dist/main/index.js',
   },
+  // Comprimir al máximo
+  compression: 'maximum',
 }
 
 module.exports = config

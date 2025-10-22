@@ -150,7 +150,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0
     ? `
     <div class="text-right margin-b-10">
-      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA 21%'}: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA %'}: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
   `
     : ivasHTML
@@ -227,6 +227,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           .bill-footer-section {
             width: 750px;
             margin: auto auto 0 auto;
+            padding: 5px;
           }
 
           .bill-footer {
@@ -427,7 +428,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                   Cod. ${codigoComprobante}
                 </div>
               </div>
-              <div class="text-center" style="padding: 10px 0">
+              <div class="text-center" style="padding-bottom: 10px">
                 ${logoPath
       ? `<img
                   src="${logoPath}"

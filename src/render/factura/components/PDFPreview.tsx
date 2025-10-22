@@ -57,7 +57,7 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
       {mostrarPreview && (
         <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden">
           <div className="bg-gray-100 p-2 text-sm text-gray-600">
-            Vista previa del PDF (formato HTML)
+            Vista previa del PDF
           </div>
           <div className="bg-white overflow-auto" style={{ maxHeight: '800px' }}>
             <iframe
