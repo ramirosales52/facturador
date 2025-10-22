@@ -248,8 +248,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           }
 
           .footer-qr img {
-            width: 200px;
-            height: 200px;
+            width: 120px;
+            height: 120px;
             display: block;
             object-fit: contain;
           }
@@ -287,7 +287,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             border-top: 1px solid;
             border-bottom: 1px solid;
             margin-right: -30px;
-            margin-bottom: 4px;
             background: white;
             width: 60px;
             height: 50px;
@@ -422,7 +421,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     text-align: center;
                     font-size: 11px;
                     font-weight: 600;
-                    margin-bottom: 4px;
+                    margin-top: 8px;
                   "
                 >
                   Cod. ${codigoComprobante}
