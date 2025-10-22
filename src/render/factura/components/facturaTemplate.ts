@@ -139,8 +139,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
   // Si no hay artículos, mostrar una fila por defecto
   const articulosDefault = !facturaInfo.Articulos || facturaInfo.Articulos.length === 0
-    ? (tipoFactura === 'A' 
-        ? `
+    ? (tipoFactura === 'A'
+      ? `
     <tr>
       <td>001</td>
       <td>Producto/Servicio</td>
@@ -151,7 +151,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
     </tr>
   `
-        : `
+      : `
     <tr>
       <td>001</td>
       <td>Producto/Servicio</td>
@@ -565,7 +565,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                   <img
                     src="${arcaLogoPath}"
                     alt="AFIP Logo"
-                    style="max-width: 140px; display: block; margin-bottom: 3px"
+                    style="max-width: 180px; display: block; margin-bottom: 3px"
                   />
                   <strong style="font-size: 10px">Comprobante Autorizado</strong>
                 </div>

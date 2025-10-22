@@ -336,7 +336,7 @@ export function ConfiguracionEmisor({
           <CardTitle>Configuración del Emisor</CardTitle>
         </div>
         <CardDescription>
-          Configure los datos de su empresa que aparecerán en las facturas
+          Configurar los datos del emisor
         </CardDescription>
       </CardHeader>
 
@@ -362,7 +362,7 @@ export function ConfiguracionEmisor({
                 <DialogHeader>
                   <DialogTitle>Conectar con ARCA</DialogTitle>
                   <DialogDescription>
-                    Ingrese sus credenciales de AFIP para generar el certificado de desarrollo. El CUIT ingresado será usado como CUIT del emisor.
+                    Ingrese sus credenciales de AFIP para conectarse. El CUIT ingresado será usado como CUIT del emisor.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -381,7 +381,7 @@ export function ConfiguracionEmisor({
                       disabled={conectandoARCA}
                     />
                     <p className="text-xs text-gray-500">
-                      Este será el CUIT de su empresa
+                      CUIT de la empresa
                     </p>
                   </div>
 
@@ -456,8 +456,8 @@ export function ConfiguracionEmisor({
 
           <p className="text-xs text-gray-500 text-center">
             {certificadoCreado
-              ? 'Certificado de desarrollo creado correctamente'
-              : 'Crea automáticamente el certificado de desarrollo para facturación electrónica'}
+              ? 'Certificado de creado correctamente'
+              : 'Crea automáticamente el certificado para la facturación'}
           </p>
 
           {/* Separador - Solo mostrar si el certificado fue creado */}
@@ -659,7 +659,7 @@ export function ConfiguracionEmisor({
                 <p className="text-xs text-gray-500">
                   {puntosVenta.length > 0
                     ? 'Seleccione un punto de venta habilitado en AFIP'
-                    : 'Consulte AFIP para ver puntos de venta habilitados'}
+                    : 'Consulte AFIP para ver los puntos de venta habilitados'}
                 </p>
               </div>
 
