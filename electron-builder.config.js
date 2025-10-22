@@ -86,7 +86,7 @@ const config = {
       target: 'nsis',
       arch: ['x64']
     }],
-    icon: 'build/icon.ico',
+    icon: 'src/render/assets/ARCA_icon.ico',
   },
   nsis: {
     oneClick: false,

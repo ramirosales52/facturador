@@ -355,7 +355,7 @@ export function ConfiguracionEmisor({
                   <Shield className="h-4 w-4 mr-2" />
                   Conectar con
                   {' '}
-                  <strong className="ml-1">ARCA</strong>
+                  <strong>ARCA</strong>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -368,7 +368,7 @@ export function ConfiguracionEmisor({
 
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="afip-username">CUIT / Usuario AFIP</Label>
+                    <Label htmlFor="afip-username">CUIT</Label>
                     <Input
                       id="afip-username"
                       type="text"
