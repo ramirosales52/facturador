@@ -107,7 +107,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar filas de artículos
   const articulosHTML = (facturaInfo.Articulos || []).map((articulo, index) => {
     const subtotal = articulo.subtotal || (articulo.cantidad * articulo.precioUnitario)
-    const precioUnitarioSinIVA = articulo.precioUnitario
+    const precioUnitario = articulo.precioUnitario
 
     if (tipoFactura === 'A') {
       // Factura A: mostrar Precio Unit., IVA%, Subtotal (con IVA)
@@ -117,19 +117,20 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         <td>${articulo.descripcion}</td>
         <td>${articulo.cantidad.toFixed(2)}</td>
         <td>${articulo.unidadMedida || 'Unidad'}</td>
-        <td>$${precioUnitarioSinIVA.toFixed(2)}</td>
+        <td>$${precioUnitario.toFixed(2)}</td>
         <td>${articulo.porcentajeIVA}%</td>
         <td>$${subtotal.toFixed(2)}</td>
       </tr>
       `
     } else {
-      // Factura B: mostrar Precio, Subtotal (con IVA)
+      // Factura B: mostrar Precio Unit., Subtotal (con IVA)
       return `
       <tr>
         <td>${articulo.codigo || String(index + 1).padStart(3, '0')}</td>
         <td>${articulo.descripcion}</td>
         <td>${articulo.cantidad.toFixed(2)}</td>
         <td>${articulo.unidadMedida || 'Unidad'}</td>
+        <td>$${precioUnitario.toFixed(2)}</td>
         <td>$${subtotal.toFixed(2)}</td>
       </tr>
       `
@@ -156,6 +157,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>Producto/Servicio</td>
       <td>1.00</td>
       <td>Unidad</td>
+      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
       <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
     </tr>
   `)
@@ -531,7 +533,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     <td>Descripción</td>
                     <td>Cantidad</td>
                     <td>Unidad</td>
-                    ${tipoFactura === 'A' ? '<td>Precio Unit.</td><td>IVA %</td>' : ''}
+                    <td>Precio Unit.</td>
+                    ${tipoFactura === 'A' ? '<td>IVA %</td>' : ''}
                     <td>Subtotal</td>
                   </tr>
                   ${articulosDefault}
