@@ -295,10 +295,13 @@ function CrearFactura() {
         const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
         const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
 
+        // Calcular subtotal (ImpNeto) desde los artículos
+        const totales = calcularTotalesFactura(formData.Articulos)
+
         const pdfData: FacturaPDFData = {
           ...response.data,
-          ImpNeto: Number.parseFloat(formData.ImpNeto),
-          ImpIVA: Number.parseFloat(formData.ImpIVA),
+          ImpNeto: totales.neto,
+          ImpIVA: totales.iva,
           TipoFactura: formData.TipoFactura,
           CondicionIVA: condicionIVANombre,
           RazonSocial: formData.RazonSocial,
@@ -480,7 +483,8 @@ function CrearFactura() {
     if (!resultado?.data)
       return
 
-    toast.loading('Generando PDF...', { id: 'pdf-generation' })
+    const toastId = `pdf-generation-${Date.now()}`
+    toast.loading('Generando PDF...', { id: toastId })
 
     // Preparar artículos para el PDF usando utilidades
     const articulosPDF = formData.Articulos.map((articulo) => {
@@ -514,9 +518,14 @@ function CrearFactura() {
     const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
     const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
 
+    // Calcular totales desde artículos
+    const totales = calcularTotalesFactura(formData.Articulos)
+
     // Crear datos extendidos para el PDF
     const pdfData = {
       ...resultado.data,
+      ImpNeto: totales.neto,
+      ImpIVA: totales.iva,
       TipoFactura: formData.TipoFactura,
       CondicionIVA: condicionIVANombre,
       RazonSocial: formData.RazonSocial,
@@ -546,7 +555,7 @@ function CrearFactura() {
       toast.success(
         'PDF generado exitosamente',
         {
-          id: 'pdf-generation',
+          id: toastId,
           description: pdfResponse.message || 'El archivo está guardado en tu escritorio',
           duration: 3000,
         },
@@ -555,7 +564,7 @@ function CrearFactura() {
     else {
       toast.error(
         `Error al generar PDF: ${pdfResponse.error}`,
-        { id: 'pdf-generation' },
+        { id: toastId },
       )
     }
   }
