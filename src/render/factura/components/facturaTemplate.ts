@@ -83,19 +83,19 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
   const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
   const codigoComprobante = String(facturaInfo.CbteTipo).padStart(2, '0')
-  const condicionIVA = facturaInfo.CondicionIVA || 'Consumidor Final'
-  const razonSocial = facturaInfo.RazonSocial || 'Cliente'
-  const domicilio = facturaInfo.Domicilio || 'Domicilio del cliente'
-  const concepto = facturaInfo.Concepto || 'Productos'
-  const condicionVenta = facturaInfo.CondicionVenta || 'Efectivo'
+  const condicionIVA = facturaInfo.CondicionIVA || ''
+  const razonSocial = facturaInfo.RazonSocial || ''
+  const domicilio = facturaInfo.Domicilio || ''
+  const concepto = facturaInfo.Concepto || ''
+  const condicionVenta = facturaInfo.CondicionVenta || ''
 
   // Datos del emisor
   const emisor = facturaInfo.DatosEmisor || {
-    razonSocial: 'Tu Empresa',
-    domicilio: 'Domicilio',
-    condicionIVA: 'Responsable Inscripto',
-    iibb: 'Exento',
-    inicioActividades: '01/01/2020',
+    razonSocial: '',
+    domicilio: '',
+    condicionIVA: '',
+    iibb: '',
+    inicioActividades: '',
     cuit: String(cuit),
   }
 
@@ -234,7 +234,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             margin: 0 auto;
             border-top: 2px solid black;
             font-size: 12px;
-            padding: 10px;
             display: flex;
             flex-direction: row;
             justify-content: space-between;
@@ -248,13 +247,9 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             align-items: flex-start;
           }
 
-          .footer-qr {
-            flex-shrink: 0;
-          }
-
           .footer-qr img {
-            width: 150px;
-            height: 150px;
+            width: 200px;
+            height: 200px;
             display: block;
             object-fit: contain;
           }
@@ -292,6 +287,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             border-top: 1px solid;
             border-bottom: 1px solid;
             margin-right: -30px;
+            margin-bottom: 4px;
             background: white;
             width: 60px;
             height: 50px;
@@ -413,10 +409,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           .row-qrcode td {
             padding: 10px;
           }
-
-          #qrcode {
-            width: 50%;
-          }
         </style>
       </head>
       <body>
@@ -430,7 +422,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     text-align: center;
                     font-size: 11px;
                     font-weight: 600;
-                    margin-b-0: 4px;
+                    margin-bottom: 4px;
                   "
                 >
                   Cod. ${codigoComprobante}
@@ -438,12 +430,12 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               </div>
               <div class="text-center" style="padding: 10px 0">
                 ${logoPath
-                  ? `<img
+      ? `<img
                   src="${logoPath}"
                   alt="Logo"
-                  style="max-width: 280px; max-height: 110px"
+                  style="max-width: auto; max-height: 140px"
                 />`
-                  : `
+      : `
                 <div class="text-lg">${emisor.razonSocial}</div>
                 `}
               </div>
@@ -529,7 +521,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           <div class="bill-footer">
             <div class="footer-left">
               <div class="footer-qr">
-                <img id="qrcode" src="${qrImageUrl}" alt="QR Code" />
+                <img src="${qrImageUrl}" alt="QR Code" />
               </div>
               <div class="footer-cae">
                 <div>
@@ -539,7 +531,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                   <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
                 </div>
                 ${arcaLogoPath
-                  ? `
+      ? `
                 <div style="margin-top: 10px">
                   <img
                     src="${arcaLogoPath}"
@@ -549,7 +541,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                   <strong style="font-size: 10px">Comprobante Autorizado</strong>
                 </div>
                 `
-                  : '<div style="margin-top: 10px"><strong style="font-size: 10px">Comprobante Autorizado</strong></div>'}
+      : '<div style="margin-top: 10px"><strong style="font-size: 10px">Comprobante Autorizado</strong></div>'}
               </div>
             </div>
             <div class="footer-totals">
