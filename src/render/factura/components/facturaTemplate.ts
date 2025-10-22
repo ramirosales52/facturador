@@ -285,7 +285,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           .footer-cae {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            justify-content: space-between;
           }
 
           .footer-totals {
@@ -554,23 +554,23 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               </div>
               <div class="footer-cae">
                 <div>
-                  <strong>CAE Nº:</strong> ${facturaInfo.CAE}
+                  <div style="display: flex; gap: 5px;">
+                    <strong>CAE Nº:</strong> ${facturaInfo.CAE}
+                  </div>
+                  <div style="margin-bottom: 15px">
+                    <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+                  </div>
                 </div>
-                <div style="margin-bottom: 15px">
-                  <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+                <div>
+                  <div style="margin-top: 10px">
+                    <img
+                      src="${arcaLogoPath}"
+                      alt="AFIP Logo"
+                      style="max-width: 200px; display: block; margin-bottom: 3px"
+                    />
+                    <strong style="font-size: 10px">Comprobante Autorizado</strong>
+                  </div>
                 </div>
-                ${arcaLogoPath
-      ? `
-                <div style="margin-top: 10px">
-                  <img
-                    src="${arcaLogoPath}"
-                    alt="AFIP Logo"
-                    style="max-width: 180px; display: block; margin-bottom: 3px"
-                  />
-                  <strong style="font-size: 10px">Comprobante Autorizado</strong>
-                </div>
-                `
-      : '<div style="margin-top: 10px"><strong style="font-size: 10px">Comprobante Autorizado</strong></div>'}
               </div>
             </div>
             <div class="footer-totals">
