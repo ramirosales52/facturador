@@ -227,7 +227,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           .bill-footer-section {
             width: 750px;
             margin: auto auto 0 auto;
-            padding: 5px;
           }
 
           .bill-footer {
@@ -239,6 +238,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             flex-direction: row;
             justify-content: space-between;
             align-items: flex-start;
+            padding: 5px;
           }
 
           .footer-left {
