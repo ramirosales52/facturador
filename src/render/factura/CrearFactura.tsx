@@ -399,6 +399,14 @@ function CrearFactura() {
         // Auto-mostrar la sección de datos del cliente
         setMostrarDatosCliente(true)
 
+        // Actualizar el toast de loading a success
+        toast.success(
+          'Datos obtenidos correctamente',
+          {
+            id: toastId,
+            description: 'La información se cargó desde AFIP',
+          },
+        )
       }
       else {
         // Actualizar el toast de loading a error

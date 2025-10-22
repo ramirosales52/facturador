@@ -130,7 +130,8 @@ export function ConfiguracionEmisor({
     if (!onBuscarCUIT)
       return
 
-    toast.loading('Consultando datos en AFIP...', { id: 'toast-buscar-cuit-loading' })
+    const toastId = 'toast-buscar-cuit-loading'
+    toast.loading('Consultando datos en AFIP...', { id: toastId })
 
     try {
       const response = await onBuscarCUIT(cuitARCA)
@@ -141,17 +142,21 @@ export function ConfiguracionEmisor({
           razonSocial: response.data.razonSocial || prev.razonSocial,
           domicilio: response.data.domicilio || prev.domicilio,
         }))
+        toast.success('Datos obtenidos correctamente', {
+          id: toastId,
+          description: 'La información se cargó desde AFIP',
+        })
       }
       else {
         // No se encontraron datos - mostrar error sin actualizar campos
         toast.error('CUIT no encontrado', {
-          id: 'toast-buscar-cuit-loading',
+          id: toastId,
           description: response.error || 'No se encontraron datos en AFIP',
         })
       }
     }
     catch (err) {
-      toast.error('Error al consultar AFIP', { id: 'toast-buscar-cuit-loading' })
+      toast.error('Error al consultar AFIP', { id: toastId })
     }
   }
 
