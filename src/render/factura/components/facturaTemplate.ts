@@ -196,7 +196,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     ${ivasDefault}
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe otros Tributos: $</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos: $</strong></div>
       <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
     </div>
 
@@ -214,7 +214,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     </div>
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe otros Tributos: $</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos: $</strong></div>
       <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
     </div>
 
