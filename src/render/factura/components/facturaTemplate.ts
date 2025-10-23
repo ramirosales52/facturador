@@ -164,25 +164,16 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     : articulosHTML
 
   // Generar filas de IVA agrupado con alineación derecha y espaciado
-  const ivasHTML = (facturaInfo.IVAsAgrupados || []).map((iva) => {
-    const label = tipoFactura === 'B' ? `IVA contenido (${iva.porcentaje}%)` : `IVA ${iva.porcentaje}%`
-    return `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-      <strong>${label}:</strong>
-      <strong style="margin-left: 20px;">$${iva.importeIVA.toFixed(2)}</strong>
-    </div>
-  `
-  }).join('')
-
-  // Si no hay IVAs agrupados, mostrar el IVA simple
-  const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0
-    ? `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA'}:</strong>
-      <strong style="margin-left: 20px;">$${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
-    </div>
-  `
-    : ivasHTML
+  const ivas = (facturaInfo.IVAsAgrupados || [])
+    .map((iva) => {
+      return `
+      <div style="display: flex; justify-content: flex-end;">
+        <div style="width: 250px; text-align: right;"><strong>IVA ${iva.porcentaje}%: $</strong></div>
+        <div style="width: 120px; text-align: right;"><strong>${iva.importeIVA.toFixed(2)}</strong></div>
+      </div>
+    `;
+    })
+    .join('');
 
   // Generar la sección de totales según el tipo de factura
   const totalesHTML = tipoFactura === 'A'
@@ -193,7 +184,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <div style="width: 120px; text-align: right;"><strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong></div>
     </div>
 
-    ${ivasDefault}
+    ${ivas}
 
     <div style="display: flex; justify-content: flex-end;">
       <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos: $</strong></div>
