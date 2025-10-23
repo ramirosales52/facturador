@@ -200,15 +200,17 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   `
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
-  // Recuadrado con línea de separación antes del IVA Contenido
+  // Se integrará con los totales en un solo recuadro
   const regimenTransparenciaHTML = tipoFactura === 'B'
     ? `
-    <div style="width: 750px; margin: 10px auto 0 auto; padding: 10px; border: 1px solid black;">
-      <div style="margin-bottom: 5px;">
-        <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+    <hr style="border: none; border-top: 1px solid black; margin: 10px 0;" />
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div style="width: 50%; padding-right: 10px;">
+        <div style="font-size: 11px; font-style: italic;">
+          <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+        </div>
       </div>
-      <hr style="border: none; border-top: 1px solid black; margin: 8px 0;" />
-      <div style="text-align: right;">
+      <div style="width: 50%; text-align: right; padding-left: 10px;">
         <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
       </div>
     </div>
@@ -270,6 +272,16 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             justify-content: space-between;
             align-items: flex-start;
             padding: 5px;
+            position: relative;
+          }
+
+          .footer-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 10px;
+            text-align: center;
+            font-size: 12px;
           }
 
           .footer-left {
@@ -533,15 +545,16 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         </table>
 
         <div class="bill-footer-section">
-          <!-- Totales alineados a la derecha - Recuadrado -->
+          <!-- Totales y Régimen en un solo recuadro -->
           <div style="width: 750px; margin: 0 auto; padding: 10px; border: 1px solid black;">
+            <!-- Totales alineados a la derecha -->
             <div style="text-align: right;">
               ${totalesHTML}
             </div>
+            
+            <!-- Régimen de transparencia (debajo de totales con línea separadora) -->
+            ${regimenTransparenciaHTML}
           </div>
-
-          <!-- Régimen de transparencia alineado a la izquierda (debajo de totales) - Recuadrado -->
-          ${regimenTransparenciaHTML}
 
           <!-- Footer con QR/ARCA a la izquierda y CAE a la derecha -->
           <div class="bill-footer">
@@ -549,8 +562,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               <div class="footer-qr">
                 <img src="${qrImageUrl}" alt="QR Code" />
               </div>
-              <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;">
-                <div style="text-align: center;">
+              <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 5px; height: 120px">
+                <div style="text-align: left;">
                   <img
                     src="${arcaLogoPath}"
                     alt="AFIP Logo"
@@ -560,6 +573,12 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                 </div>
               </div>
             </div>
+            
+            <!-- Contador de páginas en el centro -->
+            <div class="footer-center">
+              <strong>Pág. 1/1</strong>
+            </div>
+            
             <div class="footer-right">
               <div>
                 <div style="display: flex; gap: 5px; margin-bottom: 10px;">
