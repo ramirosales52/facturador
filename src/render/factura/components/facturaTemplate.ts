@@ -187,49 +187,58 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar la sección de totales según el tipo de factura
   const totalesHTML = tipoFactura === 'A'
     ? `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
-      <strong>Importe Neto Gravado:</strong>
-      <strong style="margin-left: 20px;">$${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
+  <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin-top: 10px;">
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Importe Neto Gravado: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong></div>
     </div>
+
     ${ivasDefault}
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
-      <strong>Importe otros Tributos:</strong>
-      <strong style="margin-left: 20px;">$0.00</strong>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Importe otros Tributos: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 14px;">
-      <strong>Importe Total:</strong>
-      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Importe Total: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
     </div>
+  </div>
   `
     : `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
-      <strong>Subtotal:</strong>
-      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
+  <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin-top: 10px;">
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Subtotal: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
-      <strong>Importe otros Tributos:</strong>
-      <strong style="margin-left: 20px;">$0.00</strong>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Importe otros Tributos: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 14px;">
-      <strong>Importe Total:</strong>
-      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="width: 250px; text-align: right;"><strong>Importe Total: $</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
     </div>
+  </div>
   `
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
   // Se integrará con los totales en un solo recuadro
   const regimenTransparenciaHTML = tipoFactura === 'B'
     ? `
-    <hr style="border: none; border-top: 2px solid black;" />
-    <div style="width: 50%">
-      <div style="display: flex; flex-direction: column; font-size: 12px; gap: 5px">
-        <strong style="font-style: italic"><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
-        <div style="font-size: 12px; text-align: right;">
-          <strong>IVA Contenido: $      ${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+    <hr style="border: none; border-top: 2px solid black; margin: 10px 0;" />
+      <div style="width: 100%; display: flex; justify-content: flex-start;">
+        <div style="width: 50%; font-size: 12px;">
+          <strong style="font-style: italic;"><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+          <div style="margin-top: 5px; text-align: left;">
+            <strong>IVA Contenido: $ ${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+          </div>
         </div>
       </div>
-    </div>
-  `
+    `
     : ''
 
   return `<!doctype html>
@@ -552,11 +561,14 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
         <div class="bill-footer-section">
           <!-- Totales y Régimen en un solo recuadro -->
-          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black; border-bottom: none">
-            <!-- Totales alineados a la derecha -->
-            <div style="width:30%; text-align: right;">
+          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black; border-bottom: none; display: flex; flex-direction: column;">
+
+          <!-- Totales alineados a la derecha -->
+          <div style="display: flex; justify-content: flex-end; width: 100%;">
+            <div style="width: 350px;">
               ${totalesHTML}
             </div>
+          </div>
             
             <!-- Régimen de transparencia (debajo de totales con línea separadora) -->
             ${regimenTransparenciaHTML}
