@@ -186,14 +186,23 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const totalesHTML = tipoFactura === 'A'
     ? `
     <div class="text-right margin-b-10">
-      <strong>Subtotal: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
+      <strong>Importe Neto Gravado: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
     </div>
     ${ivasDefault}
+    <div class="text-right">
+      <strong>Importe otros Tributos: $0.00</strong>
+    </div>
     <div class="text-right">
       <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
     : `
+    <div class="text-right">
+      <strong>Subtotal: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    </div>
+    <div class="text-right">
+      <strong>Importe otros Tributos: $0.00</strong>
+    </div>
     <div class="text-right">
       <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
@@ -203,15 +212,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Se integrará con los totales en un solo recuadro
   const regimenTransparenciaHTML = tipoFactura === 'B'
     ? `
-    <hr style="border: none; border-top: 1px solid black; margin: 10px 0;" />
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-      <div style="width: 50%; padding-right: 10px;">
-        <div style="font-size: 11px; font-style: italic;">
-          <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+    <hr style="border: none; border-top: 2px solid black;" />
+    <div style="width: 50%">
+      <div style="display: flex; flex-direction: column; font-size: 12px; font-style: italic;">
+        <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+        <div style="font-size: 12px; text-align: right;">
+          <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
         </div>
-      </div>
-      <div style="width: 50%; text-align: right; padding-left: 10px;">
-        <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
       </div>
     </div>
   `
@@ -271,17 +278,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             flex-direction: row;
             justify-content: space-between;
             align-items: flex-start;
-            padding: 5px;
+            padding: 12px;
             position: relative;
-          }
-
-          .footer-center {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            top: 10px;
-            text-align: center;
-            font-size: 12px;
           }
 
           .footer-left {
@@ -546,7 +544,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
         <div class="bill-footer-section">
           <!-- Totales y Régimen en un solo recuadro -->
-          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 1px solid black;">
+          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black;">
             <!-- Totales alineados a la derecha -->
             <div style="text-align: right;">
               ${totalesHTML}
@@ -574,18 +572,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               </div>
             </div>
             
-            <!-- Contador de páginas en el centro -->
-            <div class="footer-center">
-              <strong>Pág. 1/1</strong>
-            </div>
-            
             <div class="footer-right">
               <div>
                 <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                  <strong>CAE Nº:</strong> ${facturaInfo.CAE}
+                  <strong style="font-size: 14px;">CAE Nº:</strong> ${facturaInfo.CAE}
                 </div>
                 <div>
-                  <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+                  <strong style="font-size: 14px;">Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
                 </div>
               </div>
             </div>
