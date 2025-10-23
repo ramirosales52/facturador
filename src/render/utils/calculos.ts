@@ -5,31 +5,61 @@ export interface Articulo {
   descripcion: string
   cantidad: number
   unidadMedida: string
-  precioUnitario: number
+  precioUnitario: number // Ahora representa el precio FINAL (con IVA incluido)
   alicuotaIVA: string
 }
 
 export interface TotalesFactura {
-  neto: number
-  iva: number
-  total: number
+  neto: number // Precio sin IVA
+  iva: number // IVA
+  total: number // Precio final (con IVA)
 }
 
 export interface IVAAgrupado {
   id: string
   porcentaje: number
-  baseImponible: number
-  importeIVA: number
+  baseImponible: number // Sin IVA
+  importeIVA: number // IVA
 }
 
 export interface IVAParaAFIP {
   Id: number
-  BaseImp: number
-  Importe: number
+  BaseImp: number // Sin IVA
+  Importe: number // IVA
 }
 
 /**
- * Calcula el subtotal de un artículo
+ * Calcula el precio SIN IVA a partir del precio final (con IVA incluido)
+ */
+export function calcularPrecioSinIVA(precioConIVA: number, porcentajeIVA: number): number {
+  // Fórmula: Precio sin IVA = Precio con IVA / (1 + porcentaje/100)
+  return precioConIVA / (1 + porcentajeIVA / 100)
+}
+
+/**
+ * Calcula el importe de IVA a partir del precio final (con IVA incluido)
+ */
+export function calcularImporteIVA(precioConIVA: number, porcentajeIVA: number): number {
+  const precioSinIVA = calcularPrecioSinIVA(precioConIVA, porcentajeIVA)
+  return precioConIVA - precioSinIVA
+}
+
+/**
+ * Calcula el subtotal SIN IVA de un artículo
+ * El precio unitario ahora es el precio FINAL (con IVA incluido)
+ */
+export function calcularSubtotalSinIVA(articulo: Articulo): number {
+  const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+  const porcentajeIVA = alicuota?.porcentaje || 0
+  
+  const precioFinalUnitario = articulo.precioUnitario
+  const precioSinIVAUnitario = calcularPrecioSinIVA(precioFinalUnitario, porcentajeIVA)
+  
+  return articulo.cantidad * precioSinIVAUnitario
+}
+
+/**
+ * Calcula el subtotal CON IVA de un artículo (precio final)
  */
 export function calcularSubtotal(articulo: Articulo): number {
   return articulo.cantidad * articulo.precioUnitario
@@ -39,24 +69,24 @@ export function calcularSubtotal(articulo: Articulo): number {
  * Calcula el IVA de un artículo
  */
 export function calcularIVAArticulo(articulo: Articulo): number {
-  const subtotal = calcularSubtotal(articulo)
   const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
 
   if (!alicuota)
     return 0
 
-  return subtotal * (alicuota.porcentaje / 100)
+  const precioFinalTotal = calcularSubtotal(articulo)
+  return calcularImporteIVA(precioFinalTotal, alicuota.porcentaje)
 }
 
 /**
  * Calcula los totales de una lista de artículos
  */
 export function calcularTotalesFactura(articulos: Articulo[]): TotalesFactura {
-  let totalNeto = 0
+  let totalNeto = 0 // Sin IVA
   let totalIVA = 0
 
   articulos.forEach((articulo) => {
-    totalNeto += calcularSubtotal(articulo)
+    totalNeto += calcularSubtotalSinIVA(articulo)
     totalIVA += calcularIVAArticulo(articulo)
   })
 
@@ -74,7 +104,7 @@ export function agruparIVAPorAlicuota(articulos: Articulo[]): IVAAgrupado[] {
   const ivaAgrupado = new Map<string, { porcentaje: number, baseImponible: number, importeIVA: number }>()
 
   articulos.forEach((articulo) => {
-    const subtotal = calcularSubtotal(articulo)
+    const subtotalSinIVA = calcularSubtotalSinIVA(articulo)
     const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
 
     if (alicuota) {
@@ -84,14 +114,14 @@ export function agruparIVAPorAlicuota(articulos: Articulo[]): IVAAgrupado[] {
         const actual = ivaAgrupado.get(articulo.alicuotaIVA)!
         ivaAgrupado.set(articulo.alicuotaIVA, {
           porcentaje: alicuota.porcentaje,
-          baseImponible: actual.baseImponible + subtotal,
+          baseImponible: actual.baseImponible + subtotalSinIVA,
           importeIVA: actual.importeIVA + importeIVA,
         })
       }
       else {
         ivaAgrupado.set(articulo.alicuotaIVA, {
           porcentaje: alicuota.porcentaje,
-          baseImponible: subtotal,
+          baseImponible: subtotalSinIVA,
           importeIVA,
         })
       }
@@ -113,19 +143,19 @@ export function agruparIVAParaAFIP(articulos: Articulo[]): IVAParaAFIP[] {
   const ivaAgrupado = new Map<string, { BaseImp: number, Importe: number }>()
 
   articulos.forEach((articulo) => {
-    const subtotal = calcularSubtotal(articulo)
+    const subtotalSinIVA = calcularSubtotalSinIVA(articulo)
     const importeIVA = calcularIVAArticulo(articulo)
 
     if (ivaAgrupado.has(articulo.alicuotaIVA)) {
       const actual = ivaAgrupado.get(articulo.alicuotaIVA)!
       ivaAgrupado.set(articulo.alicuotaIVA, {
-        BaseImp: actual.BaseImp + subtotal,
+        BaseImp: actual.BaseImp + subtotalSinIVA,
         Importe: actual.Importe + importeIVA,
       })
     }
     else {
       ivaAgrupado.set(articulo.alicuotaIVA, {
-        BaseImp: subtotal,
+        BaseImp: subtotalSinIVA,
         Importe: importeIVA,
       })
     }

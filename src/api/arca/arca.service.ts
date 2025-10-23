@@ -453,22 +453,22 @@ export class ArcaService {
    * Crear certificado de desarrollo para ARCA
    * Utiliza las automatizaciones del SDK de AFIP
    */
-  async crearCertificadoDev(data: { cuit: string, username: string, password: string }) {
+  async crearCertificadoDev(data: { cuit: string, username: string, password: string, token: string }) {
     try {
       console.log('Iniciando creación de certificado con datos:', {
         cuit: data.username, // El CUIT debe ser el del username
         username: data.username,
         hasPassword: !!data.password,
+        hasToken: !!data.token,
       })
 
-      // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
-      if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
+      // Usar el token proporcionado por el usuario
+      if (!data.token) {
+        throw new Error('Token de acceso no proporcionado')
       }
 
       const afipInstance = new Afip({
-        access_token: accessToken,
+        access_token: data.token,
       })
 
       // Datos para la automatización - IMPORTANTE: cuit debe ser el mismo que username
@@ -890,23 +890,23 @@ export class ArcaService {
    * Crear certificado de producción para ARCA
    * Utiliza las automatizaciones del SDK de AFIP
    */
-  async crearCertificadoProd(data: { cuit: string, username: string, password: string, alias: string }) {
+  async crearCertificadoProd(data: { cuit: string, username: string, password: string, alias: string, token: string }) {
     try {
       console.log('Iniciando creación de certificado de PRODUCCIÓN con datos:', {
         cuit: data.username,
         username: data.username,
         alias: data.alias,
         hasPassword: !!data.password,
+        hasToken: !!data.token,
       })
 
-      // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
-      if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
+      // Usar el token proporcionado por el usuario
+      if (!data.token) {
+        throw new Error('Token de acceso no proporcionado')
       }
 
       const afipInstance = new Afip({
-        access_token: accessToken,
+        access_token: data.token,
       })
 
       // Datos para la automatización

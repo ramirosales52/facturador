@@ -56,9 +56,6 @@ export const ALICUOTAS_IVA = [
   { id: '3', nombre: '0%', porcentaje: 0 },
   { id: '4', nombre: '10.5%', porcentaje: 10.5 },
   { id: '5', nombre: '21%', porcentaje: 21 },
-  { id: '6', nombre: '27%', porcentaje: 27 },
-  { id: '8', nombre: '5%', porcentaje: 5 },
-  { id: '9', nombre: '2.5%', porcentaje: 2.5 },
 ] as const
 
 export const UNIDADES_MEDIDA = [

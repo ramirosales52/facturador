@@ -19,4 +19,8 @@ export class CreateCertProdDto {
   @IsString()
   @IsNotEmpty()
   alias: string
+
+  @IsString()
+  @IsNotEmpty()
+  token: string
 }

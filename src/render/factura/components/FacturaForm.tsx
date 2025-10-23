@@ -236,7 +236,7 @@ export function FacturaForm({
           </div>
 
           {/* Datos del Cliente - Siempre visible */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="RazonSocial" className="text-xs">Razón Social / Nombre</Label>
               <Input
@@ -270,11 +270,9 @@ export function FacturaForm({
             </div>
 
             {formData.Articulos.map((articulo, index) => {
-              // Calcular subtotal e IVA
-              const subtotal = articulo.cantidad * articulo.precioUnitario
-              const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
-              const ivaImporte = (subtotal * (alicuota?.porcentaje || 0)) / 100
-              const totalConIVA = subtotal + ivaImporte
+              // El precio unitario ahora es el precio FINAL (con IVA incluido)
+              // El subtotal mostrado es el total de la línea (precio final * cantidad)
+              const totalLinea = articulo.cantidad * articulo.precioUnitario
 
               return (
                 <div key={index} className="border p-3 rounded-lg space-y-2 bg-gray-50">
@@ -357,7 +355,7 @@ export function FacturaForm({
                       </div>
 
                       <div className="space-y-1 w-28">
-                        <Label htmlFor={`precio-${index}`} className="text-xs">Precio Unit.</Label>
+                        <Label htmlFor={`precio-${index}`} className="text-xs">Precio Final</Label>
                         <Input
                           id={`precio-${index}`}
                           type="number"
@@ -401,7 +399,7 @@ export function FacturaForm({
                       <Label className="text-xs">Subtotal</Label>
                       <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
                         $
-                        {totalConIVA ? totalConIVA.toFixed(2) : '0.00'}
+                        {totalLinea ? totalLinea.toFixed(2) : '0.00'}
                       </div>
                     </div>
                   </div>

@@ -66,6 +66,7 @@ export function ConfiguracionEmisor({
   const [credencialesAFIP, setCredencialesAFIP] = useState({
     username: '',
     password: '',
+    token: '',
   })
   const [cuitARCA, setCuitARCA] = useState<string>('') // Iniciar vacío
   const [certificadoCreado, setCertificadoCreado] = useState(false)
@@ -202,8 +203,8 @@ export function ConfiguracionEmisor({
   }
 
   const handleConectarARCA = async () => {
-    if (!credencialesAFIP.username || !credencialesAFIP.password) {
-      setDialogError('Complete todos los campos de credenciales AFIP')
+    if (!credencialesAFIP.username || !credencialesAFIP.password || !credencialesAFIP.token) {
+      setDialogError('Complete todos los campos incluyendo el token')
       return
     }
 
@@ -223,6 +224,7 @@ export function ConfiguracionEmisor({
         username: credencialesAFIP.username,
         password: credencialesAFIP.password,
         alias: 'afipsdk',
+        token: credencialesAFIP.token,
       })
 
       const result = response.data
@@ -245,7 +247,7 @@ export function ConfiguracionEmisor({
         localStorage.setItem('cuitARCA', cuitStr)
 
         // Limpiar credenciales y error
-        setCredencialesAFIP({ username: '', password: '' })
+        setCredencialesAFIP({ username: '', password: '', token: '' })
         setDialogError(null)
 
         // Buscar automáticamente los datos del CUIT
@@ -382,6 +384,24 @@ export function ConfiguracionEmisor({
 
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
+                    <Label htmlFor="afip-token">Token</Label>
+                    <Input
+                      id="afip-token"
+                      type="text"
+                      value={credencialesAFIP.token}
+                      onChange={(e) => {
+                        setCredencialesAFIP(prev => ({ ...prev, token: e.target.value }))
+                        setDialogError(null)
+                      }}
+                      placeholder="Token de acceso AFIP SDK"
+                      disabled={conectandoARCA}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Token de acceso del SDK de AFIP
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="afip-username">CUIT</Label>
                     <Input
                       id="afip-username"
@@ -436,7 +456,7 @@ export function ConfiguracionEmisor({
                   <Button
                     type="button"
                     onClick={handleConectarARCA}
-                    disabled={!credencialesAFIP.username || !credencialesAFIP.password || conectandoARCA}
+                    disabled={!credencialesAFIP.token || !credencialesAFIP.username || !credencialesAFIP.password || conectandoARCA}
                     className="text-white font-semibold"
                     style={{ backgroundColor: '#242c50' }}
                   >
