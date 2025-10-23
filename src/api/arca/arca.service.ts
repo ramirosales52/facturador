@@ -751,8 +751,9 @@ export class ArcaService {
       // Ruta completa del archivo PDF
       const pdfPath = join(outputDir, fileName)
 
-      // Generar PDF usando Puppeteer
+      // Generar PDF usando Puppeteer con Chromium empaquetado
       const browser = await puppeteer.launch({
+        executablePath: puppeteer.executablePath(),
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       })

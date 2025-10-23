@@ -14,7 +14,11 @@ const config = {
   buildDependenciesFromSource: false,
   // Comprimir con asar para reducir tamaño
   asar: true,
-  asarUnpack: ['.env'],
+  asarUnpack: [
+    '.env',
+    'node_modules/.cache/puppeteer/**/*',
+    'node_modules/puppeteer/.local-chromium/**/*',
+  ],
   files: [
     'dist/main/**/*',
     'dist/preload/**/*',
@@ -34,6 +38,11 @@ const config = {
     '!**/example/**',
     '!**/examples/**',
     '!**/.github/**',
+    {
+      from: 'node_modules/puppeteer/.local-chromium',
+      to: 'node_modules/puppeteer/.local-chromium',
+      filter: ['**/*'],
+    },
     {
       from: 'src/render/assets',
       to: 'assets',
@@ -56,16 +65,19 @@ const config = {
         'class-validator/**/*',
         'reflect-metadata/**/*',
         'rxjs/**/*',
-        
+
         // Puppeteer (generación de PDF)
         'puppeteer/**/*',
         'puppeteer-core/**/*',
-        
+        '@puppeteer/**/*',
+        '.cache/puppeteer/**/*',
+        '.local-chromium/**/*',
+
         // Frontend (solo producción)
         'react/**/*',
         'react-dom/**/*',
         'react-router/**/*',
-        
+
         // Excluir archivos innecesarios
         '!**/*.map',
         '!**/README.md',
