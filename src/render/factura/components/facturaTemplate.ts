@@ -163,13 +163,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   `)
     : articulosHTML
 
-  // Generar filas de IVA agrupado con alineación izquierda/derecha
+  // Generar filas de IVA agrupado con alineación derecha y espaciado
   const ivasHTML = (facturaInfo.IVAsAgrupados || []).map((iva) => {
     const label = tipoFactura === 'B' ? `IVA contenido (${iva.porcentaje}%)` : `IVA ${iva.porcentaje}%`
     return `
     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-      <strong>${label}: $</strong>
-      <strong>${iva.importeIVA.toFixed(2)}</strong>
+      <strong>${label}:</strong>
+      <strong style="margin-left: 20px;">$${iva.importeIVA.toFixed(2)}</strong>
     </div>
   `
   }).join('')
@@ -179,7 +179,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     ? `
     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
       <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA'}:</strong>
-      <strong>$${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+      <strong style="margin-left: 20px;">$${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
   `
     : ivasHTML
@@ -187,32 +187,32 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar la sección de totales según el tipo de factura
   const totalesHTML = tipoFactura === 'A'
     ? `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-      <strong>Importe Neto Gravado: $</strong>
-      <strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+      <strong>Importe Neto Gravado:</strong>
+      <strong style="margin-left: 20px;">$${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
     </div>
     ${ivasDefault}
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-      <strong>Importe otros Tributos: $</strong>
-      <strong>0.00</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+      <strong>Importe otros Tributos:</strong>
+      <strong style="margin-left: 20px;">$0.00</strong>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 12px;">
-      <strong>Importe Total: $</strong>
-      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; font-size: 14px;">
+      <strong>Importe Total:</strong>
+      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
     : `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-      <strong>Subtotal: $</strong>
-      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+      <strong>Subtotal:</strong>
+      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-      <strong>Importe otros Tributos: $</strong>
-      <strong>0.00</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+      <strong>Importe otros Tributos:</strong>
+      <strong style="margin-left: 20px;">$0.00</strong>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-      <strong>Importe Total: $</strong>
-      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; font-size: 14px;">
+      <strong>Importe Total:</strong>
+      <strong style="margin-left: 20px;">$${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
 
