@@ -233,7 +233,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <div style="width: 100%; display: flex; justify-content: flex-start;">
         <div style="width: 50%; font-size: 12px;">
           <strong style="font-style: italic;"><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
-          <div style="margin-top: 5px; text-align: left;">
+          <div style="margin-top: 5px; text-align: right;">
             <strong>IVA Contenido: $ ${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
           </div>
         </div>
