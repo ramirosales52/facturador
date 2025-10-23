@@ -163,12 +163,13 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   `)
     : articulosHTML
 
-  // Generar filas de IVA agrupado
+  // Generar filas de IVA agrupado con alineación izquierda/derecha
   const ivasHTML = (facturaInfo.IVAsAgrupados || []).map((iva) => {
     const label = tipoFactura === 'B' ? `IVA contenido (${iva.porcentaje}%)` : `IVA ${iva.porcentaje}%`
     return `
-    <div class="text-right margin-b-10">
-      <strong>${label}: $${iva.importeIVA.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>${label}: $</strong>
+      <strong>${iva.importeIVA.toFixed(2)}</strong>
     </div>
   `
   }).join('')
@@ -176,8 +177,9 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Si no hay IVAs agrupados, mostrar el IVA simple
   const ivasDefault = !facturaInfo.IVAsAgrupados || facturaInfo.IVAsAgrupados.length === 0
     ? `
-    <div class="text-right margin-b-10">
-      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA %'}: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>${tipoFactura === 'B' ? 'IVA contenido (21%)' : 'IVA'}:</strong>
+      <strong>$${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
     </div>
   `
     : ivasHTML
@@ -185,26 +187,32 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar la sección de totales según el tipo de factura
   const totalesHTML = tipoFactura === 'A'
     ? `
-    <div class="text-right margin-b-10">
-      <strong>Importe Neto Gravado: $${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>Importe Neto Gravado: $</strong>
+      <strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
     </div>
     ${ivasDefault}
-    <div class="text-right">
-      <strong>Importe otros Tributos: $0.00</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>Importe otros Tributos: $</strong>
+      <strong>0.00</strong>
     </div>
-    <div class="text-right">
-      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between;">
+      <strong>Importe Total: $</strong>
+      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
     : `
-    <div class="text-right">
-      <strong>Subtotal: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>Subtotal: $</strong>
+      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
-    <div class="text-right">
-      <strong>Importe otros Tributos: $0.00</strong>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+      <strong>Importe otros Tributos: $</strong>
+      <strong>0.00</strong>
     </div>
-    <div class="text-right">
-      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+    <div style="display: flex; justify-content: space-between;">
+      <strong>Importe Total: $</strong>
+      <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
 
@@ -214,10 +222,10 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     ? `
     <hr style="border: none; border-top: 2px solid black;" />
     <div style="width: 50%">
-      <div style="display: flex; flex-direction: column; font-size: 12px; font-style: italic;">
-        <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
+      <div style="display: flex; flex-direction: column; font-size: 12px; gap: 5px">
+        <strong style="font-style: italic"><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
         <div style="font-size: 12px; text-align: right;">
-          <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+          <strong>IVA Contenido: $      ${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
         </div>
       </div>
     </div>
@@ -544,7 +552,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
 
         <div class="bill-footer-section">
           <!-- Totales y Régimen en un solo recuadro -->
-          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black;">
+          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black; border-bottom: none">
             <!-- Totales alineados a la derecha -->
             <div style="text-align: right;">
               ${totalesHTML}
