@@ -393,12 +393,8 @@ export function ConfiguracionEmisor({
                         setCredencialesAFIP(prev => ({ ...prev, token: e.target.value }))
                         setDialogError(null)
                       }}
-                      placeholder="Token de acceso AFIP SDK"
                       disabled={conectandoARCA}
                     />
-                    <p className="text-xs text-gray-500">
-                      Token de acceso del SDK de AFIP
-                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -414,9 +410,6 @@ export function ConfiguracionEmisor({
                       placeholder="Ej: 20123456789"
                       disabled={conectandoARCA}
                     />
-                    <p className="text-xs text-gray-500">
-                      CUIT de la empresa
-                    </p>
                   </div>
 
                   <div className="space-y-2">
