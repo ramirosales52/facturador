@@ -190,23 +190,26 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     </div>
     ${ivasDefault}
     <div class="text-right">
-      <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
     : `
     <div class="text-right">
-      <strong>TOTAL: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
+      <strong>Importe Total: $${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
+  // Solo texto plano, sin recuadros ni fondos
   const regimenTransparenciaHTML = tipoFactura === 'B'
     ? `
-    <div class="regimen-transparencia">
+    <div style="width: 750px; margin: 10px auto 0 auto; padding: 5px; text-align: left;">
       <div style="margin-bottom: 3px;">
         <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
       </div>
-      ${ivasDefault}
+      <div>
+        <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+      </div>
     </div>
   `
     : ''
@@ -275,23 +278,19 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             align-items: flex-start;
           }
 
+          .footer-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-end;
+            text-align: right;
+          }
+
           .footer-qr img {
             width: 120px;
             height: 120px;
             display: block;
             object-fit: contain;
-          }
-
-          .footer-cae {
-            display: flex;
-            min-height: 120px;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-
-          .footer-totals {
-            text-align: right;
-            flex-shrink: 0;
           }
 
           .bill-emitter-row td {
@@ -489,19 +488,6 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           </tr>
           <tr class="bill-row">
             <td colspan="2">
-              <div class="row">
-                <p class="col-4 margin-b-0">
-                  <strong>Período Facturado Desde: </strong>${fecha}
-                </p>
-                <p class="col-3 margin-b-0"><strong>Hasta: </strong>${fecha}</p>
-                <p class="col-5 margin-b-0">
-                  <strong>Fecha de Vto. para el pago: </strong>${fecha}
-                </p>
-              </div>
-            </td>
-          </tr>
-          <tr class="bill-row">
-            <td colspan="2">
               <div>
                 <div class="row">
                   <p class="col-4 margin-b-0">
@@ -546,36 +532,42 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         </table>
 
         <div class="bill-footer-section">
+          <!-- Totales alineados a la derecha -->
+          <div style="width: 750px; margin: 0 auto; padding: 10px 5px;">
+            <div style="text-align: right;">
+              ${totalesHTML}
+            </div>
+          </div>
+
+          <!-- Régimen de transparencia alineado a la izquierda (debajo de totales) -->
           ${regimenTransparenciaHTML}
 
+          <!-- Footer con QR/ARCA a la izquierda y CAE a la derecha -->
           <div class="bill-footer">
             <div class="footer-left">
               <div class="footer-qr">
                 <img src="${qrImageUrl}" alt="QR Code" />
               </div>
-              <div class="footer-cae">
+              <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
                 <div>
-                  <div style="display: flex; gap: 5px;">
-                    <strong>CAE Nº:</strong> ${facturaInfo.CAE}
-                  </div>
-                  <div style="margin-bottom: 15px">
-                    <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
-                  </div>
-                </div>
-                <div>
-                  <div style="margin-top: 10px">
-                    <img
-                      src="${arcaLogoPath}"
-                      alt="AFIP Logo"
-                      style="max-width: 200px; display: block; margin-bottom: 3px"
-                    />
-                    <strong style="font-size: 10px">Comprobante Autorizado</strong>
-                  </div>
+                  <img
+                    src="${arcaLogoPath}"
+                    alt="AFIP Logo"
+                    style="max-width: 200px; display: block; margin-bottom: 3px"
+                  />
+                  <strong style="font-size: 10px; font-style: italic;">Comprobante Autorizado</strong>
                 </div>
               </div>
             </div>
-            <div class="footer-totals">
-              ${totalesHTML}
+            <div class="footer-right">
+              <div>
+                <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                  <strong>CAE Nº:</strong> ${facturaInfo.CAE}
+                </div>
+                <div>
+                  <strong>Fecha de Vto. de CAE:</strong> ${fechaVtoCAE}
+                </div>
+              </div>
             </div>
           </div>
         </div>

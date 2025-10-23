@@ -112,7 +112,7 @@ export class ArcaService {
       const datosContribuyente = {
         cuit: persona.idPersona,
         razonSocial: `${persona.nombre ?? ''} ${persona.apellido ?? ''}`.trim(),
-        domicilio: `${domicilio.direccion ?? domicilio.calle ?? ''}, ${domicilio.localidad ?? ''}, ${domicilio.descripcionProvincia ?? ''}, CP: ${domicilio.codigoPostal ?? ''}`.replace(/^, |, $/g, ''),
+        domicilio: `${domicilio.direccion ?? domicilio.calle ?? ''}, ${domicilio.localidad ?? ''}, ${domicilio.descripcionProvincia ?? ''}`.replace(/^, |, $/g, ''),
         tipoPersona: persona.tipoPersona,
         tipoDocumento: persona.tipoDocumento,
         numeroDocumento: persona.numeroDocumento,
@@ -692,8 +692,9 @@ export class ArcaService {
       let logoPathRaw: string
       let arcaLogoPathRaw: string
 
-      // En app empaquetada (process.resourcesPath existe cuando está empaquetado)
-      const isPackaged = process.resourcesPath !== undefined
+      // Detectar si está empaquetado
+      // process.resourcesPath existe y NO contiene 'node_modules' cuando está realmente empaquetado
+      const isPackaged = process.resourcesPath !== undefined && !process.resourcesPath.includes('node_modules')
 
       if (isPackaged) {
         // En app empaquetada, assets están en resources/assets (extraResources)

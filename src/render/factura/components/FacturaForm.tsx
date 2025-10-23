@@ -218,7 +218,7 @@ export function FacturaForm({
                 <div className="space-y-1.5">
                   <Label htmlFor="IVAGlobal" className="text-xs">IVA</Label>
                   <Select
-                    value={formData.IVAGlobal || '5'}
+                    value={formData.IVAGlobal || '4'}
                     onValueChange={value => onInputChange('IVAGlobal', value)}
                   >
                     <SelectTrigger id="IVAGlobal">

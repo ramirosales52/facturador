@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_VENTA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
 import { useArca } from '../hooks/useArca'
-import { agruparIVAParaAFIP, agruparIVAPorAlicuota, calcularSubtotal, calcularTotalesFactura, getNombreCondicionIVA } from '../utils/calculos'
+import { agruparIVAParaAFIP, agruparIVAPorAlicuota, calcularTotalesFactura, getNombreCondicionIVA } from '../utils/calculos'
 import {
   FacturaForm,
   FacturaResultado,
@@ -36,7 +36,7 @@ function CrearFactura() {
     ImpNeto: '0.00',
     ImpIVA: '0.00',
     ImpTotal: '0.00',
-    IVAGlobal: '5', // 21% por defecto
+    IVAGlobal: '4', // 10.5% por defecto
   })
 
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
@@ -268,9 +268,8 @@ function CrearFactura() {
         // Generar vista previa HTML
         const articulosPDF = formData.Articulos.map((articulo) => {
           const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
-          const subtotalSinIVA = calcularSubtotal(articulo)
-          const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
-          const subtotalConIVA = subtotalSinIVA + ivaArticulo
+          // El precioUnitario ahora ya incluye IVA, el subtotal es cantidad * precio
+          const subtotalConIVA = articulo.cantidad * articulo.precioUnitario
 
           return {
             codigo: articulo.codigo || '',
@@ -492,9 +491,8 @@ function CrearFactura() {
     // Preparar artículos para el PDF usando utilidades
     const articulosPDF = formData.Articulos.map((articulo) => {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
-      const subtotalSinIVA = calcularSubtotal(articulo)
-      const ivaArticulo = subtotalSinIVA * ((alicuota?.porcentaje || 0) / 100)
-      const subtotalConIVA = subtotalSinIVA + ivaArticulo
+      // El precioUnitario ahora ya incluye IVA, el subtotal es cantidad * precio
+      const subtotalConIVA = articulo.cantidad * articulo.precioUnitario
 
       return {
         codigo: articulo.codigo || '',
