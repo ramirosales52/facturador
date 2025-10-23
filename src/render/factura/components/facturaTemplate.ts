@@ -187,30 +187,30 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Generar la sección de totales según el tipo de factura
   const totalesHTML = tipoFactura === 'A'
     ? `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
       <strong>Importe Neto Gravado: $</strong>
       <strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong>
     </div>
     ${ivasDefault}
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
       <strong>Importe otros Tributos: $</strong>
       <strong>0.00</strong>
     </div>
-    <div style="display: flex; justify-content: space-between;">
+    <div style="display: flex; justify-content: space-between; font-size: 12px;">
       <strong>Importe Total: $</strong>
       <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
   `
     : `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
       <strong>Subtotal: $</strong>
       <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
       <strong>Importe otros Tributos: $</strong>
       <strong>0.00</strong>
     </div>
-    <div style="display: flex; justify-content: space-between;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
       <strong>Importe Total: $</strong>
       <strong>${facturaInfo.ImpTotal.toFixed(2)}</strong>
     </div>
@@ -554,7 +554,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           <!-- Totales y Régimen en un solo recuadro -->
           <div style="width: 750px; margin: 0 auto; padding: 10px; border: 2px solid black; border-bottom: none">
             <!-- Totales alineados a la derecha -->
-            <div style="text-align: right;">
+            <div style="width:30%; text-align: right;">
               ${totalesHTML}
             </div>
             
