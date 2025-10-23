@@ -18,6 +18,7 @@ const config = {
     '.env',
     'node_modules/.cache/puppeteer/**/*',
     'node_modules/puppeteer/.local-chromium/**/*',
+    'assets/**/*',
   ],
   files: [
     'dist/main/**/*',

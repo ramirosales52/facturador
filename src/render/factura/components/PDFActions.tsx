@@ -30,7 +30,6 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
         await window.electron.shell.openPath(pdfUrl)
-        toast.success('Abriendo carpeta del PDF', { id: 'abrir-carpeta-pdf' })
       }
       else {
         // Fallback para desarrollo

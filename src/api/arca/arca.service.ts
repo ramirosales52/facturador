@@ -696,8 +696,8 @@ export class ArcaService {
       const isPackaged = process.resourcesPath !== undefined
 
       if (isPackaged) {
-        // En app empaquetada, assets están en app.asar/assets o app.asar.unpacked/assets
-        const assetsPath = join(process.resourcesPath, 'app.asar', 'assets')
+        // En app empaquetada, assets están desempaquetados en app.asar.unpacked/assets
+        const assetsPath = join(process.resourcesPath, 'app.asar.unpacked', 'assets')
         logoPathRaw = join(assetsPath, 'logo.png')
         arcaLogoPathRaw = join(assetsPath, 'ARCA.png')
 
