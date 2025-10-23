@@ -200,14 +200,15 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   `
 
   // Sección de Régimen de Transparencia Fiscal (solo para Factura B)
-  // Solo texto plano, sin recuadros ni fondos
+  // Recuadrado con línea de separación antes del IVA Contenido
   const regimenTransparenciaHTML = tipoFactura === 'B'
     ? `
-    <div style="width: 750px; margin: 10px auto 0 auto; padding: 5px; text-align: left;">
-      <div style="margin-bottom: 3px;">
+    <div style="width: 750px; margin: 10px auto 0 auto; padding: 10px; border: 1px solid black;">
+      <div style="margin-bottom: 5px;">
         <strong><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
       </div>
-      <div>
+      <hr style="border: none; border-top: 1px solid black; margin: 8px 0;" />
+      <div style="text-align: right;">
         <strong>IVA Contenido: $${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
       </div>
     </div>
@@ -532,14 +533,14 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         </table>
 
         <div class="bill-footer-section">
-          <!-- Totales alineados a la derecha -->
-          <div style="width: 750px; margin: 0 auto; padding: 10px 5px;">
+          <!-- Totales alineados a la derecha - Recuadrado -->
+          <div style="width: 750px; margin: 0 auto; padding: 10px; border: 1px solid black;">
             <div style="text-align: right;">
               ${totalesHTML}
             </div>
           </div>
 
-          <!-- Régimen de transparencia alineado a la izquierda (debajo de totales) -->
+          <!-- Régimen de transparencia alineado a la izquierda (debajo de totales) - Recuadrado -->
           ${regimenTransparenciaHTML}
 
           <!-- Footer con QR/ARCA a la izquierda y CAE a la derecha -->
@@ -548,14 +549,14 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               <div class="footer-qr">
                 <img src="${qrImageUrl}" alt="QR Code" />
               </div>
-              <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
-                <div>
+              <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;">
+                <div style="text-align: center;">
                   <img
                     src="${arcaLogoPath}"
                     alt="AFIP Logo"
-                    style="max-width: 200px; display: block; margin-bottom: 3px"
+                    style="max-width: 250px; display: block; margin-bottom: 5px"
                   />
-                  <strong style="font-size: 10px; font-style: italic;">Comprobante Autorizado</strong>
+                  <strong style="font-size: 13px; font-style: italic;">Comprobante Autorizado</strong>
                 </div>
               </div>
             </div>
