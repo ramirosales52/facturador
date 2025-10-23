@@ -6,8 +6,7 @@ import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
-import { Edit3, Search, X } from 'lucide-react'
-import { useState } from 'react'
+import { Search, X } from 'lucide-react'
 
 export interface Articulo {
   codigo?: string
@@ -49,8 +48,6 @@ interface FacturaFormProps {
   onLimpiar: () => void
   onConsultarContribuyente?: () => Promise<void>
   loadingContribuyente?: boolean
-  mostrarDatosCliente?: boolean
-  onToggleDatosCliente?: () => void
 }
 
 export function FacturaForm({
@@ -65,14 +62,7 @@ export function FacturaForm({
   onLimpiar,
   onConsultarContribuyente,
   loadingContribuyente,
-  mostrarDatosCliente: mostrarDatosClienteProp,
-  onToggleDatosCliente,
 }: FacturaFormProps) {
-  // Usar estado local solo si no se proporciona desde el padre
-  const [mostrarDatosClienteLocal, setMostrarDatosClienteLocal] = useState(false)
-  const mostrarDatosCliente = mostrarDatosClienteProp ?? mostrarDatosClienteLocal
-  const setMostrarDatosCliente = onToggleDatosCliente ?? (() => setMostrarDatosClienteLocal(!mostrarDatosClienteLocal))
-
   return (
     <Card>
       <CardHeader className="flex justify-between">
@@ -126,16 +116,14 @@ export function FacturaForm({
               </Select>
             </div>
 
-            {/* CUIT/CUIL/DNI con botones de búsqueda y editar */}
+            {/* CUIT/CUIL/DNI con botón de búsqueda */}
             <div className="space-y-1.5">
               <Label htmlFor="DocNro" className="text-xs">
                 {formData.DocTipo === '99'
                   ? 'DNI (opcional)'
                   : formData.DocTipo === '96'
                     ? 'DNI'
-                    : formData.DocTipo === '86'
-                      ? 'CUIL'
-                      : 'CUIT'}
+                    : 'CUIT'}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -163,15 +151,6 @@ export function FacturaForm({
                     {loadingContribuyente ? '...' : <Search className="h-4 w-4" />}
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  onClick={setMostrarDatosCliente}
-                  variant="outline"
-                  size="icon"
-                  title="Editar datos del cliente"
-                >
-                  <Edit3 className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
@@ -256,38 +235,30 @@ export function FacturaForm({
             )}
           </div>
 
-          {/* Datos del Cliente - Card editable con botón toggle (ahora solo el card) */}
-          {mostrarDatosCliente && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="space-y-3">
-                <h4 className="font-medium text-sm text-blue-900">Datos del Cliente</h4>
+          {/* Datos del Cliente - Siempre visible */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="RazonSocial" className="text-xs">Razón Social / Nombre</Label>
+              <Input
+                id="RazonSocial"
+                type="text"
+                value={formData.RazonSocial || ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('RazonSocial', e.target.value)}
+                placeholder="Nombre del cliente"
+              />
+            </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="RazonSocial" className="text-sm">Razón Social / Nombre</Label>
-                  <Input
-                    id="RazonSocial"
-                    type="text"
-                    value={formData.RazonSocial || ''}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('RazonSocial', e.target.value)}
-                    placeholder="Nombre"
-                    className="bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="Domicilio" className="text-sm">Domicilio</Label>
-                  <Input
-                    id="Domicilio"
-                    type="text"
-                    value={formData.Domicilio || ''}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('Domicilio', e.target.value)}
-                    placeholder="Dirección"
-                    className="bg-white"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            <div className="space-y-1.5">
+              <Label htmlFor="Domicilio" className="text-xs">Domicilio</Label>
+              <Input
+                id="Domicilio"
+                type="text"
+                value={formData.Domicilio || ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('Domicilio', e.target.value)}
+                placeholder="Dirección del cliente"
+              />
+            </div>
+          </div>
 
           {/* Artículos */}
           <div className="space-y-3 border-t pt-3">

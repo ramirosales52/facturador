@@ -18,7 +18,13 @@ const config = {
     '.env',
     'node_modules/.cache/puppeteer/**/*',
     'node_modules/puppeteer/.local-chromium/**/*',
-    'assets/**/*',
+  ],
+  extraResources: [
+    {
+      from: 'src/render/assets',
+      to: 'assets',
+      filter: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.ico'],
+    },
   ],
   files: [
     'dist/main/**/*',

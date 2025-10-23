@@ -15,13 +15,11 @@ export const TIPOS_COMPROBANTE = {
  *
  * Opciones:
  * 80 = CUIT
- * 86 = CUIL
  * 96 = DNI
  * 99 = Consumidor Final
  */
 export const TIPOS_DOCUMENTO = [
   { id: '80', nombre: 'CUIT' },
-  { id: '86', nombre: 'CUIL' },
   { id: '96', nombre: 'DNI' },
   { id: '99', nombre: 'Consumidor Final' },
 ] as const
