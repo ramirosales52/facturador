@@ -626,7 +626,7 @@ function CrearFactura() {
         </TabsContent>
 
         <TabsContent value="comprobantes">
-          <ComprobantesEmitidos cuitEmisor={datosEmisor.cuit} />
+          <ComprobantesEmitidos />
         </TabsContent>
 
         <TabsContent value="configuracion">

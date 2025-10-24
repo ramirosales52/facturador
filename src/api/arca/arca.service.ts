@@ -1201,11 +1201,11 @@ export class ArcaService {
       console.log('Iniciando consulta de comprobantes emitidos con filtros:', filters)
 
       // Configurar Afip con el access_token guardado
-      const accessToken = this.getAccessToken()
-
-      const afipInstance = new Afip({
-        access_token: accessToken,
-      })
+      // const accessToken = this.getAccessToken()
+      //
+      // const afipInstance = new Afip({
+      //   access_token: accessToken,
+      // })
 
       // Datos para la automatización
       const automationData = {
@@ -1229,7 +1229,7 @@ export class ArcaService {
 
       // Ejecutar la automatización mis-comprobantes
       // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
-      const result = await afipInstance.CreateAutomation('mis-comprobantes', automationData, true)
+      const result = await this.afip.CreateAutomation('mis-comprobantes', automationData, true)
 
       console.log('Resultado de la automatización:', {
         id: result.id,

@@ -40,16 +40,15 @@ interface Comprobante {
   'Imp. Total': string
 }
 
-interface ComprobantesEmitidosProps {
-  cuitEmisor: string
-}
+interface ComprobantesEmitidosProps { }
 
-export function ComprobantesEmitidos({ cuitEmisor }: ComprobantesEmitidosProps) {
+export function ComprobantesEmitidos() {
   const { getMisComprobantes } = useArca()
 
   const [loading, setLoading] = useState(false)
   const [comprobantes, setComprobantes] = useState<Comprobante[]>([])
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
@@ -71,32 +70,30 @@ export function ComprobantesEmitidos({ cuitEmisor }: ComprobantesEmitidosProps) 
   }
 
   const handleBuscar = async () => {
+    // Limpiar error anterior
+    setError(null)
+
     // Obtener credenciales guardadas
     const credenciales = localStorage.getItem('credencialesARCA')
     if (!credenciales) {
-      toast.error('Debe conectarse con AFIP primero', {
-        description: 'Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales'
-      })
+      setError('Debe configurar sus credenciales de AFIP primero. Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales.')
       return
     }
 
     const { username, password } = JSON.parse(credenciales)
 
     if (!username || !password) {
-      toast.error('Credenciales incompletas', {
-        description: 'Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales'
-      })
+      setError('Credenciales incompletas. Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales.')
       return
     }
 
     if (!fechaDesde || !fechaHasta) {
-      toast.error('Debe seleccionar un rango de fechas')
+      setError('Debe seleccionar un rango de fechas.')
       return
     }
 
     setLoading(true)
-    const toastId = 'buscar-comprobantes'
-    toast.loading('Consultando comprobantes en AFIP...', { id: toastId })
+    toast.loading('Consultando comprobantes en AFIP...', { id: 'buscar-comprobantes' })
 
     try {
       const filters: any = {
@@ -127,13 +124,14 @@ export function ComprobantesEmitidos({ cuitEmisor }: ComprobantesEmitidosProps) 
 
       if (response.success && response.data) {
         setComprobantes(response.data)
-        toast.success(`Se encontraron ${response.total || 0} comprobantes`, { id: toastId })
+        setError(null)
+        toast.success(`Se encontraron ${response.total || 0} comprobantes`)
       } else {
-        toast.error(response.error || 'Error al consultar comprobantes', { id: toastId })
+        setError(response.error || 'Error al consultar comprobantes. Verifique los parámetros enviados.')
       }
     } catch (error: any) {
       console.error('Error al buscar comprobantes:', error)
-      toast.error('Error al consultar comprobantes', { id: toastId })
+      setError(error.message || 'Error inesperado al consultar comprobantes')
     } finally {
       setLoading(false)
     }
@@ -272,6 +270,23 @@ export function ComprobantesEmitidos({ cuitEmisor }: ComprobantesEmitidosProps) 
               </>
             )}
           </Button>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-red-800">Error al consultar comprobantes</h3>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
