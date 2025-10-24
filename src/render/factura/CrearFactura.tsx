@@ -599,8 +599,6 @@ function CrearFactura() {
             onLimpiar={limpiarFormulario}
             onConsultarContribuyente={handleConsultarContribuyente}
             loadingContribuyente={loadingContribuyente}
-            mostrarDatosCliente={mostrarDatosCliente}
-            onToggleDatosCliente={() => setMostrarDatosCliente(!mostrarDatosCliente)}
           />
 
           {resultado && (
