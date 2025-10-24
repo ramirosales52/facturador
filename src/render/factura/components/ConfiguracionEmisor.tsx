@@ -360,14 +360,14 @@ export function ConfiguracionEmisor({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     // Guardar credenciales en localStorage
     const credenciales = {
       username: formData.cuit,
       password: credencialesAFIP.password || '',
     }
     localStorage.setItem('credencialesARCA', JSON.stringify(credenciales))
-    
+
     onGuardar(formData)
     setDatosOriginales(formData)
     toast.success('Datos del emisor guardados correctamente', { id: 'toast-guardar-emisor' })
@@ -645,24 +645,6 @@ export function ConfiguracionEmisor({
                     handleInputChange('inicioActividades', e.target.value)}
                   required
                 />
-              </div>
-
-              {/* Contraseña AFIP para consultas */}
-              <div className="space-y-1.5">
-                <Label htmlFor="password-afip" className="text-sm">
-                  Contraseña AFIP
-                </Label>
-                <Input
-                  id="password-afip"
-                  type="password"
-                  value={credencialesAFIP.password}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setCredencialesAFIP(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Para consultar comprobantes emitidos"
-                />
-                <p className="text-xs text-gray-500">
-                  Se guarda localmente para consultar comprobantes emitidos
-                </p>
               </div>
 
               {/* Punto de Venta */}
