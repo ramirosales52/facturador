@@ -100,7 +100,7 @@ export function ComprobantesEmitidos({ cuitEmisor }: ComprobantesEmitidosProps) 
 
     try {
       const filters: any = {
-        cuit: cuitEmisor,
+        cuit: username, // Usar username como CUIT (son el mismo valor)
         username,
         password,
         fechaEmision: formatearFechas(fechaDesde, fechaHasta),
