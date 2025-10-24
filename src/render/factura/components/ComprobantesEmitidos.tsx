@@ -1,5 +1,5 @@
 import { Button } from '@render/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/card'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
@@ -39,8 +39,6 @@ interface Comprobante {
   'IVA': string
   'Imp. Total': string
 }
-
-interface ComprobantesEmitidosProps { }
 
 export function ComprobantesEmitidos() {
   const { getMisComprobantes } = useArca()
@@ -122,6 +120,8 @@ export function ComprobantesEmitidos() {
 
       const response = await getMisComprobantes(filters)
 
+      toast.dismiss()
+
       if (response.success && response.data) {
         setComprobantes(response.data)
         setError(null)
@@ -131,6 +131,7 @@ export function ComprobantesEmitidos() {
       }
     } catch (error: any) {
       console.error('Error al buscar comprobantes:', error)
+      toast.dismiss()
       setError(error.message || 'Error inesperado al consultar comprobantes')
     } finally {
       setLoading(false)
