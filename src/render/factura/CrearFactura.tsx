@@ -561,6 +561,7 @@ function CrearFactura() {
           duration: 3000,
         },
       )
+      limpiarFormulario()
     }
     else {
       toast.error(
