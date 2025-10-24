@@ -256,6 +256,7 @@ export function ConfiguracionEmisor({
         // Guardar estado del certificado en localStorage
         localStorage.setItem('certificadoARCACreado', 'true')
         localStorage.setItem('cuitARCA', cuitStr)
+        localStorage.setItem('tokenARCA', credencialesAFIP.token)
 
         // Guardar credenciales para consultas futuras
         const credenciales = {
@@ -350,6 +351,7 @@ export function ConfiguracionEmisor({
     localStorage.removeItem('cuitARCA')
     localStorage.removeItem('datosEmisor')
     localStorage.removeItem('credencialesARCA')
+    localStorage.removeItem('tokenARCA')
 
     toast.success('Certificado ARCA desconectado', {
       description: 'Puede crear un nuevo certificado cuando lo necesite',

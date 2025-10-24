@@ -11,11 +11,16 @@ import { CreateArcaDto } from './dto/create-arca.dto'
 export class ArcaService {
   private afip: Afip
   private cuitActual?: number
+  private accessToken?: string
 
   constructor() {
     // this.afip = new Afip({ CUIT: 20409378472 })
     // this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
+  }
+
+  configurarToken(token: string) {
+    this.accessToken = token
   }
 
   configurarCUIT(cuit: number) {
@@ -29,8 +34,8 @@ export class ArcaService {
       key: keyContent,
     }
 
-    if (ArcaConfig.production) {
-      config.access_token = this.getAccessToken()
+    if (ArcaConfig.production && this.accessToken) {
+      config.access_token = this.accessToken
     }
 
     this.afip = new Afip(config)
@@ -41,9 +46,12 @@ export class ArcaService {
   }
 
   private getAccessToken(): string {
+    if (this.accessToken) {
+      return this.accessToken
+    }
     const token = process.env.AFIP_SDK_ACCESS_TOKEN
     if (!token) {
-      throw new Error('AFIP_SDK_ACCESS_TOKEN es obligatorio en producción')
+      throw new Error('AFIP_SDK_ACCESS_TOKEN no está configurado. Configure el token desde la interfaz.')
     }
     return token
   }
@@ -467,6 +475,9 @@ export class ArcaService {
         throw new Error('Token de acceso no proporcionado')
       }
 
+      // Guardar el token en el servicio para uso futuro
+      this.configurarToken(data.token)
+
       const afipInstance = new Afip({
         access_token: data.token,
       })
@@ -815,11 +826,8 @@ export class ArcaService {
         hasPassword: !!data.password,
       })
 
-      // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
-      if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
-      }
+      // Configurar Afip con el access_token guardado
+      const accessToken = this.getAccessToken()
 
       const afipInstance = new Afip({
         access_token: accessToken,
@@ -905,6 +913,9 @@ export class ArcaService {
       if (!data.token) {
         throw new Error('Token de acceso no proporcionado')
       }
+
+      // Guardar el token en el servicio para uso futuro
+      this.configurarToken(data.token)
 
       const afipInstance = new Afip({
         access_token: data.token,
@@ -1091,11 +1102,8 @@ export class ArcaService {
         hasPassword: !!data.password,
       })
 
-      // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
-      if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
-      }
+      // Configurar Afip con el access_token guardado
+      const accessToken = this.getAccessToken()
 
       const afipInstance = new Afip({
         access_token: accessToken,
@@ -1192,11 +1200,8 @@ export class ArcaService {
     try {
       console.log('Iniciando consulta de comprobantes emitidos con filtros:', filters)
 
-      // Configurar Afip con el access_token desde variable de entorno
-      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
-      if (!accessToken) {
-        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
-      }
+      // Configurar Afip con el access_token guardado
+      const accessToken = this.getAccessToken()
 
       const afipInstance = new Afip({
         access_token: accessToken,

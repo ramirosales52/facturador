@@ -76,10 +76,19 @@ function CrearFactura() {
         // 2. Inicializar AFIP SDK si hay certificado guardado
         const certificadoGuardado = localStorage.getItem('certificadoARCACreado')
         const cuitGuardado = localStorage.getItem('cuitARCA')
+        const tokenGuardado = localStorage.getItem('tokenARCA')
 
         if (certificadoGuardado === 'true' && cuitGuardado) {
           const backendPort = await window.electron.getBackendPort()
           console.log('Inicializando AFIP SDK con CUIT:', cuitGuardado)
+
+          // Configurar token si existe
+          if (tokenGuardado) {
+            await axios.post(`http://localhost:${backendPort}/arca/configurar-token`, {
+              token: tokenGuardado,
+            })
+            console.log('✅ Token AFIP configurado')
+          }
 
           await axios.post(`http://localhost:${backendPort}/arca/configurar-cuit`, {
             cuit: cuitGuardado,

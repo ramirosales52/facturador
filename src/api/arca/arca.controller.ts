@@ -109,6 +109,19 @@ export class ArcaController {
   }
 
   /**
+   * Configurar token de AFIP SDK
+   */
+  @Post('configurar-token')
+  async configurarToken(@Body() body: { token: string }) {
+    try {
+      this.arcaService.configurarToken(body.token)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
    * Obtener comprobantes emitidos usando automatización de AFIP SDK
    */
   @Post('mis-comprobantes')
