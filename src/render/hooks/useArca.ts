@@ -171,6 +171,26 @@ export function useArca() {
     }
   }
 
+  const getMisComprobantes = async (filters: {
+    cuit: string
+    username: string
+    password: string
+    fechaEmision: string
+    puntosVenta?: number[]
+    tiposComprobantes?: number[]
+    comprobanteDesde?: number
+    comprobanteHasta?: number
+    tipoDoc?: number
+    nroDoc?: string
+    codigoAutorizacion?: string
+  }): Promise<{ success: boolean, data?: any[], total?: number, error?: string }> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post(`${apiUrl}/mis-comprobantes`, filters)
+      return response.data
+    })
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -184,5 +204,6 @@ export function useArca() {
     generarPDF,
     consultarContribuyente,
     getPuntosVentaHabilitados,
+    getMisComprobantes,
   }
 }

@@ -107,4 +107,12 @@ export class ArcaController {
       return { success: false, error: error.message }
     }
   }
+
+  /**
+   * Obtener comprobantes emitidos usando automatización de AFIP SDK
+   */
+  @Post('mis-comprobantes')
+  async getMisComprobantes(@Body() filters: any) {
+    return this.arcaService.getMisComprobantes(filters)
+  }
 }

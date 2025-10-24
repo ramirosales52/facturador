@@ -1172,4 +1172,94 @@ export class ArcaService {
       production: ArcaConfig.production,
     }
   }
+
+  /**
+   * Obtener comprobantes emitidos usando automatización de AFIP SDK
+   */
+  async getMisComprobantes(filters: {
+    cuit: string
+    username: string
+    password: string
+    fechaEmision: string
+    puntosVenta?: number[]
+    tiposComprobantes?: number[]
+    comprobanteDesde?: number
+    comprobanteHasta?: number
+    tipoDoc?: number
+    nroDoc?: string
+    codigoAutorizacion?: string
+  }) {
+    try {
+      console.log('Iniciando consulta de comprobantes emitidos con filtros:', filters)
+
+      // Configurar Afip con el access_token desde variable de entorno
+      const accessToken = process.env.AFIP_SDK_ACCESS_TOKEN
+      if (!accessToken) {
+        throw new Error('AFIP_SDK_ACCESS_TOKEN no configurado en variables de entorno')
+      }
+
+      const afipInstance = new Afip({
+        access_token: accessToken,
+      })
+
+      // Datos para la automatización
+      const automationData = {
+        cuit: filters.cuit,
+        username: filters.username,
+        password: filters.password,
+        filters: {
+          t: 'E', // Solo comprobantes emitidos
+          fechaEmision: filters.fechaEmision,
+          ...(filters.puntosVenta && { puntosVenta: filters.puntosVenta }),
+          ...(filters.tiposComprobantes && { tiposComprobantes: filters.tiposComprobantes }),
+          ...(filters.comprobanteDesde && { comprobanteDesde: filters.comprobanteDesde }),
+          ...(filters.comprobanteHasta && { comprobanteHasta: filters.comprobanteHasta }),
+          ...(filters.tipoDoc && { tipoDoc: filters.tipoDoc }),
+          ...(filters.nroDoc && { nroDoc: filters.nroDoc }),
+          ...(filters.codigoAutorizacion && { codigoAutorizacion: filters.codigoAutorizacion }),
+        },
+      }
+
+      console.log('Ejecutando automatización mis-comprobantes con datos:', automationData)
+
+      // Ejecutar la automatización mis-comprobantes
+      // @ts-ignore - El método CreateAutomation existe en el SDK pero no está en los tipos
+      const result = await afipInstance.CreateAutomation('mis-comprobantes', automationData, true)
+
+      console.log('Resultado de la automatización:', {
+        id: result.id,
+        status: result.status,
+        totalComprobantes: result.data?.length || 0,
+      })
+
+      // Verificar que la automatización se completó exitosamente
+      if (result.status !== 'complete') {
+        throw new Error(`La automatización no se completó correctamente. Estado: ${result.status}`)
+      }
+
+      return {
+        success: true,
+        data: result.data || [],
+        total: result.data?.length || 0,
+      }
+    }
+    catch (error: any) {
+      console.error('Error en getMisComprobantes:', error)
+
+      // Construir mensaje de error más descriptivo
+      let errorMessage = 'Error al consultar comprobantes'
+
+      if (error.data?.data?.message) {
+        errorMessage = error.data.data.message
+      }
+      else if (error.message) {
+        errorMessage = error.message
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
 }

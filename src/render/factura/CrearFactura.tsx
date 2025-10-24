@@ -17,6 +17,7 @@ import {
   FacturaForm,
   FacturaResultado,
 } from './components'
+import { ComprobantesEmitidos } from './components/ComprobantesEmitidos'
 import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
 
@@ -579,8 +580,9 @@ function CrearFactura() {
       </div>
 
       <Tabs defaultValue="facturar" className="mt-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="facturar">Crear Factura</TabsTrigger>
+          <TabsTrigger value="comprobantes">Comprobantes Emitidos</TabsTrigger>
           <TabsTrigger value="configuracion">Configuración Emisor</TabsTrigger>
         </TabsList>
 
@@ -614,6 +616,10 @@ function CrearFactura() {
               />
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="comprobantes">
+          <ComprobantesEmitidos cuitEmisor={datosEmisor.cuit} />
         </TabsContent>
 
         <TabsContent value="configuracion">
