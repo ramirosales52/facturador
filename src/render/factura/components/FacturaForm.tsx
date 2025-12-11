@@ -1,14 +1,14 @@
 import type { ChangeEvent, FormEvent } from 'react'
 import { useState } from 'react'
-import { Search, X } from 'lucide-react'
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@render/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@render/components/ui/dialog'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { Search, X } from 'lucide-react'
 
 export interface Articulo {
   codigo?: string
@@ -77,6 +77,35 @@ export function FacturaForm({
     // Crear un evento sintético para pasar a onSubmit
     const fakeEvent = { preventDefault: () => { } } as FormEvent<HTMLFormElement>
     await onSubmit(fakeEvent)
+  }
+
+  // Validar si el formulario está completo
+  const isFormValid = (): boolean => {
+    // Validar que haya al menos un artículo
+    if (formData.Articulos.length === 0) return false
+
+    // Validar DocNro si es requerido (no es tipo 99 - Consumidor Final)
+    if (formData.DocTipo !== '99' && !formData.DocNro.trim()) return false
+
+    // Validar Razón Social / Nombre
+    if (!formData.RazonSocial?.trim()) return false
+
+    // Validar Domicilio
+    if (!formData.Domicilio?.trim()) return false
+
+    // Validar que todos los artículos tengan descripción, cantidad y precio
+    const articulosValidos = formData.Articulos.every(articulo => 
+      articulo.descripcion.trim() !== '' &&
+      articulo.cantidad > 0 &&
+      articulo.precioUnitario > 0
+    )
+
+    if (!articulosValidos) return false
+
+    // Validar Condición IVA para Factura B
+    if (formData.TipoFactura === 'B' && !formData.CondicionIVA) return false
+
+    return true
   }
 
   return (
@@ -487,7 +516,7 @@ export function FacturaForm({
 
           {/* Botones */}
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading || formData.Articulos.length === 0} className="flex-1">
+            <Button type="submit" disabled={loading || !isFormValid()} className="flex-1">
               {loading ? 'Creando...' : `Crear Factura ${formData.TipoFactura}`}
             </Button>
             <Button type="button" variant="outline" onClick={onLimpiar}>
