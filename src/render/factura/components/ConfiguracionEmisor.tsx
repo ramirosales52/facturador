@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CONDICIONES_IVA_EMISOR } from '@render/constants/afip'
 import { useArca } from '@render/hooks/useArca'
 import axios from 'axios'
-import { Building2, Save, Search, Shield, XCircle, Store, Pencil } from 'lucide-react'
+import { Building2, Save, Search, Shield, XCircle, Store, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -72,6 +72,7 @@ export function ConfiguracionEmisor({
   const [certificadoCreado, setCertificadoCreado] = useState(false)
   const [puntosVenta, setPuntosVenta] = useState<any[]>([])
   const [cargandoPuntosVenta, setCargandoPuntosVenta] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Cargar estado del certificado desde localStorage
   useEffect(() => {
@@ -346,6 +347,13 @@ export function ConfiguracionEmisor({
       puntoVenta: 1,
     })
 
+    // Limpiar credenciales AFIP
+    setCredencialesAFIP({
+      username: '',
+      password: '',
+      token: '',
+    })
+
     // Limpiar localStorage
     localStorage.removeItem('certificadoARCACreado')
     localStorage.removeItem('cuitARCA')
@@ -443,17 +451,29 @@ export function ConfiguracionEmisor({
 
                   <div className="space-y-2">
                     <Label htmlFor="afip-password">Contraseña AFIP</Label>
-                    <Input
-                      id="afip-password"
-                      type="password"
-                      value={credencialesAFIP.password}
-                      onChange={(e) => {
-                        setCredencialesAFIP(prev => ({ ...prev, password: e.target.value }))
-                        setDialogError(null) // Limpiar error al editar
-                      }}
-                      placeholder="••••••••"
-                      disabled={conectandoARCA}
-                    />
+                    <div className="flex gap-1">
+                      <Input
+                        id="afip-password"
+                        type={showPassword ? "text" : "password"}
+                        value={credencialesAFIP.password}
+                        onChange={(e) => {
+                          setCredencialesAFIP(prev => ({ ...prev, password: e.target.value }))
+                          setDialogError(null) // Limpiar error al editar
+                        }}
+                        placeholder="••••••••"
+                        disabled={conectandoARCA}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        size="icon"
+                        className="cursor-pointer shrink-0" 
+                        onClick={() => setShowPassword(prev => !prev)}
+                        disabled={conectandoARCA}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </div>
 
                   {dialogError && (
