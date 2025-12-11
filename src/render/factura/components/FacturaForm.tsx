@@ -1,12 +1,14 @@
 import type { ChangeEvent, FormEvent } from 'react'
+import { useState } from 'react'
+import { Search, X } from 'lucide-react'
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@render/components/ui/dialog'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
-import { Search, X } from 'lucide-react'
 
 export interface Articulo {
   codigo?: string
@@ -63,6 +65,20 @@ export function FacturaForm({
   onConsultarContribuyente,
   loadingContribuyente,
 }: FacturaFormProps) {
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  const handleFormSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setDialogOpen(true)
+  }
+
+  const handleConfirm = async () => {
+    setDialogOpen(false)
+    // Crear un evento sintético para pasar a onSubmit
+    const fakeEvent = { preventDefault: () => { } } as FormEvent<HTMLFormElement>
+    await onSubmit(fakeEvent)
+  }
+
   return (
     <Card>
       <CardHeader className="flex justify-between">
@@ -93,7 +109,7 @@ export function FacturaForm({
 
       <CardContent>
         <h3 className="font-medium text-sm mb-3">Datos de la factura</h3>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           {/* Primera fila: Tipo Doc y CUIT con botones */}
           <div className="flex gap-4">
             {/* Tipo de Documento */}
@@ -480,6 +496,26 @@ export function FacturaForm({
           </div>
         </form>
       </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar</DialogTitle>
+          </DialogHeader>
+          <Separator />
+          <h1>
+            ¿Generar Factura <b>{formData.TipoFactura}</b> por <b>${formData.ImpTotal}</b>?
+          </h1>
+          <DialogFooter>
+            <Button type="button" onClick={handleConfirm}>
+              Confirmar
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
