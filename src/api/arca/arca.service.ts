@@ -14,8 +14,8 @@ export class ArcaService {
   private accessToken?: string
 
   constructor() {
-    // this.afip = new Afip({ CUIT: 20409378472 })
-    // this.cuitActual = 20409378472
+    this.afip = new Afip({ CUIT: 20409378472 })
+    this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
   }
 
@@ -24,21 +24,21 @@ export class ArcaService {
   }
 
   configurarCUIT(cuit: number) {
-    this.cuitActual = cuit
-    const { certContent, keyContent } = this.loadCertificates(cuit)
-
-    const config: any = {
-      CUIT: cuit,
-      production: ArcaConfig.production,
-      cert: certContent,
-      key: keyContent,
-    }
-
-    if (ArcaConfig.production && this.accessToken) {
-      config.access_token = this.accessToken
-    }
-
-    this.afip = new Afip(config)
+    // this.cuitActual = cuit
+    // const { certContent, keyContent } = this.loadCertificates(cuit)
+    //
+    // const config: any = {
+    //   CUIT: cuit,
+    //   production: ArcaConfig.production,
+    //   cert: certContent,
+    //   key: keyContent,
+    // }
+    //
+    // if (this.accessToken) {
+    //   config.access_token = this.accessToken
+    // }
+    //
+    // this.afip = new Afip(config)
   }
 
   getCUITActual(): number | undefined {
