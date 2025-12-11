@@ -84,14 +84,18 @@ export function FacturaForm({
     // Validar que haya al menos un artículo
     if (formData.Articulos.length === 0) return false
 
-    // Validar DocNro si es requerido (no es tipo 99 - Consumidor Final)
-    if (formData.DocTipo !== '99' && !formData.DocNro.trim()) return false
+    // Determinar si es Consumidor Final
+    const esConsumidorFinal = formData.DocTipo === '99'
 
-    // Validar Razón Social / Nombre
-    if (!formData.RazonSocial?.trim()) return false
+    // Validar DocNro solo si NO es Consumidor Final
+    if (!esConsumidorFinal && !formData.DocNro.trim()) return false
 
-    // Validar Domicilio
-    if (!formData.Domicilio?.trim()) return false
+    // Validar Razón Social y Domicilio solo si NO es Consumidor Final
+    // Para Consumidor Final estos campos son opcionales
+    if (!esConsumidorFinal) {
+      if (!formData.RazonSocial?.trim()) return false
+      if (!formData.Domicilio?.trim()) return false
+    }
 
     // Validar que todos los artículos tengan descripción, cantidad y precio
     const articulosValidos = formData.Articulos.every(articulo => 

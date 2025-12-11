@@ -659,6 +659,8 @@ export class ArcaService {
     CAEFchVto: string
     FchProceso?: string
     customPath?: string
+    TipoFactura?: 'A' | 'B'
+    RazonSocial?: string
   }) {
     try {
       // Generar QR para incluir en el PDF
@@ -742,7 +744,77 @@ export class ArcaService {
       )
 
       // Nombre del archivo
-      const fileName = `Factura_${facturaInfo.CbteTipo}_${String(facturaInfo.PtoVta).padStart(4, '0')}_${String(facturaInfo.CbteDesde).padStart(8, '0')}.pdf`
+      // Formato para Consumidor Final: [tipoFactura]_[datos]_CFinal
+      // Formato para otros: [tipoFactura]_[nombre]_[apellido]_[cuit]
+      // Determinar tipo de factura (A o B) basado en CbteTipo
+      const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
+      
+      let nombreArchivo = ''
+      
+      // Verificar si es Consumidor Final (DocTipo 99)
+      const esConsumidorFinal = facturaInfo.DocTipo === 99
+      
+      // Verificar si tiene datos del cliente (nombre o CUIT)
+      const tieneRazonSocial = facturaInfo.RazonSocial && facturaInfo.RazonSocial.trim() !== ''
+      const tieneDocNro = facturaInfo.DocNro && facturaInfo.DocNro !== 0
+      
+      if (esConsumidorFinal) {
+        // Para Consumidor Final, siempre incluir "CFinal" al final
+        if (tieneRazonSocial && tieneDocNro) {
+          // Tiene nombre y CUIT: [tipoFactura]_[nombre]_[cuit]_CFinal
+          const razonSocialLimpia = facturaInfo.RazonSocial!
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+            .replace(/[^a-zA-Z0-9\s]/g, '') // Quitar caracteres especiales excepto espacios
+            .trim()
+            .replace(/\s+/g, '_') // Reemplazar espacios por _
+          
+          nombreArchivo = `${tipoFacturaLetra}_${razonSocialLimpia}_${facturaInfo.DocNro}_CFinal.pdf`
+        } else if (tieneRazonSocial) {
+          // Solo tiene nombre: [tipoFactura]_[nombre]_CFinal
+          const razonSocialLimpia = facturaInfo.RazonSocial!
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .trim()
+            .replace(/\s+/g, '_')
+          
+          nombreArchivo = `${tipoFacturaLetra}_${razonSocialLimpia}_CFinal.pdf`
+        } else if (tieneDocNro) {
+          // Solo tiene CUIT: [tipoFactura]_[cuit]_CFinal
+          nombreArchivo = `${tipoFacturaLetra}_${facturaInfo.DocNro}_CFinal.pdf`
+        } else {
+          // No tiene nada: [tipoFactura]_[CAE]_CFinal
+          nombreArchivo = `${tipoFacturaLetra}_${facturaInfo.CAE}_CFinal.pdf`
+        }
+      } else {
+        // No es Consumidor Final: usar formato normal sin "CFinal"
+        if (tieneRazonSocial || tieneDocNro) {
+          let nombreParte = ''
+          
+          if (tieneRazonSocial) {
+            nombreParte = facturaInfo.RazonSocial!
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-zA-Z0-9\s]/g, '')
+              .trim()
+              .replace(/\s+/g, '_')
+          }
+          
+          if (tieneDocNro) {
+            nombreArchivo = nombreParte 
+              ? `${tipoFacturaLetra}_${nombreParte}_${facturaInfo.DocNro}.pdf`
+              : `${tipoFacturaLetra}_${facturaInfo.DocNro}.pdf`
+          } else {
+            nombreArchivo = `${tipoFacturaLetra}_${nombreParte}.pdf`
+          }
+        } else {
+          // Fallback: usar CAE si no hay ningún dato (caso raro)
+          nombreArchivo = `${tipoFacturaLetra}_${facturaInfo.CAE}.pdf`
+        }
+      }
+      
+      const fileName = nombreArchivo
 
       // Directorio de destino
       // Si hay customPath usar ese, sino usar Desktop
