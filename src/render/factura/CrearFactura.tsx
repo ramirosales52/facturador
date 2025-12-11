@@ -33,7 +33,14 @@ function CrearFactura() {
     CondicionVenta: 'efectivo',
     RazonSocial: '',
     Domicilio: '',
-    Articulos: [],
+    Articulos: [{
+      codigo: '',
+      descripcion: 'Componentes electrónicos',
+      cantidad: DEFAULTS.CANTIDAD_DEFAULT,
+      unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
+      precioUnitario: 0,
+      alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
+    }],
     ImpNeto: '0.00',
     ImpIVA: '0.00',
     ImpTotal: '0.00',
@@ -56,7 +63,7 @@ function CrearFactura() {
   const [htmlPreview, setHtmlPreview] = useState<string | null>(null)
   const [loadingContribuyente, setLoadingContribuyente] = useState(false)
   const [loadingEmisor, setLoadingEmisor] = useState(false)
-  const [mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
+  const [_mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
   const [pdfSavePath, setPdfSavePath] = useState<string>('')
 
   // Inicializar AFIP y cargar configuración al inicio
@@ -202,7 +209,14 @@ function CrearFactura() {
       Concepto: DEFAULTS.CONCEPTO,
       CondicionIVA: DEFAULTS.CONDICION_IVA,
       CondicionVenta: 'efectivo',
-      Articulos: [],
+      Articulos: [{
+        codigo: '',
+        descripcion: 'Componentes electrónicos',
+        cantidad: DEFAULTS.CANTIDAD_DEFAULT,
+        unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
+        precioUnitario: 0,
+        alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
+      }],
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
