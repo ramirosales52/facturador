@@ -188,14 +188,14 @@ export function FacturaForm({
                   required={formData.DocTipo !== '99'}
                   className="flex-1"
                 />
-                {onConsultarContribuyente && formData.DocTipo === '80' && (
+                {onConsultarContribuyente && (formData.DocTipo === '80' || formData.DocTipo === '96') && (
                   <Button
                     type="button"
                     onClick={onConsultarContribuyente}
                     disabled={!formData.DocNro || loadingContribuyente}
                     variant="outline"
                     size="icon"
-                    title="Buscar datos en AFIP"
+                    title={formData.DocTipo === '96' ? 'Buscar datos en AFIP por DNI' : 'Buscar datos en AFIP'}
                   >
                     {loadingContribuyente ? '...' : <Search className="h-4 w-4" />}
                   </Button>

@@ -39,6 +39,14 @@ export class ArcaController {
   }
 
   /**
+   * Obtener CUIT a partir de un DNI
+   */
+  @Get('dni-to-cuit/:dni')
+  obtenerCUITDesdeDNI(@Param('dni') dni: string) {
+    return this.arcaService.obtenerCUITDesdeDNI(+dni)
+  }
+
+  /**
    * Consultar datos de un contribuyente por CUIT
    */
   @Get('contribuyente/:cuit')

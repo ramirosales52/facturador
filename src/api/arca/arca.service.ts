@@ -84,6 +84,52 @@ export class ArcaService {
   }
 
   /**
+   * Obtener CUIT a partir de un DNI
+   * Utiliza el servicio RegisterScopeThirteen para consultar el padrón de AFIP
+   */
+  async obtenerCUITDesdeDNI(dni: number) {
+    try {
+      if (!this.afip) {
+        throw new Error('AFIP SDK no está configurado. Configure el CUIT primero.')
+      }
+
+      console.log('Consultando CUIT para DNI:', dni)
+      
+      // Usar el servicio RegisterScopeThirteen para obtener el CUIT
+      const taxID = await this.afip.RegisterScopeThirteen.getTaxIDByDocument(dni)
+
+      if (!taxID) {
+        return {
+          success: false,
+          error: 'No se encontró CUIT asociado al DNI especificado',
+        }
+      }
+
+      console.log('CUIT encontrado:', taxID)
+
+      return {
+        success: true,
+        data: { cuit: taxID }
+      }
+
+    } catch (error: any) {
+      console.error('Error al obtener CUIT desde DNI:', error)
+
+      let errorMessage = 'Error al consultar DNI'
+      if (error.data?.message) {
+        errorMessage = error.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      return {
+        success: false,
+        error: errorMessage
+      }
+    }
+  }
+
+  /**
    * Consultar datos de un contribuyente por CUIT
    * NOTA: Esta funcionalidad requiere servicios de padrón que pueden no estar disponibles
    * para todos los CUITs. Si falla, el usuario debe ingresar los datos manualmente.

@@ -143,6 +143,20 @@ export function useArca() {
     })
   }
 
+  const obtenerCUITDesdeDNI = async (dni: string): Promise<{ success: boolean, data?: { cuit: number }, error?: string }> => {
+    // No usamos handleRequest para no afectar el estado de error global
+    try {
+      const apiUrl = await getApiUrl()
+      const response = await axios.get(`${apiUrl}/dni-to-cuit/${dni}`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener CUIT desde DNI'
+      return { success: false, error: errorMsg }
+    }
+  }
+
   const consultarContribuyente = async (cuit: string): Promise<ContribuyenteResponse> => {
     // No usamos handleRequest para no afectar el estado de error global
     // Los errores se manejan con toasts en el componente
@@ -259,6 +273,7 @@ export function useArca() {
     crearFactura,
     generarQR,
     generarPDF,
+    obtenerCUITDesdeDNI,
     consultarContribuyente,
     getPuntosVentaHabilitados,
     getMisComprobantes,

@@ -22,7 +22,7 @@ import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
 
 function CrearFactura() {
-  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente, guardarFactura } = useArca()
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura } = useArca()
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: DEFAULTS.TIPO_FACTURA,
@@ -441,7 +441,7 @@ function CrearFactura() {
 
   const handleConsultarContribuyente = async (): Promise<void> => {
     if (!formData.DocNro) {
-      toast.error('Ingrese un CUIT para buscar', { id: 'buscar-contribuyente' })
+      toast.error('Ingrese un CUIT o DNI para buscar', { id: 'buscar-contribuyente' })
       return
     }
 
@@ -460,7 +460,32 @@ function CrearFactura() {
     toast.loading('Consultando datos en AFIP...', { id: toastIdLoading })
 
     try {
-      const response = await consultarContribuyente(formData.DocNro)
+      let cuitABuscar = formData.DocNro
+
+      // Si es DNI (tipo 96), primero obtener el CUIT
+      if (formData.DocTipo === '96') {
+        toast.loading('Obteniendo CUIT desde DNI...', { id: toastIdLoading })
+        
+        const responseCUIT = await obtenerCUITDesdeDNI(formData.DocNro)
+        
+        if (!responseCUIT.success || !responseCUIT.data?.cuit) {
+          toast.dismiss(toastIdLoading)
+          toast.error('DNI no encontrado', {
+            description: responseCUIT.error || 'No se encontró CUIT asociado al DNI',
+          })
+          setLoadingContribuyente(false)
+          return
+        }
+
+        cuitABuscar = responseCUIT.data.cuit.toString()
+        console.log(`✅ CUIT obtenido desde DNI ${formData.DocNro}: ${cuitABuscar}`)
+        
+        // Actualizar el toast
+        toast.loading('Consultando datos del contribuyente...', { id: toastIdLoading })
+      }
+
+      // Ahora consultar los datos con el CUIT
+      const response = await consultarContribuyente(cuitABuscar)
       console.log(response)
 
       // Dismiss el toast de loading
