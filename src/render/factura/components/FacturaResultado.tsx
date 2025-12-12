@@ -17,6 +17,7 @@ export interface FacturaResultadoData {
     ImpTotal?: number
     FchProceso?: string
   }
+  facturaLocalId?: number
   error?: string
 }
 

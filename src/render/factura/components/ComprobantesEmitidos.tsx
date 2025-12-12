@@ -4,7 +4,7 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@render/components/ui/table'
-import { ChevronDown, ChevronUp, FileText, Filter, Loader2, Printer, Search } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Filter, FolderOpen, Loader2, Printer, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
@@ -43,11 +43,12 @@ interface FacturaLocal {
   articulos: string // JSON
   ivas: string // JSON
   datosEmisor: string // JSON
+  pdfPath?: string
   createdAt: string
 }
 
 export function ComprobantesEmitidos() {
-  const { obtenerFacturas, generarPDF } = useArca()
+  const { obtenerFacturas, generarPDF, actualizarPdfPath } = useArca()
 
   const [loading, setLoading] = useState(false)
   const [facturas, setFacturas] = useState<FacturaLocal[]>([])
@@ -124,16 +125,52 @@ export function ComprobantesEmitidos() {
   }
 
   const handleRegenerarPDF = async (factura: FacturaLocal) => {
-    setRegenerandoPDF(factura.id)
-    toast.loading('Regenerando PDF...', { id: `pdf-${factura.id}` })
+    // Primero seleccionar carpeta
+    // @ts-ignore - Electron API
+    if (!window.electron?.dialog?.showOpenDialog) {
+      toast.error('Función disponible solo en la aplicación empaquetada')
+      return
+    }
 
     try {
+      // @ts-ignore
+      const result = await window.electron.dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar carpeta para guardar el PDF',
+      })
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        // Usuario canceló
+        return
+      }
+
+      const selectedPath = result.filePaths[0]
+      
+      setRegenerandoPDF(factura.id)
+      const toastId = `pdf-${factura.id}-${Date.now()}`
+      toast.loading('Regenerando PDF...', { id: toastId })
+
       // Parsear los datos guardados
       const articulos = JSON.parse(factura.articulos)
       const ivas = JSON.parse(factura.ivas)
       const datosEmisor = JSON.parse(factura.datosEmisor)
 
-      // Preparar datos para el PDF
+      // Agregar porcentajeIVA a los artículos para el PDF
+      const ALICUOTAS_IVA = [
+        { id: '3', nombre: '0%', porcentaje: 0 },
+        { id: '4', nombre: '10.5%', porcentaje: 10.5 },
+        { id: '5', nombre: '21%', porcentaje: 21 },
+      ]
+      
+      const articulosConPorcentaje = articulos.map((articulo: any) => {
+        const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+        return {
+          ...articulo,
+          porcentajeIVA: alicuota?.porcentaje || 0,
+        }
+      })
+
+      // Preparar datos para el PDF con la carpeta seleccionada
       const pdfData = {
         PtoVta: factura.ptoVta,
         CbteTipo: factura.cbteTipo,
@@ -152,28 +189,51 @@ export function ComprobantesEmitidos() {
         Concepto: factura.concepto,
         CondicionVenta: factura.condicionVenta,
         CondicionIVA: factura.condicionIVA,
-        Articulos: articulos,
+        Articulos: articulosConPorcentaje,
         IVAsAgrupados: ivas,
         DatosEmisor: datosEmisor,
+        customPath: selectedPath, // Pasar la carpeta seleccionada
       }
 
       const response = await generarPDF(pdfData)
 
-      if (response.success) {
+      if (response.success && response.filePath) {
+        // Actualizar el pdfPath en la base de datos
+        await actualizarPdfPath(factura.id, response.filePath)
+        
+        // Recargar facturas para actualizar la tabla
+        await cargarFacturas()
+        
+        toast.dismiss(toastId)
         toast.success('PDF regenerado exitosamente', {
-          id: `pdf-${factura.id}`,
           description: response.message || 'El archivo está guardado',
         })
       } else {
-        toast.error(`Error al regenerar PDF: ${response.error}`, {
-          id: `pdf-${factura.id}`,
-        })
+        toast.dismiss(toastId)
+        toast.error(`Error al regenerar PDF: ${response.error}`)
       }
     } catch (error: any) {
-      console.error('Error al regenerar PDF:', error)
-      toast.error('Error al regenerar PDF', { id: `pdf-${factura.id}` })
+      toast.error('Error al regenerar PDF')
     } finally {
       setRegenerandoPDF(null)
+    }
+  }
+
+  const handleAbrirCarpeta = async (pdfPath: string) => {
+    try {
+      // @ts-ignore - Electron API
+      if (window.electron?.shell?.openPath) {
+        // @ts-ignore
+        const result = await window.electron.shell.openPath(pdfPath)
+        if (result) {
+          toast.error('No se pudo abrir la carpeta')
+        }
+      } else {
+        toast.info('Función disponible solo en la aplicación empaquetada')
+      }
+    } catch (error) {
+      console.error('Error al abrir carpeta:', error)
+      toast.error('Error al abrir la carpeta')
     }
   }
 
@@ -181,12 +241,6 @@ export function ComprobantesEmitidos() {
     // Convertir de YYYY-MM-DD a DD/MM/YYYY
     const [year, month, day] = fecha.split('-')
     return `${day}/${month}/${year}`
-  }
-
-  const getNombreTipoComprobante = (cbteTipo: number): string => {
-    if (cbteTipo === 1) return 'Factura A'
-    if (cbteTipo === 6) return 'Factura B'
-    return `Tipo ${cbteTipo}`
   }
 
   return (
@@ -352,21 +406,20 @@ export function ComprobantesEmitidos() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Factura</TableHead>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
                     <TableHead>Número</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Doc. Cliente</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead>CAE</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {facturas.map((factura) => (
                     <TableRow key={factura.id}>
+                      <TableCell>{factura.tipoFactura}</TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
-                      <TableCell>{getNombreTipoComprobante(factura.cbteTipo)}</TableCell>
                       <TableCell>
                         {String(factura.ptoVta).padStart(5, '0')}-{String(factura.cbteDesde).padStart(8, '0')}
                       </TableCell>
@@ -378,9 +431,6 @@ export function ComprobantesEmitidos() {
                         ${factura.impTotal.toFixed(2)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {factura.cae}
-                      </TableCell>
-                      <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
@@ -398,11 +448,19 @@ export function ComprobantesEmitidos() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleRegenerarPDF(factura)}
-                            disabled={regenerandoPDF === factura.id}
-                            title="Imprimir"
+                            disabled={true}
+                            title="Imprimir (Próximamente)"
                           >
                             <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAbrirCarpeta(factura.pdfPath!)}
+                            disabled={!factura.pdfPath}
+                            title={factura.pdfPath ? "Abrir carpeta" : "PDF no generado"}
+                          >
+                            <FolderOpen className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

@@ -22,7 +22,7 @@ import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
 
 function CrearFactura() {
-  const { loading, error, clearError, crearFactura, generarQR, generarPDF, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura } = useArca()
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura, actualizarPdfPath } = useArca()
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: DEFAULTS.TIPO_FACTURA,
@@ -38,7 +38,7 @@ function CrearFactura() {
       descripcion: 'Componentes electrónicos',
       cantidad: DEFAULTS.CANTIDAD_DEFAULT,
       unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
-      precioUnitario: 0,
+      precioUnitario: undefined,
       alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
     }],
     ImpNeto: '0.00',
@@ -310,8 +310,12 @@ function CrearFactura() {
           }),
         }
 
-        await guardarFactura(facturaGuardada)
-        console.log('✅ Factura guardada en la base de datos local')
+        const saveResult = await guardarFactura(facturaGuardada)
+        if (saveResult.success && saveResult.id) {
+          console.log('✅ Factura guardada en la base de datos local con ID:', saveResult.id)
+          // Guardar el ID de la factura en el estado para usar al guardar el PDF
+          setResultado(prev => prev ? { ...prev, facturaLocalId: saveResult.id } : prev)
+        }
       } catch (error) {
         console.error('Error al guardar factura en BD local:', error)
         // No bloqueamos el flujo si falla el guardado local
@@ -320,6 +324,7 @@ function CrearFactura() {
 
     // Si la factura se creó exitosamente, generar QR automáticamente
     if (response.success && response.data) {
+      toast.success('Factura generada correctamente')
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
@@ -649,6 +654,18 @@ function CrearFactura() {
 
     if (pdfResponse.success && pdfResponse.filePath) {
       setPdfUrl(pdfResponse.filePath)
+      
+      // Si existe el ID de la factura guardada localmente, actualizar el pdfPath
+      if (resultado?.facturaLocalId) {
+        try {
+          await actualizarPdfPath(resultado.facturaLocalId, pdfResponse.filePath)
+          console.log('✅ PDF path actualizado en la base de datos local')
+        } catch (error) {
+          console.error('Error al actualizar PDF path en BD local:', error)
+          // No bloqueamos el flujo si falla la actualización
+        }
+      }
+      
       toast.success(
         'PDF generado exitosamente',
         {

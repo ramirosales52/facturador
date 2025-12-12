@@ -147,9 +147,13 @@ export class ArcaController {
   @Post('facturas/guardar')
   async guardarFactura(@Body() factura: any) {
     try {
+      console.log('📥 Guardando factura:', JSON.stringify(factura, null, 2))
       const id = this.databaseService.guardarFactura(factura)
+      console.log('✅ Factura guardada con ID:', id)
       return { success: true, id }
     } catch (error: any) {
+      console.error('❌ Error al guardar factura:', error.message)
+      console.error('Stack:', error.stack)
       return { success: false, error: error.message }
     }
   }
@@ -198,6 +202,22 @@ export class ArcaController {
         return { success: false, error: 'Factura no encontrada' }
       }
       return { success: true, data: factura }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Actualizar el path del PDF de una factura
+   */
+  @Post('facturas/:id/pdf-path')
+  async actualizarPdfPath(@Param('id') id: string, @Body() body: { pdfPath: string }) {
+    try {
+      const success = this.databaseService.actualizarPdfPath(parseInt(id), body.pdfPath)
+      if (!success) {
+        return { success: false, error: 'Factura no encontrada' }
+      }
+      return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

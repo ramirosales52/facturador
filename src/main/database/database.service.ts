@@ -36,6 +36,9 @@ export interface FacturaGuardada {
   // Datos del emisor (JSON)
   datosEmisor: string; // JSON.stringify de los datos del emisor
   
+  // Path del PDF generado
+  pdfPath?: string;
+  
   // Metadata
   createdAt?: string;
 }
@@ -84,6 +87,7 @@ export class DatabaseService implements OnModuleInit {
         articulos TEXT NOT NULL,
         ivas TEXT NOT NULL,
         datosEmisor TEXT NOT NULL,
+        pdfPath TEXT,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -108,15 +112,21 @@ export class DatabaseService implements OnModuleInit {
       INSERT INTO facturas (
         cae, caeVencimiento, fechaProceso, ptoVta, cbteTipo, cbteDesde, cbteHasta,
         docTipo, docNro, impTotal, impNeto, impIVA, tipoFactura, concepto,
-        condicionIVA, condicionVenta, razonSocial, domicilio, articulos, ivas, datosEmisor
+        condicionIVA, condicionVenta, razonSocial, domicilio, articulos, ivas, datosEmisor, pdfPath
       ) VALUES (
         @cae, @caeVencimiento, @fechaProceso, @ptoVta, @cbteTipo, @cbteDesde, @cbteHasta,
         @docTipo, @docNro, @impTotal, @impNeto, @impIVA, @tipoFactura, @concepto,
-        @condicionIVA, @condicionVenta, @razonSocial, @domicilio, @articulos, @ivas, @datosEmisor
+        @condicionIVA, @condicionVenta, @razonSocial, @domicilio, @articulos, @ivas, @datosEmisor, @pdfPath
       )
     `);
     
-    const result = stmt.run(factura);
+    // Asegurar que pdfPath esté presente (null si no existe)
+    const facturaConPdfPath = {
+      ...factura,
+      pdfPath: factura.pdfPath || null,
+    };
+    
+    const result = stmt.run(facturaConPdfPath);
     return result.lastInsertRowid as number;
   }
 
@@ -241,6 +251,15 @@ export class DatabaseService implements OnModuleInit {
   eliminarFactura(id: number): boolean {
     const stmt = this.db.prepare('DELETE FROM facturas WHERE id = ?');
     const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Actualizar el path del PDF de una factura
+   */
+  actualizarPdfPath(id: number, pdfPath: string): boolean {
+    const stmt = this.db.prepare('UPDATE facturas SET pdfPath = ? WHERE id = ?');
+    const result = stmt.run(pdfPath, id);
     return result.changes > 0;
   }
 

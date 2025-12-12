@@ -262,6 +262,19 @@ export function useArca() {
     }
   }
 
+  const actualizarPdfPath = async (id: number, pdfPath: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post(`${apiUrl}/facturas/${id}/pdf-path`, { pdfPath })
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al actualizar path del PDF'
+      return { success: false, error: errorMsg }
+    }
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -280,5 +293,6 @@ export function useArca() {
     guardarFactura,
     obtenerFacturas,
     obtenerFacturaPorId,
+    actualizarPdfPath,
   }
 }
