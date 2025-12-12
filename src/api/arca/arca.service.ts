@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
 import puppeteer from 'puppeteer'
+import { DatabaseService } from '../../main/database/database.service'
 import { ArcaConfig } from './arca.config'
 import { CreateArcaDto } from './dto/create-arca.dto'
 
@@ -13,9 +14,9 @@ export class ArcaService {
   private cuitActual?: number
   private accessToken?: string
 
-  constructor() {
-    this.afip = new Afip({ CUIT: 20409378472 })
-    this.cuitActual = 20409378472
+  constructor(private readonly databaseService: DatabaseService) {
+    // this.afip = new Afip({ CUIT: 20409378472 })
+    // this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
   }
 
@@ -24,21 +25,21 @@ export class ArcaService {
   }
 
   configurarCUIT(cuit: number) {
-    // this.cuitActual = cuit
-    // const { certContent, keyContent } = this.loadCertificates(cuit)
-    //
-    // const config: any = {
-    //   CUIT: cuit,
-    //   production: ArcaConfig.production,
-    //   cert: certContent,
-    //   key: keyContent,
-    // }
-    //
-    // if (this.accessToken) {
-    //   config.access_token = this.accessToken
-    // }
-    //
-    // this.afip = new Afip(config)
+    this.cuitActual = cuit
+    const { certContent, keyContent } = this.loadCertificates(cuit)
+
+    const config: any = {
+      CUIT: cuit,
+      production: ArcaConfig.production,
+      cert: certContent,
+      key: keyContent,
+    }
+
+    if (this.accessToken) {
+      config.access_token = this.accessToken
+    }
+
+    this.afip = new Afip(config)
   }
 
   getCUITActual(): number | undefined {
@@ -112,6 +113,7 @@ export class ArcaService {
           error: 'No se encontraron datos para el CUIT especificado',
         }
       }
+      console.log(JSON.stringify(persona, null, 2))
 
       // Obtener domicilio
       const domicilio = persona.domicilio?.[0] ?? {}
@@ -119,8 +121,15 @@ export class ArcaService {
       // Construir datos para el front
       const datosContribuyente = {
         cuit: persona.idPersona,
-        razonSocial: `${persona.nombre ?? ''} ${persona.apellido ?? ''}`.trim(),
-        domicilio: `${domicilio.direccion ?? domicilio.calle ?? ''}, ${domicilio.localidad ?? ''}, ${domicilio.descripcionProvincia ?? ''}`.replace(/^, |, $/g, ''),
+        razonSocial: (
+          persona.razonSocial ??
+          `${persona.nombre ?? ''} ${persona.apellido ?? ''}`.trim()
+        ),
+        domicilio: [
+          domicilio.direccion ?? domicilio.calle ?? '',
+          domicilio.localidad ?? '',
+          domicilio.descripcionProvincia ?? ''
+        ].filter(Boolean).join(', ').replace(/^, |, $/g, ''),
         tipoPersona: persona.tipoPersona,
         tipoDocumento: persona.tipoDocumento,
         numeroDocumento: persona.numeroDocumento,
@@ -748,16 +757,16 @@ export class ArcaService {
       // Formato para otros: [tipoFactura]_[nombre]_[apellido]_[cuit]
       // Determinar tipo de factura (A o B) basado en CbteTipo
       const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
-      
+
       let nombreArchivo = ''
-      
+
       // Verificar si es Consumidor Final (DocTipo 99)
       const esConsumidorFinal = facturaInfo.DocTipo === 99
-      
+
       // Verificar si tiene datos del cliente (nombre o CUIT)
       const tieneRazonSocial = facturaInfo.RazonSocial && facturaInfo.RazonSocial.trim() !== ''
       const tieneDocNro = facturaInfo.DocNro && facturaInfo.DocNro !== 0
-      
+
       if (esConsumidorFinal) {
         // Para Consumidor Final, siempre incluir "CFinal" al final
         if (tieneRazonSocial && tieneDocNro) {
@@ -768,7 +777,7 @@ export class ArcaService {
             .replace(/[^a-zA-Z0-9\s]/g, '') // Quitar caracteres especiales excepto espacios
             .trim()
             .replace(/\s+/g, '_') // Reemplazar espacios por _
-          
+
           nombreArchivo = `${tipoFacturaLetra}_${razonSocialLimpia}_${facturaInfo.DocNro}_CFinal.pdf`
         } else if (tieneRazonSocial) {
           // Solo tiene nombre: [tipoFactura]_[nombre]_CFinal
@@ -778,7 +787,7 @@ export class ArcaService {
             .replace(/[^a-zA-Z0-9\s]/g, '')
             .trim()
             .replace(/\s+/g, '_')
-          
+
           nombreArchivo = `${tipoFacturaLetra}_${razonSocialLimpia}_CFinal.pdf`
         } else if (tieneDocNro) {
           // Solo tiene CUIT: [tipoFactura]_[cuit]_CFinal
@@ -791,7 +800,7 @@ export class ArcaService {
         // No es Consumidor Final: usar formato normal sin "CFinal"
         if (tieneRazonSocial || tieneDocNro) {
           let nombreParte = ''
-          
+
           if (tieneRazonSocial) {
             nombreParte = facturaInfo.RazonSocial!
               .normalize('NFD')
@@ -800,9 +809,9 @@ export class ArcaService {
               .trim()
               .replace(/\s+/g, '_')
           }
-          
+
           if (tieneDocNro) {
-            nombreArchivo = nombreParte 
+            nombreArchivo = nombreParte
               ? `${tipoFacturaLetra}_${nombreParte}_${facturaInfo.DocNro}.pdf`
               : `${tipoFacturaLetra}_${facturaInfo.DocNro}.pdf`
           } else {
@@ -813,7 +822,7 @@ export class ArcaService {
           nombreArchivo = `${tipoFacturaLetra}_${facturaInfo.CAE}.pdf`
         }
       }
-      
+
       const fileName = nombreArchivo
 
       // Directorio de destino

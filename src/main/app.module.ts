@@ -3,6 +3,7 @@ import { ElectronModule } from '@doubleshot/nest-electron'
 import { Module } from '@nestjs/common'
 import { app, BrowserWindow } from 'electron'
 import { ArcaModule } from 'src/api/arca/arca.module'
+import { DatabaseService } from './database/database.service'
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ArcaModule } from 'src/api/arca/arca.module'
       },
     }),
   ],
+  providers: [DatabaseService],
 })
 
 export class AppModule { }

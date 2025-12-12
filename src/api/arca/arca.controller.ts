@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Inject, Param, Post, UsePipes, ValidationPipe } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Param, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common'
+import { DatabaseService } from '../../main/database/database.service'
 import { ArcaService } from './arca.service'
 import { AuthWebServiceDevDto } from './dto/auth-web-service-dev.dto'
 import { AuthWebServiceProdDto } from './dto/auth-web-service-prod.dto'
@@ -8,7 +9,10 @@ import { CreateCertProdDto } from './dto/create-cert-prod.dto'
 
 @Controller('arca')
 export class ArcaController {
-  constructor(@Inject(ArcaService) private readonly arcaService: ArcaService) { }
+  constructor(
+    @Inject(ArcaService) private readonly arcaService: ArcaService,
+    @Inject(DatabaseService) private readonly databaseService: DatabaseService,
+  ) { }
 
   /**
    * Crear una nueva factura electrónica
@@ -127,5 +131,67 @@ export class ArcaController {
   @Post('mis-comprobantes')
   async getMisComprobantes(@Body() filters: any) {
     return this.arcaService.getMisComprobantes(filters)
+  }
+
+  /**
+   * Guardar una factura en la base de datos local
+   */
+  @Post('facturas/guardar')
+  async guardarFactura(@Body() factura: any) {
+    try {
+      const id = this.databaseService.guardarFactura(factura)
+      return { success: true, id }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Obtener facturas guardadas localmente
+   */
+  @Get('facturas')
+  async obtenerFacturas(
+    @Query('fechaDesde') fechaDesde?: string,
+    @Query('fechaHasta') fechaHasta?: string,
+    @Query('docNro') docNro?: string,
+    @Query('ptoVta') ptoVta?: string,
+    @Query('cbteTipo') cbteTipo?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    try {
+      const filtros: any = {}
+      
+      if (fechaDesde) filtros.fechaDesde = fechaDesde
+      if (fechaHasta) filtros.fechaHasta = fechaHasta
+      if (docNro) filtros.docNro = parseInt(docNro)
+      if (ptoVta) filtros.ptoVta = parseInt(ptoVta)
+      if (cbteTipo) filtros.cbteTipo = parseInt(cbteTipo)
+      if (limit) filtros.limit = parseInt(limit)
+      if (offset) filtros.offset = parseInt(offset)
+
+      const facturas = this.databaseService.obtenerFacturas(filtros)
+      const total = this.databaseService.contarFacturas(filtros)
+
+      return { success: true, data: facturas, total }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Obtener una factura por ID
+   */
+  @Get('facturas/:id')
+  async obtenerFacturaPorId(@Param('id') id: string) {
+    try {
+      const factura = this.databaseService.obtenerFacturaPorId(parseInt(id))
+      if (!factura) {
+        return { success: false, error: 'Factura no encontrada' }
+      }
+      return { success: true, data: factura }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
   }
 }

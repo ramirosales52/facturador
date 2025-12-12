@@ -4,8 +4,8 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@render/components/ui/table'
-import { ChevronDown, ChevronUp, Filter, Loader2, Search } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, ChevronUp, FileText, Filter, Loader2, Printer, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
 
@@ -20,33 +20,40 @@ const TIPOS_DOCUMENTO = [
   { id: '99', nombre: 'Consumidor Final' },
 ]
 
-interface Comprobante {
-  'Fecha de Emisión': string
-  'Tipo de Comprobante': string
-  'Punto de Venta': string
-  'Número Desde': string
-  'Número Hasta': string
-  'Cód. Autorización': string
-  'Tipo Doc. Receptor': string
-  'Nro. Doc. Receptor': string
-  'Denominación Receptor': string
-  'Tipo Cambio': string
-  'Moneda': string
-  'Imp. Neto Gravado': string
-  'Imp. Neto No Gravado': string
-  'Imp. Op. Exentas': string
-  'Otros Tributos': string
-  'IVA': string
-  'Imp. Total': string
+interface FacturaLocal {
+  id: number
+  cae: string
+  caeVencimiento: string
+  fechaProceso: string
+  ptoVta: number
+  cbteTipo: number
+  cbteDesde: number
+  cbteHasta: number
+  docTipo: number
+  docNro: number
+  impTotal: number
+  impNeto: number
+  impIVA: number
+  tipoFactura: 'A' | 'B'
+  concepto: string
+  condicionIVA: string
+  condicionVenta: string
+  razonSocial?: string
+  domicilio?: string
+  articulos: string // JSON
+  ivas: string // JSON
+  datosEmisor: string // JSON
+  createdAt: string
 }
 
 export function ComprobantesEmitidos() {
-  const { getMisComprobantes } = useArca()
+  const { obtenerFacturas, generarPDF } = useArca()
 
   const [loading, setLoading] = useState(false)
-  const [comprobantes, setComprobantes] = useState<Comprobante[]>([])
+  const [facturas, setFacturas] = useState<FacturaLocal[]>([])
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [regenerandoPDF, setRegenerandoPDF] = useState<number | null>(null)
 
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
@@ -55,87 +62,131 @@ export function ComprobantesEmitidos() {
   const [tipoComprobante, setTipoComprobante] = useState('')
   const [tipoDoc, setTipoDoc] = useState('')
   const [nroDoc, setNroDoc] = useState('')
-  const [codigoAutorizacion, setCodigoAutorizacion] = useState('')
 
-  const formatearFechas = (desde: string, hasta: string): string => {
-    // Convertir de YYYY-MM-DD a DD/MM/YYYY
-    const formatear = (fecha: string) => {
-      const [year, month, day] = fecha.split('-')
-      return `${day}/${month}/${year}`
-    }
+  // Cargar facturas al montar el componente
+  useEffect(() => {
+    cargarFacturas()
+  }, [])
 
-    return `${formatear(desde)} - ${formatear(hasta)}`
-  }
-
-  const handleBuscar = async () => {
-    // Limpiar error anterior
+  const cargarFacturas = async (filtros?: any) => {
+    setLoading(true)
     setError(null)
 
-    // Obtener credenciales guardadas
-    const credenciales = localStorage.getItem('credencialesARCA')
-    if (!credenciales) {
-      setError('Debe configurar sus credenciales de AFIP primero. Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales.')
-      return
-    }
-
-    const { username, password } = JSON.parse(credenciales)
-
-    if (!username || !password) {
-      setError('Credenciales incompletas. Vaya a la pestaña "Configuración Emisor" y guarde sus credenciales.')
-      return
-    }
-
-    if (!fechaDesde || !fechaHasta) {
-      setError('Debe seleccionar un rango de fechas.')
-      return
-    }
-
-    setLoading(true)
-    toast.loading('Consultando comprobantes en AFIP...', { id: 'buscar-comprobantes' })
-
     try {
-      const filters: any = {
-        cuit: username, // Usar username como CUIT (son el mismo valor)
-        username,
-        password,
-        fechaEmision: formatearFechas(fechaDesde, fechaHasta),
-      }
-
-      // Agregar filtros opcionales si están presentes
-      if (puntoVenta) {
-        filters.puntosVenta = [Number.parseInt(puntoVenta)]
-      }
-      if (tipoComprobante) {
-        filters.tiposComprobantes = [Number.parseInt(tipoComprobante)]
-      }
-      if (tipoDoc) {
-        filters.tipoDoc = Number.parseInt(tipoDoc)
-      }
-      if (nroDoc) {
-        filters.nroDoc = nroDoc
-      }
-      if (codigoAutorizacion) {
-        filters.codigoAutorizacion = codigoAutorizacion
-      }
-
-      const response = await getMisComprobantes(filters)
-
-      toast.dismiss()
+      const response = await obtenerFacturas(filtros)
 
       if (response.success && response.data) {
-        setComprobantes(response.data)
+        setFacturas(response.data)
         setError(null)
-        toast.success(`Se encontraron ${response.total || 0} comprobantes`)
       } else {
-        setError(response.error || 'Error al consultar comprobantes. Verifique los parámetros enviados.')
+        setError(response.error || 'Error al cargar facturas')
       }
     } catch (error: any) {
-      console.error('Error al buscar comprobantes:', error)
-      toast.dismiss()
-      setError(error.message || 'Error inesperado al consultar comprobantes')
+      console.error('Error al cargar facturas:', error)
+      setError(error.message || 'Error inesperado al cargar facturas')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleBuscar = async () => {
+    setError(null)
+
+    const filtros: any = {}
+
+    if (fechaDesde) {
+      filtros.fechaDesde = fechaDesde
+    }
+    if (fechaHasta) {
+      filtros.fechaHasta = fechaHasta
+    }
+    if (puntoVenta) {
+      filtros.ptoVta = parseInt(puntoVenta)
+    }
+    if (tipoComprobante) {
+      filtros.cbteTipo = parseInt(tipoComprobante)
+    }
+    if (nroDoc) {
+      filtros.docNro = parseInt(nroDoc)
+    }
+
+    await cargarFacturas(filtros)
+  }
+
+  const handleLimpiarFiltros = () => {
+    setFechaDesde('')
+    setFechaHasta('')
+    setPuntoVenta('')
+    setTipoComprobante('')
+    setTipoDoc('')
+    setNroDoc('')
+    cargarFacturas()
+  }
+
+  const handleRegenerarPDF = async (factura: FacturaLocal) => {
+    setRegenerandoPDF(factura.id)
+    toast.loading('Regenerando PDF...', { id: `pdf-${factura.id}` })
+
+    try {
+      // Parsear los datos guardados
+      const articulos = JSON.parse(factura.articulos)
+      const ivas = JSON.parse(factura.ivas)
+      const datosEmisor = JSON.parse(factura.datosEmisor)
+
+      // Preparar datos para el PDF
+      const pdfData = {
+        PtoVta: factura.ptoVta,
+        CbteTipo: factura.cbteTipo,
+        CbteDesde: factura.cbteDesde,
+        DocTipo: factura.docTipo,
+        DocNro: factura.docNro,
+        ImpTotal: factura.impTotal,
+        ImpNeto: factura.impNeto,
+        ImpIVA: factura.impIVA,
+        CAE: factura.cae,
+        CAEFchVto: factura.caeVencimiento,
+        FchProceso: factura.fechaProceso,
+        TipoFactura: factura.tipoFactura,
+        RazonSocial: factura.razonSocial,
+        Domicilio: factura.domicilio,
+        Concepto: factura.concepto,
+        CondicionVenta: factura.condicionVenta,
+        CondicionIVA: factura.condicionIVA,
+        Articulos: articulos,
+        IVAsAgrupados: ivas,
+        DatosEmisor: datosEmisor,
+      }
+
+      const response = await generarPDF(pdfData)
+
+      if (response.success) {
+        toast.success('PDF regenerado exitosamente', {
+          id: `pdf-${factura.id}`,
+          description: response.message || 'El archivo está guardado',
+        })
+      } else {
+        toast.error(`Error al regenerar PDF: ${response.error}`, {
+          id: `pdf-${factura.id}`,
+        })
+      }
+    } catch (error: any) {
+      console.error('Error al regenerar PDF:', error)
+      toast.error('Error al regenerar PDF', { id: `pdf-${factura.id}` })
+    } finally {
+      setRegenerandoPDF(null)
+    }
+  }
+
+  const formatearFecha = (fecha: string): string => {
+    // Convertir de YYYY-MM-DD a DD/MM/YYYY
+    const [year, month, day] = fecha.split('-')
+    return `${day}/${month}/${year}`
+  }
+
+  const getNombreTipoComprobante = (cbteTipo: number): string => {
+    if (cbteTipo === 1) return 'Factura A'
+    if (cbteTipo === 6) return 'Factura B'
+    return `Tipo ${cbteTipo}`
   }
 
   return (
@@ -177,7 +228,7 @@ export function ComprobantesEmitidos() {
             className="w-full"
           >
             <Filter className="mr-2 h-4 w-4" />
-            Filtros
+            Filtros Avanzados
             {mostrarFiltros ? (
               <ChevronUp className="ml-2 h-4 w-4" />
             ) : (
@@ -240,37 +291,36 @@ export function ComprobantesEmitidos() {
                   placeholder="20123456789"
                 />
               </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="codigoAutorizacion">Código de Autorización (CAE)</Label>
-                <Input
-                  id="codigoAutorizacion"
-                  value={codigoAutorizacion}
-                  onChange={(e) => setCodigoAutorizacion(e.target.value)}
-                  placeholder="74112153083444"
-                />
-              </div>
             </div>
           )}
 
-          {/* Botón de búsqueda */}
-          <Button
-            onClick={handleBuscar}
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Consultando...
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Buscar Comprobantes
-              </>
-            )}
-          </Button>
+          {/* Botones de búsqueda */}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleBuscar}
+              disabled={loading}
+              className="flex-1"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Buscando...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Buscar
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleLimpiarFiltros}
+              variant="outline"
+              disabled={loading}
+            >
+              Limpiar
+            </Button>
+          </div>
 
           {/* Mensaje de error */}
           {error && (
@@ -282,7 +332,7 @@ export function ComprobantesEmitidos() {
                   </svg>
                 </div>
                 <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium text-red-800">Error al consultar comprobantes</h3>
+                  <h3 className="text-sm font-medium text-red-800">Error</h3>
                   <p className="mt-1 text-sm text-red-700">{error}</p>
                 </div>
               </div>
@@ -292,10 +342,10 @@ export function ComprobantesEmitidos() {
       </Card>
 
       {/* Tabla de resultados */}
-      {comprobantes.length > 0 && (
+      {facturas.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Resultados ({comprobantes.length})</CardTitle>
+            <CardTitle>Resultados ({facturas.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -304,35 +354,75 @@ export function ComprobantesEmitidos() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Pto. Venta</TableHead>
                     <TableHead>Número</TableHead>
-                    <TableHead>Receptor</TableHead>
-                    <TableHead>Doc. Receptor</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Doc. Cliente</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>CAE</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {comprobantes.map((comp, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{comp['Fecha de Emisión']}</TableCell>
-                      <TableCell>{comp['Tipo de Comprobante']}</TableCell>
-                      <TableCell>{comp['Punto de Venta']}</TableCell>
-                      <TableCell>{comp['Número Desde']}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {comp['Denominación Receptor']}
+                  {facturas.map((factura) => (
+                    <TableRow key={factura.id}>
+                      <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
+                      <TableCell>{getNombreTipoComprobante(factura.cbteTipo)}</TableCell>
+                      <TableCell>
+                        {String(factura.ptoVta).padStart(5, '0')}-{String(factura.cbteDesde).padStart(8, '0')}
                       </TableCell>
-                      <TableCell>{comp['Nro. Doc. Receptor']}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {factura.razonSocial || 'Sin nombre'}
+                      </TableCell>
+                      <TableCell>{factura.docNro || '-'}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${comp['Imp. Total']}
+                        ${factura.impTotal.toFixed(2)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {comp['Cód. Autorización']}
+                        {factura.cae}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRegenerarPDF(factura)}
+                            disabled={regenerandoPDF === factura.id}
+                            title="Regenerar PDF"
+                          >
+                            {regenerandoPDF === factura.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRegenerarPDF(factura)}
+                            disabled={regenerandoPDF === factura.id}
+                            title="Imprimir"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mensaje cuando no hay resultados */}
+      {!loading && facturas.length === 0 && !error && (
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center text-gray-500">
+              <FileText className="mx-auto h-12 w-12 mb-2 opacity-50" />
+              <p>No hay facturas guardadas</p>
+              <p className="text-sm mt-1">Las facturas que genere aparecerán aquí</p>
             </div>
           </CardContent>
         </Card>

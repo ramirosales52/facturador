@@ -191,6 +191,63 @@ export function useArca() {
     })
   }
 
+  const guardarFactura = async (factura: any): Promise<{ success: boolean, id?: number, error?: string }> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post(`${apiUrl}/facturas/guardar`, factura)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al guardar factura'
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  const obtenerFacturas = async (filtros?: {
+    fechaDesde?: string
+    fechaHasta?: string
+    docNro?: number
+    ptoVta?: number
+    cbteTipo?: number
+    limit?: number
+    offset?: number
+  }): Promise<{ success: boolean, data?: any[], total?: number, error?: string }> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const params = new URLSearchParams()
+      
+      if (filtros?.fechaDesde) params.append('fechaDesde', filtros.fechaDesde)
+      if (filtros?.fechaHasta) params.append('fechaHasta', filtros.fechaHasta)
+      if (filtros?.docNro) params.append('docNro', filtros.docNro.toString())
+      if (filtros?.ptoVta) params.append('ptoVta', filtros.ptoVta.toString())
+      if (filtros?.cbteTipo) params.append('cbteTipo', filtros.cbteTipo.toString())
+      if (filtros?.limit) params.append('limit', filtros.limit.toString())
+      if (filtros?.offset) params.append('offset', filtros.offset.toString())
+
+      const response = await axios.get(`${apiUrl}/facturas?${params.toString()}`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener facturas'
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  const obtenerFacturaPorId = async (id: number): Promise<{ success: boolean, data?: any, error?: string }> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const response = await axios.get(`${apiUrl}/facturas/${id}`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener factura'
+      return { success: false, error: errorMsg }
+    }
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -205,5 +262,8 @@ export function useArca() {
     consultarContribuyente,
     getPuntosVentaHabilitados,
     getMisComprobantes,
+    guardarFactura,
+    obtenerFacturas,
+    obtenerFacturaPorId,
   }
 }

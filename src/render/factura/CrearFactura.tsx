@@ -22,7 +22,7 @@ import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
 
 function CrearFactura() {
-  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente } = useArca()
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, consultarContribuyente, guardarFactura } = useArca()
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: DEFAULTS.TIPO_FACTURA,
@@ -266,6 +266,57 @@ function CrearFactura() {
 
     const response = await crearFactura(facturaData)
     setResultado(response)
+
+    // Si la factura se creó exitosamente, guardarla en la base de datos local
+    if (response.success && response.data) {
+      try {
+        const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
+        const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
+
+        // Calcular IVAs agrupados para guardar
+        const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos)
+
+        const facturaGuardada = {
+          cae: response.data.CAE,
+          caeVencimiento: response.data.CAEFchVto,
+          fechaProceso: response.data.FchProceso,
+          ptoVta: response.data.PtoVta,
+          cbteTipo: response.data.CbteTipo,
+          cbteDesde: response.data.CbteDesde,
+          cbteHasta: response.data.CbteHasta,
+          docTipo: response.data.DocTipo,
+          docNro: response.data.DocNro,
+          impTotal: response.data.ImpTotal,
+          impNeto: Number.parseFloat(formData.ImpNeto),
+          impIVA: Number.parseFloat(formData.ImpIVA),
+          tipoFactura: formData.TipoFactura,
+          concepto: conceptoNombre,
+          condicionIVA: condicionIVANombre,
+          condicionVenta: condicionVentaNombre,
+          razonSocial: formData.RazonSocial || '',
+          domicilio: formData.Domicilio || '',
+          articulos: JSON.stringify(formData.Articulos),
+          ivas: JSON.stringify(ivasAgrupados),
+          datosEmisor: JSON.stringify({
+            cuit: datosEmisor.cuit,
+            razonSocial: datosEmisor.razonSocial,
+            domicilio: datosEmisor.domicilio,
+            condicionIVA: datosEmisor.condicionIVA === '1'
+              ? 'Responsable Inscripto'
+              : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+            iibb: datosEmisor.iibb || 'Exento',
+            inicioActividades: datosEmisor.inicioActividades,
+          }),
+        }
+
+        await guardarFactura(facturaGuardada)
+        console.log('✅ Factura guardada en la base de datos local')
+      } catch (error) {
+        console.error('Error al guardar factura en BD local:', error)
+        // No bloqueamos el flujo si falla el guardado local
+      }
+    }
 
     // Si la factura se creó exitosamente, generar QR automáticamente
     if (response.success && response.data) {
