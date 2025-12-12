@@ -464,7 +464,6 @@ function CrearFactura() {
 
       // Si es DNI (tipo 96), primero obtener el CUIT
       if (formData.DocTipo === '96') {
-        toast.loading('Obteniendo CUIT desde DNI...', { id: toastIdLoading })
         
         const responseCUIT = await obtenerCUITDesdeDNI(formData.DocNro)
         
@@ -479,9 +478,6 @@ function CrearFactura() {
 
         cuitABuscar = responseCUIT.data.cuit.toString()
         console.log(`✅ CUIT obtenido desde DNI ${formData.DocNro}: ${cuitABuscar}`)
-        
-        // Actualizar el toast
-        toast.loading('Consultando datos del contribuyente...', { id: toastIdLoading })
       }
 
       // Ahora consultar los datos con el CUIT
