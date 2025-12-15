@@ -98,12 +98,28 @@ ipcMain.handle('get-backend-port', () => {
   return BACKEND_PORT
 })
 
+// IPC para verificar si un archivo existe
+ipcMain.handle('fs-exists', async (_event, filePath: string) => {
+  try {
+    return existsSync(filePath)
+  }
+  catch (error) {
+    console.error('Error al verificar archivo:', error)
+    return false
+  }
+})
+
 // IPC para shell.showItemInFolder - Abrir carpeta y seleccionar archivo
 ipcMain.handle('shell-open-path', async (_event, filePath: string) => {
   try {
     if (!filePath) {
       console.error('Ruta no válida')
       return 'Ruta no válida'
+    }
+
+    // Verificar si el archivo existe
+    if (!existsSync(filePath)) {
+      return 'El archivo fue borrado o movido'
     }
 
     // Normalizar la ruta

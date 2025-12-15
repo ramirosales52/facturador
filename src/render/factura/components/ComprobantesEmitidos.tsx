@@ -226,7 +226,9 @@ export function ComprobantesEmitidos() {
         // @ts-ignore
         const result = await window.electron.shell.openPath(pdfPath)
         // El handler retorna 'ok' si tuvo éxito, o un mensaje de error si falló
-        if (result !== 'ok') {
+        if (result === 'El archivo fue borrado o movido') {
+          toast.error('El archivo fue borrado o movido')
+        } else if (result !== 'ok') {
           toast.error('No se pudo abrir la carpeta')
         }
       } else {

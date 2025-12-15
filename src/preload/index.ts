@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld(
   'electron',
   {
     sendMsg: (msg: string): Promise<string> => ipcRenderer.invoke('msg', msg),
-    onReplyMsg: (cb: (msg: string) => any) => ipcRenderer.on('reply-msg', (e, msg: string) => {
+    onReplyMsg: (cb: (msg: string) => any) => ipcRenderer.on('reply-msg', (_e, msg: string) => {
       cb(msg)
     }),
     getCommandLineCuit: (): Promise<string | null> => ipcRenderer.invoke('get-command-line-cuit'),
@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld(
     },
     dialog: {
       showOpenDialog: (options: any): Promise<any> => ipcRenderer.invoke('dialog-show-open', options),
+    },
+    fs: {
+      exists: (path: string): Promise<boolean> => ipcRenderer.invoke('fs-exists', path),
     },
     store: {
       get: (key: string): Promise<any> => ipcRenderer.invoke('store-get', key),
