@@ -141,6 +141,34 @@ ipcMain.handle('dialog-show-open', async (_event, options: any) => {
   return await dialog.showOpenDialog(options)
 })
 
+// IPC para imprimir PDF
+ipcMain.handle('print-pdf', async (_event, filePath: string) => {
+  try {
+    if (!filePath) {
+      return { success: false, error: 'Ruta no válida' }
+    }
+
+    // Verificar si el archivo existe
+    if (!existsSync(filePath)) {
+      return { success: false, error: 'El archivo fue borrado o movido' }
+    }
+
+    // Abrir el PDF con la aplicación predeterminada del sistema
+    // Esto abrirá el PDF y el usuario podrá imprimirlo desde ahí
+    const result = await shell.openPath(filePath)
+    
+    if (result === '') {
+      return { success: true }
+    } else {
+      return { success: false, error: result }
+    }
+  }
+  catch (error) {
+    console.error('Error al abrir PDF para imprimir:', error)
+    return { success: false, error: String(error) }
+  }
+})
+
 // IPC para electron-store
 ipcMain.handle('store-get', (_event, key: string) => {
   return simpleStore.get(key)

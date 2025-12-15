@@ -240,6 +240,29 @@ export function ComprobantesEmitidos() {
     }
   }
 
+  const handleImprimir = async (pdfPath: string) => {
+    try {
+      // @ts-ignore - Electron API
+      if (window.electron?.print?.pdf) {
+        // @ts-ignore
+        const result = await window.electron.print.pdf(pdfPath)
+        
+        if (!result.success) {
+          if (result.error === 'El archivo fue borrado o movido') {
+            toast.error('El archivo fue borrado o movido')
+          } else {
+            toast.error('No se pudo abrir el PDF para imprimir')
+          }
+        }
+      } else {
+        toast.info('Función disponible solo en la aplicación empaquetada')
+      }
+    } catch (error) {
+      console.error('Error al imprimir:', error)
+      toast.error('Error al imprimir el PDF')
+    }
+  }
+
   const formatearFecha = (fecha: string): string => {
     // Convertir de YYYY-MM-DD a DD/MM/YYYY
     const [year, month, day] = fecha.split('-')
@@ -451,8 +474,9 @@ export function ComprobantesEmitidos() {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={true}
-                            title="Imprimir (Próximamente)"
+                            onClick={() => handleImprimir(factura.pdfPath!)}
+                            disabled={!factura.pdfPath}
+                            title={factura.pdfPath ? "Imprimir" : "PDF no generado"}
                           >
                             <Printer className="h-4 w-4" />
                           </Button>

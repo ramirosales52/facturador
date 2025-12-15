@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld(
     fs: {
       exists: (path: string): Promise<boolean> => ipcRenderer.invoke('fs-exists', path),
     },
+    print: {
+      pdf: (path: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('print-pdf', path),
+    },
     store: {
       get: (key: string): Promise<any> => ipcRenderer.invoke('store-get', key),
       set: (key: string, value: any): Promise<void> => ipcRenderer.invoke('store-set', key, value),
