@@ -230,7 +230,6 @@ function CrearFactura() {
       setHtmlPreview(null)
     }
   }
-  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
