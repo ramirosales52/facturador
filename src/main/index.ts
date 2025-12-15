@@ -156,10 +156,13 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     // Crear una ventana invisible para cargar el PDF
     const printWindow = new BrowserWindow({
       show: false,
+      width: 794, // A4 width en píxeles a 96 DPI
+      height: 1123, // A4 height en píxeles a 96 DPI
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         plugins: true,
+        zoomFactor: 1.0,
       },
     })
 
@@ -179,6 +182,10 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
       },
       pageSize: 'A4',
       scaleFactor: 100,
+      dpi: {
+        horizontal: 300,
+        vertical: 300,
+      },
     }, (success, errorType) => {
       if (!success && errorType) {
         console.error('Error al imprimir:', errorType)
