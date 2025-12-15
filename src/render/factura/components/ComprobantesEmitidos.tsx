@@ -222,13 +222,10 @@ export function ComprobantesEmitidos() {
   const handleAbrirCarpeta = async (pdfPath: string) => {
     try {
       // @ts-ignore - Electron API
-      if (window.electron?.shell?.openPath) {
+      if (window.electron?.shell?.showItemInFolder) {
         // @ts-ignore
-        const result = await window.electron.shell.openPath(pdfPath)
-        // shell.openPath retorna una cadena vacía si tuvo éxito, o un mensaje de error si falló
-        if (result !== '') {
-          toast.error('No se pudo abrir la carpeta')
-        }
+        // showItemInFolder abre el explorador de archivos y selecciona el archivo
+        window.electron.shell.showItemInFolder(pdfPath)
       } else {
         toast.info('Función disponible solo en la aplicación empaquetada')
       }
