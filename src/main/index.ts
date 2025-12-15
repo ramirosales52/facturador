@@ -157,12 +157,13 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     // Crear una ventana VISIBLE para cargar el PDF
     const printWindow = new BrowserWindow({
       show: true, // Mostrar la ventana para que el diálogo de impresión funcione
-      width: 800,
-      height: 600,
       webPreferences: {
         plugins: true, // Activar el plugin de PDF de Chromium
       },
     })
+
+    // Maximizar la ventana
+    printWindow.maximize()
 
     // Convertir la ruta del archivo a URL correcta
     const fileUrl = pathToFileURL(filePath).toString()
