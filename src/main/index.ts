@@ -154,9 +154,11 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
       return { success: false, error: 'El archivo fue borrado o movido' }
     }
 
-    // Crear una ventana invisible para cargar el PDF
+    // Crear una ventana VISIBLE para cargar el PDF
     const printWindow = new BrowserWindow({
-      show: false,
+      show: true, // Mostrar la ventana para que el diálogo de impresión funcione
+      width: 800,
+      height: 600,
       webPreferences: {
         plugins: true, // Activar el plugin de PDF de Chromium
       },
@@ -165,26 +167,31 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     // Convertir la ruta del archivo a URL correcta
     const fileUrl = pathToFileURL(filePath).toString()
 
-    // Cargar el PDF
-    await printWindow.loadURL(fileUrl)
-
-    // Esperar a que el PDF esté completamente cargado antes de imprimir
+    // Registrar el evento ANTES de cargar la URL
     printWindow.webContents.once('did-finish-load', () => {
-      // Abrir el diálogo de impresión de Chromium
-      printWindow.webContents.print(
-        {
-          silent: false, // Esto abre el diálogo de impresión
-          printBackground: true,
-        },
-        (success, errorType) => {
-          if (!success && errorType) {
-            console.error('Error al imprimir:', errorType)
-          }
-          // Cerrar la ventana cuando termine
-          printWindow.close()
-        }
-      )
+      console.log('PDF cargado, abriendo diálogo de impresión...')
+      
+      // Pequeño delay para asegurar que todo esté listo
+      setTimeout(() => {
+        // Usar executeJavaScript para disparar window.print() del navegador
+        printWindow.webContents.executeJavaScript('window.print()')
+          .then(() => {
+            console.log('Diálogo de impresión abierto')
+          })
+          .catch((error) => {
+            console.error('Error al abrir diálogo de impresión:', error)
+            printWindow.close()
+          })
+      }, 500)
     })
+
+    // Cerrar la ventana cuando el usuario cierre el diálogo de impresión
+    printWindow.on('close', () => {
+      console.log('Ventana de impresión cerrada')
+    })
+
+    // Cargar el PDF DESPUÉS de registrar el evento
+    await printWindow.loadURL(fileUrl)
 
     return { success: true }
   }
