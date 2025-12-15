@@ -168,8 +168,14 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     // Esperar a que el contenido esté listo
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Abrir el diálogo de impresión
-    printWindow.webContents.print({}, (success, errorType) => {
+    // Abrir el diálogo de impresión con configuración personalizada
+    printWindow.webContents.print({
+      silent: false,
+      printBackground: true,
+      margins: {
+        marginType: 'none', // Sin márgenes adicionales
+      },
+    }, (success, errorType) => {
       if (!success && errorType) {
         console.error('Error al imprimir:', errorType)
       }
