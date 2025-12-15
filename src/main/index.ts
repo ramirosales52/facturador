@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { NestFactory } from '@nestjs/core'
 import { config } from 'dotenv'
-import { app, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { AppModule } from './app.module'
 import { extraerCUITDeArgumentos } from './utils/cuit-validator'
 import { findAvailablePort } from './utils/port-finder'
@@ -153,15 +153,32 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
       return { success: false, error: 'El archivo fue borrado o movido' }
     }
 
-    // Abrir el PDF con la aplicación predeterminada del sistema
-    // Esto abrirá el PDF y el usuario podrá imprimirlo desde ahí
-    const result = await shell.openPath(filePath)
-    
-    if (result === '') {
-      return { success: true }
-    } else {
-      return { success: false, error: result }
-    }
+    // Crear una ventana invisible para cargar el PDF
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    })
+
+    // Cargar el PDF
+    await printWindow.loadURL(`file://${filePath}`)
+
+    // Esperar a que el contenido esté listo
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Abrir el diálogo de impresión
+    printWindow.webContents.print({}, (success, errorType) => {
+      if (!success && errorType) {
+        console.error('Error al imprimir:', errorType)
+      }
+      
+      // Cerrar la ventana después de imprimir o cancelar
+      printWindow.close()
+    })
+
+    return { success: true }
   }
   catch (error) {
     console.error('Error al abrir PDF para imprimir:', error)
