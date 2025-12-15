@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { NestFactory } from '@nestjs/core'
 import { config } from 'dotenv'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
@@ -157,25 +158,32 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     const printWindow = new BrowserWindow({
       show: false,
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        plugins: true,
+        plugins: true, // Activar el plugin de PDF de Chromium
       },
     })
 
+    // Convertir la ruta del archivo a URL correcta
+    const fileUrl = pathToFileURL(filePath).toString()
+
     // Cargar el PDF
-    await printWindow.loadURL(`file://${filePath}`)
+    await printWindow.loadURL(fileUrl)
 
-    // Esperar a que el contenido esté listo
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Ejecutar el comando de impresión de Chrome (Ctrl+P)
-    // Esto abre el diálogo de impresión del navegador, no el del sistema
-    printWindow.webContents.executeJavaScript('window.print()')
-
-    // Escuchar cuando se cierre la ventana de impresión
-    printWindow.on('closed', () => {
-      // La ventana ya se cerró
+    // Esperar a que el PDF esté completamente cargado antes de imprimir
+    printWindow.webContents.once('did-finish-load', () => {
+      // Abrir el diálogo de impresión de Chromium
+      printWindow.webContents.print(
+        {
+          silent: false, // Esto abre el diálogo de impresión
+          printBackground: true,
+        },
+        (success, errorType) => {
+          if (!success && errorType) {
+            console.error('Error al imprimir:', errorType)
+          }
+          // Cerrar la ventana cuando termine
+          printWindow.close()
+        }
+      )
     })
 
     return { success: true }
