@@ -159,6 +159,7 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        plugins: true,
       },
     })
 
@@ -166,15 +167,18 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     await printWindow.loadURL(`file://${filePath}`)
 
     // Esperar a que el contenido esté listo
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Abrir el diálogo de impresión con configuración personalizada
     printWindow.webContents.print({
       silent: false,
       printBackground: true,
+      color: true,
       margins: {
-        marginType: 'none', // Sin márgenes adicionales
+        marginType: 'none',
       },
+      pageSize: 'A4',
+      scaleFactor: 100,
     }, (success, errorType) => {
       if (!success && errorType) {
         console.error('Error al imprimir:', errorType)
