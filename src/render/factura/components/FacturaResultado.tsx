@@ -1,7 +1,6 @@
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { PDFActions } from './PDFActions'
 import { PDFPreview } from './PDFPreview'
-import { QRCode } from './QRCode'
 
 export interface FacturaResultadoData {
   success: boolean
@@ -19,6 +18,8 @@ export interface FacturaResultadoData {
   }
   facturaLocalId?: number
   error?: string
+  tipoFactura?: string
+  razonSocial?: string
 }
 
 interface FacturaResultadoProps {
@@ -31,42 +32,83 @@ interface FacturaResultadoProps {
   onSelectFolder?: () => Promise<void>
 }
 
-export function FacturaResultado({ resultado, qrUrl, pdfUrl, onGenerarPDF, htmlPreview, pdfSavePath, onSelectFolder }: FacturaResultadoProps) {
+export function FacturaResultado({ 
+  resultado, 
+  pdfUrl, 
+  onGenerarPDF, 
+  htmlPreview, 
+  pdfSavePath, 
+  onSelectFolder,
+}: FacturaResultadoProps) {
+  // Obtener nombre del tipo de documento
+  const getNombreTipoDoc = (tipo?: number): string => {
+    if (!tipo) return 'N/A'
+    switch (tipo) {
+      case 80: return 'CUIT'
+      case 96: return 'DNI'
+      case 99: return 'Consumidor Final'
+      default: return `Tipo ${tipo}`
+    }
+  }
+
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
       {resultado.success
         ? (
           <div>
-            <p className="font-bold text-green-800 text-lg mb-2 flex items-center gap-2">
+            <p className="font-bold text-green-800 text-lg mb-4 flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
               Factura creada exitosamente
             </p>
-            <div className="space-y-1 text-green-800">
-              <p>
+            
+            {/* Grid de 2 columnas con máximo 4 filas */}
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-green-800 mb-4">
+              <div>
+                <span className="font-medium">Tipo de Factura:</span>
+                {' '}
+                {resultado.tipoFactura || 'N/A'}
+              </div>
+              <div>
                 <span className="font-medium">CAE:</span>
                 {' '}
                 {resultado.data?.CAE}
-              </p>
-              <p>
+              </div>
+              
+              <div>
+                <span className="font-medium">Cliente:</span>
+                {' '}
+                {resultado.razonSocial || 'Consumidor Final'}
+              </div>
+              <div>
                 <span className="font-medium">Vencimiento CAE:</span>
                 {' '}
                 {resultado.data?.CAEFchVto}
-              </p>
-              <p>
+              </div>
+              
+              <div>
+                <span className="font-medium">Documento:</span>
+                {' '}
+                {getNombreTipoDoc(resultado.data?.DocTipo)} {resultado.data?.DocNro || ''}
+              </div>
+              <div>
                 <span className="font-medium">Comprobante Nro:</span>
                 {' '}
-                {resultado.data?.CbteDesde}
-              </p>
-              <p>
+                {String(resultado.data?.PtoVta).padStart(5, '0')}-{String(resultado.data?.CbteDesde).padStart(8, '0')}
+              </div>
+              
+              <div>
+                <span className="font-medium">Monto:</span>
+                {' '}
+                ${resultado.data?.ImpTotal?.toFixed(2)}
+              </div>
+              <div>
                 <span className="font-medium">Punto de Venta:</span>
                 {' '}
                 {resultado.data?.PtoVta}
-              </p>
+              </div>
             </div>
 
-            {qrUrl && <QRCode qrUrl={qrUrl} />}
-
-            {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={qrUrl} />}
+            {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={null} />}
 
             <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} pdfSavePath={pdfSavePath} onSelectFolder={onSelectFolder} />
           </div>

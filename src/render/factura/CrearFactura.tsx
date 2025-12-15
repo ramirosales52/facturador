@@ -201,7 +201,7 @@ function CrearFactura() {
     recalcularTotales(nuevosArticulos)
   }
 
-  const limpiarFormulario = (): void => {
+  const limpiarFormulario = (mantenerResultado = false): void => {
     setFormData({
       TipoFactura: DEFAULTS.TIPO_FACTURA,
       DocTipo: DEFAULTS.TIPO_DOCUMENTO,
@@ -209,22 +209,27 @@ function CrearFactura() {
       Concepto: DEFAULTS.CONCEPTO,
       CondicionIVA: DEFAULTS.CONDICION_IVA,
       CondicionVenta: 'efectivo',
+      RazonSocial: '',
+      Domicilio: '',
       Articulos: [{
         codigo: '',
         descripcion: 'Componentes electrónicos',
         cantidad: DEFAULTS.CANTIDAD_DEFAULT,
         unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
-        precioUnitario: 0,
+        precioUnitario: undefined,
         alicuotaIVA: DEFAULTS.ALICUOTA_IVA_DEFAULT,
       }],
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
     })
-    setResultado(null)
-    setQrUrl(null)
-    setPdfUrl(null)
-    setHtmlPreview(null)
+    if (!mantenerResultado) {
+      setResultado(null)
+      setQrUrl(null)
+      setPdfUrl(null)
+      setHtmlPreview(null)
+    }
+  }
   }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -265,7 +270,12 @@ function CrearFactura() {
     }
 
     const response = await crearFactura(facturaData)
-    setResultado(response)
+    // Agregar datos adicionales al resultado
+    setResultado({
+      ...response,
+      tipoFactura: formData.TipoFactura,
+      razonSocial: formData.RazonSocial,
+    })
 
     // Si la factura se creó exitosamente, guardarla en la base de datos local
     if (response.success && response.data) {
@@ -442,6 +452,11 @@ function CrearFactura() {
         setHtmlPreview(htmlContent)
       }
     }
+
+    // Limpiar formulario solo si la factura se creó exitosamente, pero mantener el resultado
+    if (response.success) {
+      limpiarFormulario(true)
+    }
   }
 
   const handleConsultarContribuyente = async (): Promise<void> => {
@@ -469,9 +484,9 @@ function CrearFactura() {
 
       // Si es DNI (tipo 96), primero obtener el CUIT
       if (formData.DocTipo === '96') {
-        
+
         const responseCUIT = await obtenerCUITDesdeDNI(formData.DocNro)
-        
+
         if (!responseCUIT.success || !responseCUIT.data?.cuit) {
           toast.dismiss(toastIdLoading)
           toast.error('DNI no encontrado', {
@@ -654,7 +669,7 @@ function CrearFactura() {
 
     if (pdfResponse.success && pdfResponse.filePath) {
       setPdfUrl(pdfResponse.filePath)
-      
+
       // Si existe el ID de la factura guardada localmente, actualizar el pdfPath
       if (resultado?.facturaLocalId) {
         try {
@@ -665,7 +680,7 @@ function CrearFactura() {
           // No bloqueamos el flujo si falla la actualización
         }
       }
-      
+
       toast.success(
         'PDF generado exitosamente',
         {
@@ -674,7 +689,6 @@ function CrearFactura() {
           duration: 3000,
         },
       )
-      limpiarFormulario()
     }
     else {
       toast.error(
