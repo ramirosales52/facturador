@@ -169,23 +169,13 @@ ipcMain.handle('print-pdf', async (_event, filePath: string) => {
     // Esperar a que el contenido esté listo
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Abrir el diálogo de impresión con configuración personalizada
-    printWindow.webContents.print({
-      silent: false,
-      printBackground: true,
-      color: true,
-      margins: {
-        marginType: 'none',
-      },
-      pageSize: 'A4',
-      scaleFactor: 100,
-    }, (success, errorType) => {
-      if (!success && errorType) {
-        console.error('Error al imprimir:', errorType)
-      }
-      
-      // Cerrar la ventana después de imprimir o cancelar
-      printWindow.close()
+    // Ejecutar el comando de impresión de Chrome (Ctrl+P)
+    // Esto abre el diálogo de impresión del navegador, no el del sistema
+    printWindow.webContents.executeJavaScript('window.print()')
+
+    // Escuchar cuando se cierre la ventana de impresión
+    printWindow.on('closed', () => {
+      // La ventana ya se cerró
     })
 
     return { success: true }
