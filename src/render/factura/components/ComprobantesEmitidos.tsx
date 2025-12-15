@@ -225,7 +225,8 @@ export function ComprobantesEmitidos() {
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
         const result = await window.electron.shell.openPath(pdfPath)
-        if (result) {
+        // shell.openPath retorna una cadena vacía si tuvo éxito, o un mensaje de error si falló
+        if (result !== '') {
           toast.error('No se pudo abrir la carpeta')
         }
       } else {
