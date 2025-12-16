@@ -802,15 +802,11 @@ export class ArcaService {
       )
 
       // Nombre del archivo
-      // Formato para Consumidor Final: [tipoFactura]_[nroComprobante]_[datos]_CFinal
-      // Formato para otros: [tipoFactura]_[nroComprobante]_[nombre]_[apellido]_[cuit]
-      // Determinar tipo de factura (A o B) basado en CbteTipo
-      const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
-
-      // Formatear número de comprobante: 00001-00000001
-      const nroComprobante = `${String(facturaInfo.PtoVta).padStart(5, '0')}-${String(facturaInfo.CbteDesde).padStart(8, '0')}`
-
-      let nombreArchivo = ''
+      // Formato para Consumidor Final: CFinal_[nroComprobante]_[datos]
+      // Formato para otros: [tipoFactura]_[nroComprobante]_[nombre]_[cuit]
+      
+      // Formatear número de comprobante: 00000001
+      const nroComprobante = String(facturaInfo.CbteDesde).padStart(8, '0')
 
       // Verificar si es Consumidor Final (DocTipo 99)
       const esConsumidorFinal = facturaInfo.DocTipo === 99
@@ -819,10 +815,12 @@ export class ArcaService {
       const tieneRazonSocial = facturaInfo.RazonSocial && facturaInfo.RazonSocial.trim() !== ''
       const tieneDocNro = facturaInfo.DocNro && facturaInfo.DocNro !== 0
 
+      let nombreArchivo = ''
+
       if (esConsumidorFinal) {
-        // Para Consumidor Final, siempre incluir "CFinal" al final
+        // Para Consumidor Final, usar "CFinal" al inicio
         if (tieneRazonSocial && tieneDocNro) {
-          // Tiene nombre y CUIT: [tipoFactura]_[nroComprobante]_[nombre]_[cuit]_CFinal
+          // Tiene nombre y CUIT: CFinal_[nroComprobante]_[nombre]_[cuit]
           const razonSocialLimpia = facturaInfo.RazonSocial!
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
@@ -830,9 +828,9 @@ export class ArcaService {
             .trim()
             .replace(/\s+/g, '_') // Reemplazar espacios por _
 
-          nombreArchivo = `${tipoFacturaLetra}_${nroComprobante}_${razonSocialLimpia}_${facturaInfo.DocNro}_CFinal.pdf`
+          nombreArchivo = `CFinal_${nroComprobante}_${razonSocialLimpia}_${facturaInfo.DocNro}.pdf`
         } else if (tieneRazonSocial) {
-          // Solo tiene nombre: [tipoFactura]_[nroComprobante]_[nombre]_CFinal
+          // Solo tiene nombre: CFinal_[nroComprobante]_[nombre]
           const razonSocialLimpia = facturaInfo.RazonSocial!
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
@@ -840,16 +838,18 @@ export class ArcaService {
             .trim()
             .replace(/\s+/g, '_')
 
-          nombreArchivo = `${tipoFacturaLetra}_${nroComprobante}_${razonSocialLimpia}_CFinal.pdf`
+          nombreArchivo = `CFinal_${nroComprobante}_${razonSocialLimpia}.pdf`
         } else if (tieneDocNro) {
-          // Solo tiene CUIT: [tipoFactura]_[nroComprobante]_[cuit]_CFinal
-          nombreArchivo = `${tipoFacturaLetra}_${nroComprobante}_${facturaInfo.DocNro}_CFinal.pdf`
+          // Solo tiene CUIT: CFinal_[nroComprobante]_[cuit]
+          nombreArchivo = `CFinal_${nroComprobante}_${facturaInfo.DocNro}.pdf`
         } else {
-          // No tiene nada: [tipoFactura]_[nroComprobante]_CFinal
-          nombreArchivo = `${tipoFacturaLetra}_${nroComprobante}_CFinal.pdf`
+          // No tiene nada: CFinal_[nroComprobante]
+          nombreArchivo = `CFinal_${nroComprobante}.pdf`
         }
       } else {
-        // No es Consumidor Final: usar formato normal sin "CFinal"
+        // No es Consumidor Final: usar letra de factura (A o B)
+        const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
+        
         if (tieneRazonSocial || tieneDocNro) {
           let nombreParte = ''
 
