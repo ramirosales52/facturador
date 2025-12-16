@@ -140,7 +140,7 @@ function CrearFactura() {
         }
       }
       else {
-        toast.info('Función disponible solo en la aplicación empaquetada', { id: 'seleccionar-carpeta' })
+        console.log('Función disponible solo en la aplicación empaquetada')
       }
     }
     catch (error) {

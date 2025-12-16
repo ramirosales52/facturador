@@ -30,7 +30,7 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder, loa
       }
       else {
         // Fallback para desarrollo
-        toast.info('Función disponible solo en la aplicación empaquetada', { id: 'abrir-carpeta-pdf' })
+        console.log('Función disponible solo en la aplicación empaquetada')
       }
     }
     catch (error) {

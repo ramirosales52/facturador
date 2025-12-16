@@ -182,7 +182,7 @@ export function ComprobantesEmitidos() {
     // Primero seleccionar carpeta
     // @ts-ignore - Electron API
     if (!window.electron?.dialog?.showOpenDialog) {
-      toast.error('Función disponible solo en la aplicación empaquetada')
+      console.log('Función disponible solo en la aplicación empaquetada')
       return
     }
 
@@ -286,7 +286,7 @@ export function ComprobantesEmitidos() {
           toast.error('No se pudo abrir la carpeta')
         }
       } else {
-        toast.info('Función disponible solo en la aplicación empaquetada')
+        console.log('Función disponible solo en la aplicación empaquetada')
       }
     } catch (error) {
       console.error('Error al abrir carpeta:', error)
@@ -309,7 +309,7 @@ export function ComprobantesEmitidos() {
           }
         }
       } else {
-        toast.info('Función disponible solo en la aplicación empaquetada')
+        console.log('Función disponible solo en la aplicación empaquetada')
       }
     } catch (error) {
       console.error('Error al imprimir:', error)
