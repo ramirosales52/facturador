@@ -51,7 +51,7 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
         {mostrarPreview ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
         {mostrarPreview ? 'Ocultar' : 'Mostrar'}
         {' '}
-        Vista Previa HTML
+        Vista Previa PDF
       </Button>
 
       {mostrarPreview && (

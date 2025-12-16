@@ -137,6 +137,7 @@ export class DatabaseService implements OnModuleInit {
     fechaDesde?: string;
     fechaHasta?: string;
     docNro?: number;
+    docTipo?: number;
     ptoVta?: number;
     cbteTipo?: number;
     limit?: number;
@@ -158,6 +159,11 @@ export class DatabaseService implements OnModuleInit {
     if (filtros?.docNro) {
       query += ' AND docNro = @docNro';
       params.docNro = filtros.docNro;
+    }
+
+    if (filtros?.docTipo) {
+      query += ' AND docTipo = @docTipo';
+      params.docTipo = filtros.docTipo;
     }
 
     if (filtros?.ptoVta) {
@@ -209,6 +215,7 @@ export class DatabaseService implements OnModuleInit {
     fechaDesde?: string;
     fechaHasta?: string;
     docNro?: number;
+    docTipo?: number;
     ptoVta?: number;
     cbteTipo?: number;
   }): number {
@@ -228,6 +235,11 @@ export class DatabaseService implements OnModuleInit {
     if (filtros?.docNro) {
       query += ' AND docNro = @docNro';
       params.docNro = filtros.docNro;
+    }
+
+    if (filtros?.docTipo) {
+      query += ' AND docTipo = @docTipo';
+      params.docTipo = filtros.docTipo;
     }
 
     if (filtros?.ptoVta) {

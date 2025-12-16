@@ -166,6 +166,7 @@ export class ArcaController {
     @Query('fechaDesde') fechaDesde?: string,
     @Query('fechaHasta') fechaHasta?: string,
     @Query('docNro') docNro?: string,
+    @Query('docTipo') docTipo?: string,
     @Query('ptoVta') ptoVta?: string,
     @Query('cbteTipo') cbteTipo?: string,
     @Query('limit') limit?: string,
@@ -177,6 +178,7 @@ export class ArcaController {
       if (fechaDesde) filtros.fechaDesde = fechaDesde
       if (fechaHasta) filtros.fechaHasta = fechaHasta
       if (docNro) filtros.docNro = parseInt(docNro)
+      if (docTipo) filtros.docTipo = parseInt(docTipo)
       if (ptoVta) filtros.ptoVta = parseInt(ptoVta)
       if (cbteTipo) filtros.cbteTipo = parseInt(cbteTipo)
       if (limit) filtros.limit = parseInt(limit)

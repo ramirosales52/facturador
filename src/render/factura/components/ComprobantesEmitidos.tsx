@@ -65,7 +65,6 @@ export function ComprobantesEmitidos() {
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
-  const [puntoVenta, setPuntoVenta] = useState('')
   const [tipoComprobante, setTipoComprobante] = useState('')
   const [tipoDoc, setTipoDoc] = useState('')
   const [nroDoc, setNroDoc] = useState('')
@@ -107,11 +106,11 @@ export function ComprobantesEmitidos() {
     if (fechaHasta) {
       filtros.fechaHasta = fechaHasta
     }
-    if (puntoVenta) {
-      filtros.ptoVta = parseInt(puntoVenta)
-    }
     if (tipoComprobante) {
       filtros.cbteTipo = parseInt(tipoComprobante)
+    }
+    if (tipoDoc) {
+      filtros.docTipo = parseInt(tipoDoc)
     }
     if (nroDoc) {
       filtros.docNro = parseInt(nroDoc)
@@ -123,7 +122,6 @@ export function ComprobantesEmitidos() {
   const handleLimpiarFiltros = () => {
     setFechaDesde('')
     setFechaHasta('')
-    setPuntoVenta('')
     setTipoComprobante('')
     setTipoDoc('')
     setNroDoc('')
@@ -175,7 +173,7 @@ export function ComprobantesEmitidos() {
     if (sortField !== field) {
       return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
     }
-    return sortDirection === 'asc' 
+    return sortDirection === 'asc'
       ? <ChevronUp className="ml-2 h-4 w-4" />
       : <ChevronDown className="ml-2 h-4 w-4" />
   }
@@ -201,7 +199,7 @@ export function ComprobantesEmitidos() {
       }
 
       const selectedPath = result.filePaths[0]
-      
+
       setRegenerandoPDF(factura.id)
       const toastId = `pdf-${factura.id}-${Date.now()}`
       toast.loading('Regenerando PDF...', { id: toastId })
@@ -217,7 +215,7 @@ export function ComprobantesEmitidos() {
         { id: '4', nombre: '10.5%', porcentaje: 10.5 },
         { id: '5', nombre: '21%', porcentaje: 21 },
       ]
-      
+
       const articulosConPorcentaje = articulos.map((articulo: any) => {
         const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
         return {
@@ -256,10 +254,10 @@ export function ComprobantesEmitidos() {
       if (response.success && response.filePath) {
         // Actualizar el pdfPath en la base de datos
         await actualizarPdfPath(factura.id, response.filePath)
-        
+
         // Recargar facturas para actualizar la tabla
         await cargarFacturas()
-        
+
         toast.dismiss(toastId)
         toast.success('PDF regenerado exitosamente', {
           description: response.message || 'El archivo está guardado',
@@ -302,7 +300,7 @@ export function ComprobantesEmitidos() {
       if (window.electron?.print?.pdf) {
         // @ts-ignore
         const result = await window.electron.print.pdf(pdfPath)
-        
+
         if (!result.success) {
           if (result.error === 'El archivo fue borrado o movido') {
             toast.error('El archivo fue borrado o movido')
@@ -364,7 +362,7 @@ export function ComprobantesEmitidos() {
             className="w-full"
           >
             <Filter className="mr-2 h-4 w-4" />
-            Filtros Avanzados
+            Filtros
             {mostrarFiltros ? (
               <ChevronUp className="ml-2 h-4 w-4" />
             ) : (
@@ -376,30 +374,13 @@ export function ComprobantesEmitidos() {
           {mostrarFiltros && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
               <div className="space-y-2">
-                <Label htmlFor="puntoVenta">Punto de Venta</Label>
+                <Label htmlFor="nroDoc">Número de Documento</Label>
                 <Input
-                  id="puntoVenta"
-                  type="number"
-                  value={puntoVenta}
-                  onChange={(e) => setPuntoVenta(e.target.value)}
-                  placeholder="1"
+                  id="nroDoc"
+                  value={nroDoc}
+                  onChange={(e) => setNroDoc(e.target.value)}
+                  placeholder="20123456789"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tipoComprobante">Tipo de Comprobante</Label>
-                <Select value={tipoComprobante} onValueChange={setTipoComprobante}>
-                  <SelectTrigger id="tipoComprobante">
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_COMPROBANTE.map((tipo) => (
-                      <SelectItem key={tipo.id} value={tipo.id}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -419,13 +400,19 @@ export function ComprobantesEmitidos() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nroDoc">Número de Documento</Label>
-                <Input
-                  id="nroDoc"
-                  value={nroDoc}
-                  onChange={(e) => setNroDoc(e.target.value)}
-                  placeholder="20123456789"
-                />
+                <Label htmlFor="tipoComprobante">Tipo de Comprobante</Label>
+                <Select value={tipoComprobante} onValueChange={setTipoComprobante}>
+                  <SelectTrigger id="tipoComprobante">
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_COMPROBANTE.map((tipo) => (
+                      <SelectItem key={tipo.id} value={tipo.id}>
+                        {tipo.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
@@ -488,7 +475,7 @@ export function ComprobantesEmitidos() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer select-none hover:bg-gray-50"
                       onClick={() => handleSort('tipoFactura')}
                     >
@@ -497,7 +484,7 @@ export function ComprobantesEmitidos() {
                         <SortIcon field="tipoFactura" />
                       </div>
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer select-none hover:bg-gray-50"
                       onClick={() => handleSort('fechaProceso')}
                     >
@@ -508,8 +495,8 @@ export function ComprobantesEmitidos() {
                     </TableHead>
                     <TableHead>Número</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Doc. Cliente</TableHead>
-                    <TableHead 
+                    <TableHead>Documento</TableHead>
+                    <TableHead
                       className="text-right cursor-pointer select-none hover:bg-gray-50"
                       onClick={() => handleSort('impTotal')}
                     >
@@ -518,7 +505,7 @@ export function ComprobantesEmitidos() {
                         <SortIcon field="impTotal" />
                       </div>
                     </TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                    <TableHead className="text-center"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -533,7 +520,7 @@ export function ComprobantesEmitidos() {
                         {factura.razonSocial || 'Sin nombre'}
                       </TableCell>
                       <TableCell>{factura.docNro || '-'}</TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-center font-semibold">
                         ${factura.impTotal.toFixed(2)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
