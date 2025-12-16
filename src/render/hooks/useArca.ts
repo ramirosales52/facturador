@@ -222,6 +222,7 @@ export function useArca() {
     fechaDesde?: string
     fechaHasta?: string
     docNro?: number
+    docTipo?: number
     ptoVta?: number
     cbteTipo?: number
     limit?: number
@@ -234,6 +235,7 @@ export function useArca() {
       if (filtros?.fechaDesde) params.append('fechaDesde', filtros.fechaDesde)
       if (filtros?.fechaHasta) params.append('fechaHasta', filtros.fechaHasta)
       if (filtros?.docNro) params.append('docNro', filtros.docNro.toString())
+      if (filtros?.docTipo) params.append('docTipo', filtros.docTipo.toString())
       if (filtros?.ptoVta) params.append('ptoVta', filtros.ptoVta.toString())
       if (filtros?.cbteTipo) params.append('cbteTipo', filtros.cbteTipo.toString())
       if (filtros?.limit) params.append('limit', filtros.limit.toString())
