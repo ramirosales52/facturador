@@ -702,7 +702,7 @@ function CrearFactura() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-6xl">
       <div className="mb-4">
         <h1 className="text-2xl font-bold mb-1">Facturación Electrónica</h1>
         <p className="text-sm text-gray-600">Crear facturas A y B</p>
