@@ -15,11 +15,11 @@ export class ArcaService {
   private accessToken?: string
 
   constructor(private readonly databaseService: DatabaseService) {
-    this.afip = new Afip({
-      CUIT: 20409378472,
-      access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
-    })
-    this.cuitActual = 20409378472
+    // this.afip = new Afip({
+    //   CUIT: 20409378472,
+    //   access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+    // })
+    // this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
   }
 
@@ -28,21 +28,21 @@ export class ArcaService {
   }
 
   configurarCUIT(cuit: number) {
-    // this.cuitActual = cuit
-    // const { certContent, keyContent } = this.loadCertificates(cuit)
-    //
-    // const config: any = {
-    //   CUIT: cuit,
-    //   production: ArcaConfig.production,
-    //   cert: certContent,
-    //   key: keyContent,
-    // }
-    //
-    // if (this.accessToken) {
-    //   config.access_token = this.accessToken
-    // }
-    //
-    // this.afip = new Afip(config)
+    this.cuitActual = cuit
+    const { certContent, keyContent } = this.loadCertificates(cuit)
+
+    const config: any = {
+      CUIT: cuit,
+      production: ArcaConfig.production,
+      cert: certContent,
+      key: keyContent,
+    }
+
+    if (this.accessToken) {
+      config.access_token = this.accessToken
+    }
+
+    this.afip = new Afip(config)
   }
 
   getCUITActual(): number | undefined {
@@ -804,7 +804,7 @@ export class ArcaService {
       // Nombre del archivo
       // Formato para Consumidor Final: CFinal_[nroComprobante]_[datos]
       // Formato para otros: [tipoFactura]_[nroComprobante]_[nombre]_[cuit]
-      
+
       // Formatear número de comprobante: 00000001
       const nroComprobante = String(facturaInfo.CbteDesde).padStart(8, '0')
 
@@ -849,7 +849,7 @@ export class ArcaService {
       } else {
         // No es Consumidor Final: usar letra de factura (A o B)
         const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
-        
+
         if (tieneRazonSocial || tieneDocNro) {
           let nombreParte = ''
 
