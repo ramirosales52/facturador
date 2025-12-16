@@ -511,13 +511,13 @@ export function ComprobantesEmitidos() {
                 <TableBody>
                   {getSortedFacturas().map((factura) => (
                     <TableRow key={factura.id}>
-                      <TableCell>{factura.tipoFactura}</TableCell>
+                      <TableCell>{factura.docTipo === 99 ? 'C. Final' : factura.tipoFactura}</TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
                       <TableCell>
                         {String(factura.ptoVta).padStart(5, '0')}-{String(factura.cbteDesde).padStart(8, '0')}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
-                        {factura.razonSocial || 'Sin nombre'}
+                        {factura.razonSocial || '-'}
                       </TableCell>
                       <TableCell>{factura.docNro || '-'}</TableCell>
                       <TableCell className="text-center font-semibold">

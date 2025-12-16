@@ -927,7 +927,7 @@ export class ArcaService {
         filePath: pdfPath,
         fileName,
         qrUrl: qrResult.qrUrl || undefined,
-        message: `PDF generado exitosamente en ${pdfPath}`,
+        message: pdfPath,
       }
     }
     catch (error) {
