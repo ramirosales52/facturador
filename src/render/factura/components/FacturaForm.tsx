@@ -412,7 +412,7 @@ export function FacturaForm({
                           min="0"
                           placeholder="$"
                           className="bg-white"
-                          value={articulo.precioUnitario}
+                          value={articulo.precioUnitario ?? ''}
                           onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             onArticuloChange(index, 'precioUnitario', e.target.value === '' ? null : Number.parseFloat(e.target.value))}
                           required

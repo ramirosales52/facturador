@@ -4,7 +4,7 @@ import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@render/components/ui/table'
-import { ChevronDown, ChevronUp, FileText, Filter, FolderOpen, Loader2, Printer, Search } from 'lucide-react'
+import { ArrowUpDown, ChevronDown, ChevronUp, FileText, Filter, FolderOpen, Loader2, Printer, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
@@ -55,6 +55,12 @@ export function ComprobantesEmitidos() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [regenerandoPDF, setRegenerandoPDF] = useState<number | null>(null)
+
+  // Estado de ordenamiento
+  type SortField = 'tipoFactura' | 'fechaProceso' | 'impTotal' | null
+  type SortDirection = 'asc' | 'desc'
+  const [sortField, setSortField] = useState<SortField>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
@@ -122,6 +128,56 @@ export function ComprobantesEmitidos() {
     setTipoDoc('')
     setNroDoc('')
     cargarFacturas()
+  }
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Si ya está ordenado por este campo, cambiar dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Nuevo campo, ordenar ascendente
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const getSortedFacturas = () => {
+    if (!sortField) return facturas
+
+    return [...facturas].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortField) {
+        case 'tipoFactura':
+          aValue = a.tipoFactura
+          bValue = b.tipoFactura
+          break
+        case 'fechaProceso':
+          aValue = new Date(a.fechaProceso).getTime()
+          bValue = new Date(b.fechaProceso).getTime()
+          break
+        case 'impTotal':
+          aValue = a.impTotal
+          bValue = b.impTotal
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+    }
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="ml-2 h-4 w-4" />
+      : <ChevronDown className="ml-2 h-4 w-4" />
   }
 
   const handleRegenerarPDF = async (factura: FacturaLocal) => {
@@ -432,17 +488,41 @@ export function ComprobantesEmitidos() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Factura</TableHead>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-gray-50"
+                      onClick={() => handleSort('tipoFactura')}
+                    >
+                      <div className="flex items-center">
+                        Factura
+                        <SortIcon field="tipoFactura" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-gray-50"
+                      onClick={() => handleSort('fechaProceso')}
+                    >
+                      <div className="flex items-center">
+                        Fecha
+                        <SortIcon field="fechaProceso" />
+                      </div>
+                    </TableHead>
                     <TableHead>Número</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Doc. Cliente</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead 
+                      className="text-right cursor-pointer select-none hover:bg-gray-50"
+                      onClick={() => handleSort('impTotal')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Total
+                        <SortIcon field="impTotal" />
+                      </div>
+                    </TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facturas.map((factura) => (
+                  {getSortedFacturas().map((factura) => (
                     <TableRow key={factura.id}>
                       <TableCell>{factura.tipoFactura}</TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
