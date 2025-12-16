@@ -108,11 +108,11 @@ export class ArcaService {
         }
       }
 
-      console.log('CUIT encontrado:', taxID)
+      console.log('CUIT encontrado:', taxID[0])
 
       return {
         success: true,
-        data: { cuit: taxID }
+        data: { cuit: taxID[0] }
       }
 
     } catch (error: any) {

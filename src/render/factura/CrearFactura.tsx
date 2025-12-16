@@ -63,6 +63,7 @@ function CrearFactura() {
   const [htmlPreview, setHtmlPreview] = useState<string | null>(null)
   const [loadingContribuyente, setLoadingContribuyente] = useState(false)
   const [loadingEmisor, setLoadingEmisor] = useState(false)
+  const [loadingPDF, setLoadingPDF] = useState(false)
   const [_mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
   const [pdfSavePath, setPdfSavePath] = useState<string>('')
 
@@ -234,10 +235,6 @@ function CrearFactura() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
     clearError()
-    setResultado(null)
-    setQrUrl(null)
-    setPdfUrl(null)
-    setHtmlPreview(null)
 
     // Validar que haya datos del emisor
     // if (!datosEmisor.razonSocial || !datosEmisor.domicilio) {
@@ -269,11 +266,12 @@ function CrearFactura() {
     }
 
     const response = await crearFactura(facturaData)
-    // Agregar datos adicionales al resultado
+    // Agregar datos adicionales al resultado, incluyendo una copia de formData
     setResultado({
       ...response,
       tipoFactura: formData.TipoFactura,
       razonSocial: formData.RazonSocial,
+      formData: { ...formData }, // Guardar copia de los datos del formulario
     })
 
     // Si la factura se creó exitosamente, guardarla en la base de datos local
@@ -597,24 +595,28 @@ function CrearFactura() {
   }, [])
 
   const handleDescargarPDF = async (): Promise<void> => {
-    if (!resultado?.data)
+    if (!resultado?.data || !resultado?.formData)
       return
 
+    setLoadingPDF(true)
     const toastId = `pdf-generation-${Date.now()}`
     toast.loading('Generando PDF...', { id: toastId })
 
+    // Usar los datos guardados en el resultado en lugar de formData actual
+    const datosFactura = resultado.formData
+
     // Preparar artículos para el PDF usando utilidades
-    const articulosPDF = formData.Articulos.map((articulo) => {
+    const articulosPDF = datosFactura.Articulos.map((articulo) => {
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
       // El precioUnitario ahora ya incluye IVA, el subtotal es cantidad * precio
-      const subtotalConIVA = articulo.cantidad * articulo.precioUnitario
+      const subtotalConIVA = articulo.cantidad * (articulo.precioUnitario || 0)
 
       return {
         codigo: articulo.codigo || '',
         descripcion: articulo.descripcion,
         cantidad: articulo.cantidad,
         unidadMedida: articulo.unidadMedida,
-        precioUnitario: articulo.precioUnitario,
+        precioUnitario: articulo.precioUnitario || 0,
         alicuotaIVA: articulo.alicuotaIVA,
         porcentajeIVA: alicuota?.porcentaje || 0,
         subtotal: subtotalConIVA,
@@ -622,7 +624,7 @@ function CrearFactura() {
     })
 
     // Usar utilidad para agrupar IVAs
-    const ivasAgrupados = agruparIVAPorAlicuota(formData.Articulos).map(iva => ({
+    const ivasAgrupados = agruparIVAPorAlicuota(datosFactura.Articulos).map(iva => ({
       alicuota: iva.id,
       porcentaje: iva.porcentaje,
       baseImponible: iva.baseImponible,
@@ -630,22 +632,22 @@ function CrearFactura() {
     }))
 
     // Obtener nombre de condición IVA usando utilidad
-    const condicionIVANombre = getNombreCondicionIVA(formData.CondicionIVA, formData.TipoFactura)
-    const conceptoNombre = CONCEPTOS.find(c => c.id === formData.Concepto)?.nombre || 'Productos'
-    const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === formData.CondicionVenta)?.nombre || 'Efectivo'
+    const condicionIVANombre = getNombreCondicionIVA(datosFactura.CondicionIVA, datosFactura.TipoFactura)
+    const conceptoNombre = CONCEPTOS.find(c => c.id === datosFactura.Concepto)?.nombre || 'Productos'
+    const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === datosFactura.CondicionVenta)?.nombre || 'Efectivo'
 
     // Calcular totales desde artículos
-    const totales = calcularTotalesFactura(formData.Articulos)
+    const totales = calcularTotalesFactura(datosFactura.Articulos)
 
     // Crear datos extendidos para el PDF
     const pdfData = {
       ...resultado.data,
       ImpNeto: totales.neto,
       ImpIVA: totales.iva,
-      TipoFactura: formData.TipoFactura,
+      TipoFactura: datosFactura.TipoFactura,
       CondicionIVA: condicionIVANombre,
-      RazonSocial: formData.RazonSocial,
-      Domicilio: formData.Domicilio,
+      RazonSocial: datosFactura.RazonSocial,
+      Domicilio: datosFactura.Domicilio,
       Concepto: conceptoNombre,
       CondicionVenta: condicionVentaNombre,
       Articulos: articulosPDF,
@@ -695,6 +697,8 @@ function CrearFactura() {
         { id: toastId },
       )
     }
+    
+    setLoadingPDF(false)
   }
 
   return (
@@ -721,7 +725,7 @@ function CrearFactura() {
             onArticuloRemove={handleArticuloRemove}
             onArticuloChange={handleArticuloChange}
             onSubmit={handleSubmit}
-            onLimpiar={limpiarFormulario}
+            onLimpiar={() => limpiarFormulario(false)}
             onConsultarContribuyente={handleConsultarContribuyente}
             loadingContribuyente={loadingContribuyente}
           />
@@ -736,6 +740,7 @@ function CrearFactura() {
                 htmlPreview={htmlPreview || undefined}
                 pdfSavePath={pdfSavePath}
                 onSelectFolder={handleSelectFolder}
+                loadingPDF={loadingPDF}
               />
             </div>
           )}

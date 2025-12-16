@@ -1,6 +1,7 @@
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { PDFActions } from './PDFActions'
 import { PDFPreview } from './PDFPreview'
+import type { FormData } from './FacturaForm'
 
 export interface FacturaResultadoData {
   success: boolean
@@ -20,6 +21,7 @@ export interface FacturaResultadoData {
   error?: string
   tipoFactura?: string
   razonSocial?: string
+  formData?: FormData // Guardar los datos del formulario
 }
 
 interface FacturaResultadoProps {
@@ -30,6 +32,7 @@ interface FacturaResultadoProps {
   htmlPreview?: string
   pdfSavePath?: string
   onSelectFolder?: () => Promise<void>
+  loadingPDF?: boolean
 }
 
 export function FacturaResultado({ 
@@ -39,6 +42,7 @@ export function FacturaResultado({
   htmlPreview, 
   pdfSavePath, 
   onSelectFolder,
+  loadingPDF,
 }: FacturaResultadoProps) {
   // Obtener nombre del tipo de documento
   const getNombreTipoDoc = (tipo?: number): string => {
@@ -110,7 +114,7 @@ export function FacturaResultado({
 
             {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={null} />}
 
-            <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} pdfSavePath={pdfSavePath} onSelectFolder={onSelectFolder} />
+            <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} pdfSavePath={pdfSavePath} onSelectFolder={onSelectFolder} loadingPDF={loadingPDF} />
           </div>
         )
         : (

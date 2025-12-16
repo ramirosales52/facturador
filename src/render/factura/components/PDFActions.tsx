@@ -1,5 +1,5 @@
 import { Button } from '@render/components/ui/button'
-import { Copy, FileText, FolderInput, FolderOpen } from 'lucide-react'
+import { FileText, FolderInput, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PDFActionsProps {
@@ -7,19 +7,10 @@ interface PDFActionsProps {
   onGenerar: () => Promise<void>
   pdfSavePath?: string
   onSelectFolder?: () => Promise<void>
+  loadingPDF?: boolean
 }
 
-export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: PDFActionsProps) {
-  const copiarAlPortapapeles = async (texto: string, tipo: string): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(texto)
-      toast.success(`${tipo} copiado al portapapeles`, { id: 'copiar-portapapeles' })
-    }
-    catch {
-      toast.error('Error al copiar al portapapeles', { id: 'copiar-portapapeles' })
-    }
-  }
-
+export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder, loadingPDF }: PDFActionsProps) {
   const abrirCarpeta = async (): Promise<void> => {
     if (!pdfUrl)
       return
@@ -29,7 +20,13 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
       // @ts-ignore - Electron API
       if (window.electron?.shell?.openPath) {
         // @ts-ignore
-        await window.electron.shell.openPath(pdfUrl)
+        const result = await window.electron.shell.openPath(pdfUrl)
+        // El handler retorna 'ok' si tuvo éxito, o un mensaje de error si falló
+        if (result === 'El archivo fue borrado o movido') {
+          toast.error('El archivo fue borrado o movido')
+        } else if (result !== 'ok') {
+          toast.error('No se pudo abrir la carpeta')
+        }
       }
       else {
         // Fallback para desarrollo
@@ -44,8 +41,8 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
 
   return (
     <div>
-      {/* Carpeta de guardado */}
-      {onSelectFolder && (
+      {/* Carpeta de guardado - Solo mostrar si NO hay PDF generado */}
+      {!pdfUrl && onSelectFolder && (
         <div className="mt-4 flex gap-2 items-center">
           <div className="flex-1 bg-gray-50 border rounded px-3 py-2 text-sm text-gray-700 font-mono truncate">
             {pdfSavePath || 'Escritorio (por defecto)'}
@@ -56,47 +53,20 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder }: P
         </div>
       )}
 
-      {/* Botón generar PDF */}
+      {/* Botón generar PDF o Abrir carpeta */}
       <div className="mt-4">
-        <Button onClick={onGenerar} variant="outline" className="w-full">
-          <FileText className="mr-2 h-4 w-4" />
-          Generar PDF
-        </Button>
+        {!pdfUrl ? (
+          <Button onClick={onGenerar} variant="outline" className="w-full" disabled={loadingPDF}>
+            <FileText className="mr-2 h-4 w-4" />
+            {loadingPDF ? 'Generando...' : 'Generar PDF'}
+          </Button>
+        ) : (
+          <Button onClick={abrirCarpeta} variant="default" className="w-full">
+            <FolderOpen className="mr-2 h-4 w-4" />
+            Abrir carpeta
+          </Button>
+        )}
       </div>
-
-      {/* Ruta del PDF */}
-      {pdfUrl && (
-        <div className="mt-4 p-4 bg-white rounded border border-green-300">
-          <p className="font-medium text-green-800 mb-2">PDF generado exitosamente:</p>
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <p className="flex-1 text-sm text-gray-700 font-mono bg-gray-50 p-2 rounded truncate">
-                {pdfUrl}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => copiarAlPortapapeles(pdfUrl, 'Ruta del PDF')}
-                variant="outline"
-                size="sm"
-                className="flex-1"
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copiar ruta
-              </Button>
-              <Button
-                onClick={abrirCarpeta}
-                variant="default"
-                size="sm"
-                className="flex-1"
-              >
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Abrir carpeta
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
