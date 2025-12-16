@@ -163,6 +163,11 @@ function CrearFactura() {
   const handleInputChange = (field: keyof FormData, value: string): void => {
     setFormData(prev => ({ ...prev, [field]: value }))
 
+    // Si se cambia a Factura A, forzar DocTipo a CUIT (80)
+    if (field === 'TipoFactura' && value === 'A') {
+      setFormData(prev => ({ ...prev, [field]: value, DocTipo: '80' }))
+    }
+
     // Si es Factura B y se cambió el IVA Global, actualizar todos los artículos
     if (field === 'IVAGlobal' && formData.TipoFactura === 'B') {
       const articulosActualizados = formData.Articulos.map(articulo => ({
@@ -728,6 +733,13 @@ function CrearFactura() {
             onLimpiar={() => limpiarFormulario(false)}
             onConsultarContribuyente={handleConsultarContribuyente}
             loadingContribuyente={loadingContribuyente}
+            onConfirmDialog={() => {
+              // Ocultar el resultado anterior cuando se confirma crear una nueva factura
+              setResultado(null)
+              setQrUrl(null)
+              setPdfUrl(null)
+              setHtmlPreview(null)
+            }}
           />
 
           {resultado && (

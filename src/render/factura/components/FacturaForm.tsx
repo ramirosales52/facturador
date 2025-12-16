@@ -50,6 +50,7 @@ interface FacturaFormProps {
   onLimpiar: () => void
   onConsultarContribuyente?: () => Promise<void>
   loadingContribuyente?: boolean
+  onConfirmDialog?: () => void
 }
 
 export function FacturaForm({
@@ -64,6 +65,7 @@ export function FacturaForm({
   onLimpiar,
   onConsultarContribuyente,
   loadingContribuyente,
+  onConfirmDialog,
 }: FacturaFormProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -74,6 +76,10 @@ export function FacturaForm({
 
   const handleConfirm = async () => {
     setDialogOpen(false)
+    // Notificar al padre que se confirmó el diálogo
+    if (onConfirmDialog) {
+      onConfirmDialog()
+    }
     // Crear un evento sintético para pasar a onSubmit
     const fakeEvent = { preventDefault: () => { } } as FormEvent<HTMLFormElement>
     await onSubmit(fakeEvent)
@@ -156,7 +162,9 @@ export function FacturaForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIPOS_DOCUMENTO.map(tipo => (
+                  {TIPOS_DOCUMENTO
+                    .filter(tipo => formData.TipoFactura === 'A' ? tipo.id === '80' : true)
+                    .map(tipo => (
                     <SelectItem key={tipo.id} value={tipo.id}>
                       {tipo.nombre}
                     </SelectItem>
