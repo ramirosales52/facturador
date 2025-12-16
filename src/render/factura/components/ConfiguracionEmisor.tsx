@@ -502,7 +502,7 @@ export function ConfiguracionEmisor({
                     className="text-white font-semibold"
                     style={{ backgroundColor: '#242c50' }}
                   >
-                    {conectandoARCA ? 'Generando...' : 'Generar Certificado'}
+                    {conectandoARCA ? 'Conectando...' : 'Conectar'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
