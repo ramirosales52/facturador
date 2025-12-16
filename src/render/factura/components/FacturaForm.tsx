@@ -98,7 +98,7 @@ export function FacturaForm({
     }
 
     // Validar que todos los artículos tengan descripción, cantidad y precio
-    const articulosValidos = formData.Articulos.every(articulo => 
+    const articulosValidos = formData.Articulos.every(articulo =>
       articulo.descripcion.trim() !== '' &&
       articulo.cantidad > 0 &&
       articulo.precioUnitario > 0
@@ -404,7 +404,7 @@ export function FacturaForm({
                       </div>
 
                       <div className="space-y-1 w-28">
-                        <Label htmlFor={`precio-${index}`} className="text-xs">Precio Final</Label>
+                        <Label htmlFor={`precio-${index}`} className="text-xs">Precio Unitario</Label>
                         <Input
                           id={`precio-${index}`}
                           type="number"
