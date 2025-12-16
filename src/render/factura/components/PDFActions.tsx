@@ -1,5 +1,5 @@
 import { Button } from '@render/components/ui/button'
-import { FileText, FolderInput, FolderOpen } from 'lucide-react'
+import { FileText, FolderInput, FolderOpen, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PDFActionsProps {
@@ -39,6 +39,32 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder, loa
     }
   }
 
+  const handleImprimir = async (): Promise<void> => {
+    if (!pdfUrl)
+      return
+
+    try {
+      // @ts-ignore - Electron API
+      if (window.electron?.print?.pdf) {
+        // @ts-ignore
+        const result = await window.electron.print.pdf(pdfUrl)
+
+        if (!result.success) {
+          if (result.error === 'El archivo fue borrado o movido') {
+            toast.error('El archivo fue borrado o movido')
+          } else {
+            toast.error('No se pudo abrir el PDF para imprimir')
+          }
+        }
+      } else {
+        console.log('Función disponible solo en la aplicación empaquetada')
+      }
+    } catch (error) {
+      console.error('Error al imprimir:', error)
+      toast.error('Error al imprimir el PDF')
+    }
+  }
+
   return (
     <div>
       {/* Carpeta de guardado - Solo mostrar si NO hay PDF generado */}
@@ -61,10 +87,16 @@ export function PDFActions({ pdfUrl, onGenerar, pdfSavePath, onSelectFolder, loa
             {loadingPDF ? 'Generando...' : 'Generar PDF'}
           </Button>
         ) : (
-          <Button onClick={abrirCarpeta} variant="default" className="w-full">
-            <FolderOpen className="mr-2 h-4 w-4" />
-            Abrir carpeta
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleImprimir} variant="outline" className="flex-1">
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir
+            </Button>
+            <Button onClick={abrirCarpeta} variant="default" className="flex-1">
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Abrir carpeta
+            </Button>
+          </div>
         )}
       </div>
     </div>
