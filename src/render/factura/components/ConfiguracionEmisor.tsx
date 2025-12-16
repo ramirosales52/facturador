@@ -463,11 +463,11 @@ export function ConfiguracionEmisor({
                         placeholder="••••••••"
                         disabled={conectandoARCA}
                       />
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="outline"
                         size="icon"
-                        className="cursor-pointer shrink-0" 
+                        className="cursor-pointer shrink-0"
                         onClick={() => setShowPassword(prev => !prev)}
                         disabled={conectandoARCA}
                       >
@@ -640,7 +640,7 @@ export function ConfiguracionEmisor({
               {/* Ingresos Brutos */}
               <div className="space-y-1.5">
                 <Label htmlFor="iibb" className="text-sm">
-                  Inscripción Ingresos Brutos (opcional)
+                  Ingresos Brutos
                 </Label>
                 <Input
                   id="iibb"

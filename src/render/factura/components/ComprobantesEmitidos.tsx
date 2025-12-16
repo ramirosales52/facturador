@@ -478,7 +478,7 @@ export function ComprobantesEmitidos() {
                 <TableHeader>
                   <TableRow>
                     <TableHead
-                      className="cursor-pointer select-none hover:bg-gray-50"
+                      className="cursor-pointer select-none hover:bg-gray-100"
                       onClick={() => handleSort('tipoFactura')}
                     >
                       <div className="flex items-center">
@@ -487,7 +487,7 @@ export function ComprobantesEmitidos() {
                       </div>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer select-none hover:bg-gray-50"
+                      className="cursor-pointer select-none hover:bg-gray-100"
                       onClick={() => handleSort('fechaProceso')}
                     >
                       <div className="flex items-center">
@@ -499,7 +499,7 @@ export function ComprobantesEmitidos() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Documento</TableHead>
                     <TableHead
-                      className="text-right cursor-pointer select-none hover:bg-gray-50"
+                      className="text-right cursor-pointer select-none hover:bg-gray-100"
                       onClick={() => handleSort('impTotal')}
                     >
                       <div className="flex items-center justify-end">

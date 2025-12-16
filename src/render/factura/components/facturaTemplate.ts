@@ -89,6 +89,22 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const concepto = facturaInfo.Concepto || ''
   const condicionVenta = facturaInfo.CondicionVenta || ''
 
+  // Determinar etiqueta del tipo de documento
+  let tipoDocLabel = 'CUIT/CUIL'
+  let docNroDisplay = String(facturaInfo.DocNro || '-')
+  
+  if (facturaInfo.DocTipo === 80) {
+    tipoDocLabel = 'CUIT'
+  } else if (facturaInfo.DocTipo === 96) {
+    tipoDocLabel = 'DNI'
+  } else if (facturaInfo.DocTipo === 99) {
+    tipoDocLabel = 'DNI'
+    // Para consumidor final, si DocNro es 0, mostrar '-'
+    if (facturaInfo.DocNro === 0) {
+      docNroDisplay = '-'
+    }
+  }
+
   // Datos del emisor
   const emisor = facturaInfo.DatosEmisor || {
     razonSocial: '',
@@ -510,7 +526,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
               <div>
                 <div class="row">
                   <p class="col-4 margin-b-0">
-                    <strong>CUIL/CUIT: </strong>${facturaInfo.DocNro}
+                    <strong>${tipoDocLabel}: </strong>${docNroDisplay}
                   </p>
                   <p class="col-8 margin-b-0">
                     <strong>Apellido y Nombre / Razón social: </strong
