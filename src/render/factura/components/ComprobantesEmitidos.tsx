@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@render/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@render/components/ui/table'
+import { Separator } from '@render/components/ui/separator'
 import { ArrowUpDown, ChevronDown, ChevronUp, FileText, Filter, FolderOpen, Loader2, Printer, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -18,6 +20,12 @@ const TIPOS_DOCUMENTO = [
   { id: '80', nombre: 'CUIT' },
   { id: '96', nombre: 'DNI' },
   { id: '99', nombre: 'Consumidor Final' },
+]
+
+const ALICUOTAS_IVA = [
+  { id: '3', nombre: '0%', porcentaje: 0 },
+  { id: '4', nombre: '10.5%', porcentaje: 10.5 },
+  { id: '5', nombre: '21%', porcentaje: 21 },
 ]
 
 interface FacturaLocal {
@@ -55,6 +63,8 @@ export function ComprobantesEmitidos() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [regenerandoPDF, setRegenerandoPDF] = useState<number | null>(null)
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaLocal | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   // Estado de ordenamiento
   type SortField = 'tipoFactura' | 'fechaProceso' | 'impTotal' | null
@@ -325,6 +335,21 @@ export function ComprobantesEmitidos() {
     return `${day}/${month}/${year}`
   }
 
+  const handleRowClick = (factura: FacturaLocal) => {
+    setFacturaSeleccionada(factura)
+    setSheetOpen(true)
+  }
+
+  const getTipoDocumentoNombre = (tipoDoc: number): string => {
+    const tipo = TIPOS_DOCUMENTO.find(t => t.id === String(tipoDoc))
+    return tipo?.nombre || 'Desconocido'
+  }
+
+  const getAlicuotaIVANombre = (alicuotaId: string): string => {
+    const alicuota = ALICUOTAS_IVA.find(a => a.id === alicuotaId)
+    return alicuota?.nombre || '-'
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -512,7 +537,11 @@ export function ComprobantesEmitidos() {
                 </TableHeader>
                 <TableBody>
                   {getSortedFacturas().map((factura) => (
-                    <TableRow key={factura.id}>
+                    <TableRow
+                      key={factura.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleRowClick(factura)}
+                    >
                       <TableCell>{factura.docTipo === 99 ? 'C. Final' : factura.tipoFactura}</TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
                       <TableCell>
@@ -525,7 +554,7 @@ export function ComprobantesEmitidos() {
                       <TableCell className="text-center font-semibold">
                         ${factura.impTotal.toFixed(2)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="font-mono text-xs" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2 justify-center">
                           <Button
                             size="sm"
@@ -581,6 +610,220 @@ export function ComprobantesEmitidos() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sheet con detalles de la factura */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          {facturaSeleccionada && (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  Factura {facturaSeleccionada.tipoFactura} {String(facturaSeleccionada.ptoVta).padStart(5, '0')}-{String(facturaSeleccionada.cbteDesde).padStart(8, '0')}
+                </SheetTitle>
+                <SheetDescription>
+                  Detalles de la factura emitida
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="px-4 pb-4 space-y-6">
+                {/* Información General */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Información General</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500">Fecha de Emisión</Label>
+                      <p className="text-sm font-medium">{formatearFecha(facturaSeleccionada.fechaProceso)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Tipo de Comprobante</Label>
+                      <p className="text-sm font-medium">
+                        {facturaSeleccionada.docTipo === 99 ? 'Consumidor Final' : `Factura ${facturaSeleccionada.tipoFactura}`}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">CAE</Label>
+                      <p className="text-sm font-medium font-mono">{facturaSeleccionada.cae}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Vencimiento CAE</Label>
+                      <p className="text-sm font-medium">{formatearFecha(facturaSeleccionada.caeVencimiento)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Información del Cliente */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Cliente</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {facturaSeleccionada.razonSocial && (
+                      <div>
+                        <Label className="text-xs text-gray-500">Razón Social</Label>
+                        <p className="text-sm font-medium">{facturaSeleccionada.razonSocial}</p>
+                      </div>
+                    )}
+                    {facturaSeleccionada.domicilio && (
+                      <div>
+                        <Label className="text-xs text-gray-500">Domicilio</Label>
+                        <p className="text-sm font-medium">{facturaSeleccionada.domicilio}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-gray-500">Tipo de Documento</Label>
+                        <p className="text-sm font-medium">{getTipoDocumentoNombre(facturaSeleccionada.docTipo)}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500">Número de Documento</Label>
+                        <p className="text-sm font-medium">{facturaSeleccionada.docNro || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-gray-500">Condición IVA</Label>
+                        <p className="text-sm font-medium">{facturaSeleccionada.condicionIVA}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500">Condición de Venta</Label>
+                        <p className="text-sm font-medium">{facturaSeleccionada.condicionVenta}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Artículos */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Artículos</h3>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead className="text-right">Cantidad</TableHead>
+                          <TableHead className="text-right">Precio Unit.</TableHead>
+                          {facturaSeleccionada.tipoFactura === 'A' && (
+                            <TableHead className="text-right">IVA</TableHead>
+                          )}
+                          <TableHead className="text-right">Subtotal</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {JSON.parse(facturaSeleccionada.articulos).map((articulo: any, index: number) => {
+                          const cantidad = Number(articulo.cantidad) || 0
+                          const precioUnitario = Number(articulo.precioUnitario) || 0
+                          const subtotal = articulo.subtotal ? Number(articulo.subtotal) : (cantidad * precioUnitario)
+
+                          return (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{articulo.descripcion}</TableCell>
+                              <TableCell className="text-center">{cantidad}</TableCell>
+                              <TableCell className="text-center">${precioUnitario.toFixed(2)}</TableCell>
+                              {facturaSeleccionada.tipoFactura === 'A' && (
+                                <TableCell className="text-right">{getAlicuotaIVANombre(articulo.alicuotaIVA)}</TableCell>
+                              )}
+                              <TableCell className="text-right">${subtotal.toFixed(2)}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Totales */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Totales</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Subtotal (Neto)</span>
+                      <span className="text-sm font-medium">${facturaSeleccionada.impNeto.toFixed(2)}</span>
+                    </div>
+
+                    {/* Mostrar IVAs desglosados por alícuota */}
+                    {facturaSeleccionada.ivas && JSON.parse(facturaSeleccionada.ivas).length > 0 ? (
+                      JSON.parse(facturaSeleccionada.ivas).map((iva: any, index: number) => (
+                        <div key={index} className="flex justify-between">
+                          <span className="text-sm text-gray-600">IVA {iva.porcentaje}%</span>
+                          <span className="text-sm font-medium">${Number(iva.importeIVA || 0).toFixed(2)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">IVA</span>
+                        <span className="text-sm font-medium">${facturaSeleccionada.impIVA.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-base font-semibold">Total</span>
+                      <span className="text-base font-bold">${facturaSeleccionada.impTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Acciones */}
+                <div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRegenerarPDF(facturaSeleccionada)
+                      }}
+                      disabled={regenerandoPDF === facturaSeleccionada.id}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {regenerandoPDF === facturaSeleccionada.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Regenerando PDF...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Regenerar PDF
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleImprimir(facturaSeleccionada.pdfPath!)
+                      }}
+                      disabled={!facturaSeleccionada.pdfPath}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAbrirCarpeta(facturaSeleccionada.pdfPath!)
+                      }}
+                      disabled={!facturaSeleccionada.pdfPath}
+                      variant="default"
+                      className="w-full"
+                    >
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      Abrir Carpeta
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
