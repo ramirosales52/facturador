@@ -270,6 +270,14 @@ export function ComprobantesEmitidos() {
         // Recargar facturas para actualizar la tabla
         await cargarFacturas()
 
+        // Actualizar la factura seleccionada si es la misma que se regeneró
+        if (facturaSeleccionada?.id === factura.id) {
+          setFacturaSeleccionada({
+            ...facturaSeleccionada,
+            pdfPath: response.filePath,
+          })
+        }
+
         toast.dismiss(toastId)
         toast.success('PDF regenerado exitosamente', {
           description: response.message || 'El archivo está guardado',
