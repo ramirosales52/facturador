@@ -637,7 +637,6 @@ export function ComprobantesEmitidos() {
               <div className="px-4 pb-4 space-y-6">
                 {/* Información General */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Información General</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-gray-500">Fecha de Emisión</Label>
@@ -725,7 +724,7 @@ export function ComprobantesEmitidos() {
                           const precioUnitario = Number(articulo.precioUnitario) || 0
                           const subtotal = articulo.subtotal ? Number(articulo.subtotal) : (cantidad * precioUnitario)
 
-                           return (
+                          return (
                             <TableRow key={index}>
                               <TableCell className="font-medium">{articulo.descripcion}</TableCell>
                               <TableCell className="text-center">{cantidad}</TableCell>
@@ -746,8 +745,7 @@ export function ComprobantesEmitidos() {
 
                 {/* Totales */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Totales</h3>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Subtotal (Neto)</span>
                       <span className="text-sm font-medium">{formatearMoneda(facturaSeleccionada.impNeto)}</span>
