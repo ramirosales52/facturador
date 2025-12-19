@@ -8,6 +8,7 @@ import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
 import { Separator } from '@render/components/ui/separator'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { formatearMoneda } from '@render/utils/calculos'
 import { Search, X } from 'lucide-react'
 
 export interface Articulo {
@@ -455,8 +456,7 @@ export function FacturaForm({
                     <div className="min-w-36 space-y-1">
                       <Label className="text-xs">Subtotal</Label>
                       <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
-                        $
-                        {totalLinea ? totalLinea.toFixed(2) : '0.00'}
+                        {totalLinea ? formatearMoneda(totalLinea) : formatearMoneda(0)}
                       </div>
                     </div>
                   </div>
@@ -475,14 +475,9 @@ export function FacturaForm({
           <div className="gap-3 border-t pt-3 bg-gray-50 p-3 rounded-lg grid grid-cols-3">
             <div className="space-y-1">
               <Label htmlFor="ImpNeto" className="text-xs">Neto (sin IVA)</Label>
-              <Input
-                id="ImpNeto"
-                type="number"
-                step="0.01"
-                value={formData.ImpNeto}
-                readOnly
-                className="bg-white font-medium"
-              />
+              <div className="bg-white border rounded-md px-3 h-10 flex items-center font-medium">
+                {formatearMoneda(Number.parseFloat(formData.ImpNeto) || 0)}
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -495,26 +490,16 @@ export function FacturaForm({
                     ? `(${ALICUOTAS_IVA.find(a => a.id === formData.Articulos[0]?.alicuotaIVA)?.porcentaje || 0}%)`
                     : ''}
               </Label>
-              <Input
-                id="ImpIVA"
-                type="number"
-                step="0.01"
-                value={formData.ImpIVA}
-                readOnly
-                className="bg-white font-medium"
-              />
+              <div className="bg-white border rounded-md px-3 h-10 flex items-center font-medium">
+                {formatearMoneda(Number.parseFloat(formData.ImpIVA) || 0)}
+              </div>
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="ImpTotal" className="text-xs">Total</Label>
-              <Input
-                id="ImpTotal"
-                type="number"
-                step="0.01"
-                value={formData.ImpTotal}
-                readOnly
-                className="bg-white font-bold text-base"
-              />
+              <div className="bg-white border rounded-md px-3 h-10 flex items-center font-bold text-base">
+                {formatearMoneda(Number.parseFloat(formData.ImpTotal) || 0)}
+              </div>
             </div>
           </div>
 
@@ -545,7 +530,7 @@ export function FacturaForm({
           </DialogHeader>
           <Separator />
           <h1>
-            ¿Generar Factura <b>{formData.TipoFactura}</b> por <b>${formData.ImpTotal}</b>?
+            ¿Generar Factura <b>{formData.TipoFactura}</b> por <b>{formatearMoneda(Number.parseFloat(formData.ImpTotal))}</b>?
           </h1>
           <DialogFooter>
             <Button type="button" onClick={handleConfirm}>

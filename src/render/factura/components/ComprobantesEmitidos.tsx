@@ -10,6 +10,7 @@ import { ArrowUpDown, ChevronDown, ChevronUp, FileText, Filter, FolderOpen, Load
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
+import { formatearMoneda } from '@render/utils/calculos'
 
 const TIPOS_COMPROBANTE = [
   { id: '1', nombre: 'Factura A' },
@@ -560,7 +561,7 @@ export function ComprobantesEmitidos() {
                       </TableCell>
                       <TableCell>{factura.docNro || '-'}</TableCell>
                       <TableCell className="text-center font-semibold">
-                        ${factura.impTotal.toFixed(2)}
+                        {formatearMoneda(factura.impTotal)}
                       </TableCell>
                       <TableCell className="font-mono text-xs" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2 justify-center">
@@ -724,15 +725,15 @@ export function ComprobantesEmitidos() {
                           const precioUnitario = Number(articulo.precioUnitario) || 0
                           const subtotal = articulo.subtotal ? Number(articulo.subtotal) : (cantidad * precioUnitario)
 
-                          return (
+                           return (
                             <TableRow key={index}>
                               <TableCell className="font-medium">{articulo.descripcion}</TableCell>
                               <TableCell className="text-center">{cantidad}</TableCell>
-                              <TableCell className="text-center">${precioUnitario.toFixed(2)}</TableCell>
+                              <TableCell className="text-center">{formatearMoneda(precioUnitario)}</TableCell>
                               {facturaSeleccionada.tipoFactura === 'A' && (
                                 <TableCell className="text-right">{getAlicuotaIVANombre(articulo.alicuotaIVA)}</TableCell>
                               )}
-                              <TableCell className="text-right">${subtotal.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">{formatearMoneda(subtotal)}</TableCell>
                             </TableRow>
                           )
                         })}
@@ -749,7 +750,7 @@ export function ComprobantesEmitidos() {
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Subtotal (Neto)</span>
-                      <span className="text-sm font-medium">${facturaSeleccionada.impNeto.toFixed(2)}</span>
+                      <span className="text-sm font-medium">{formatearMoneda(facturaSeleccionada.impNeto)}</span>
                     </div>
 
                     {/* Mostrar IVAs desglosados por alícuota */}
@@ -757,20 +758,20 @@ export function ComprobantesEmitidos() {
                       JSON.parse(facturaSeleccionada.ivas).map((iva: any, index: number) => (
                         <div key={index} className="flex justify-between">
                           <span className="text-sm text-gray-600">IVA {iva.porcentaje}%</span>
-                          <span className="text-sm font-medium">${Number(iva.importeIVA || 0).toFixed(2)}</span>
+                          <span className="text-sm font-medium">{formatearMoneda(Number(iva.importeIVA || 0))}</span>
                         </div>
                       ))
                     ) : (
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">IVA</span>
-                        <span className="text-sm font-medium">${facturaSeleccionada.impIVA.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{formatearMoneda(facturaSeleccionada.impIVA)}</span>
                       </div>
                     )}
 
                     <Separator />
                     <div className="flex justify-between">
                       <span className="text-base font-semibold">Total</span>
-                      <span className="text-base font-bold">${facturaSeleccionada.impTotal.toFixed(2)}</span>
+                      <span className="text-base font-bold">{formatearMoneda(facturaSeleccionada.impTotal)}</span>
                     </div>
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 import { PDFActions } from './PDFActions'
 import { PDFPreview } from './PDFPreview'
 import type { FormData } from './FacturaForm'
+import { formatearMoneda } from '@render/utils/calculos'
 
 export interface FacturaResultadoData {
   success: boolean
@@ -103,7 +104,7 @@ export function FacturaResultado({
               <div>
                 <span className="font-medium">Monto:</span>
                 {' '}
-                ${resultado.data?.ImpTotal?.toFixed(2)}
+                {resultado.data?.ImpTotal ? formatearMoneda(resultado.data.ImpTotal) : formatearMoneda(0)}
               </div>
               <div>
                 <span className="font-medium">Punto de Venta:</span>
