@@ -39,6 +39,9 @@ export interface FacturaGuardada {
   // Path del PDF generado
   pdfPath?: string;
   
+  // Flag para diferenciar tickets de facturas B
+  esTicket?: boolean;
+  
   // Metadata
   createdAt?: string;
 }
@@ -88,9 +91,23 @@ export class DatabaseService implements OnModuleInit {
         ivas TEXT NOT NULL,
         datosEmisor TEXT NOT NULL,
         pdfPath TEXT,
+        esTicket INTEGER DEFAULT 0,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    
+    // Migración: agregar columna esTicket si no existe
+    try {
+      this.db.exec(`
+        ALTER TABLE facturas ADD COLUMN esTicket INTEGER DEFAULT 0;
+      `);
+      console.log('✅ Columna esTicket agregada a la tabla facturas');
+    } catch (error) {
+      // La columna ya existe, ignorar el error
+      if (!error.message.includes('duplicate column name')) {
+        console.error('Error al agregar columna esTicket:', error);
+      }
+    }
     
     // Crear índices para búsquedas más rápidas
     this.db.exec(`
@@ -112,21 +129,22 @@ export class DatabaseService implements OnModuleInit {
       INSERT INTO facturas (
         cae, caeVencimiento, fechaProceso, ptoVta, cbteTipo, cbteDesde, cbteHasta,
         docTipo, docNro, impTotal, impNeto, impIVA, tipoFactura, concepto,
-        condicionIVA, condicionVenta, razonSocial, domicilio, articulos, ivas, datosEmisor, pdfPath
+        condicionIVA, condicionVenta, razonSocial, domicilio, articulos, ivas, datosEmisor, pdfPath, esTicket
       ) VALUES (
         @cae, @caeVencimiento, @fechaProceso, @ptoVta, @cbteTipo, @cbteDesde, @cbteHasta,
         @docTipo, @docNro, @impTotal, @impNeto, @impIVA, @tipoFactura, @concepto,
-        @condicionIVA, @condicionVenta, @razonSocial, @domicilio, @articulos, @ivas, @datosEmisor, @pdfPath
+        @condicionIVA, @condicionVenta, @razonSocial, @domicilio, @articulos, @ivas, @datosEmisor, @pdfPath, @esTicket
       )
     `);
     
-    // Asegurar que pdfPath esté presente (null si no existe)
-    const facturaConPdfPath = {
+    // Asegurar que pdfPath y esTicket estén presentes
+    const facturaConDefaults = {
       ...factura,
       pdfPath: factura.pdfPath || null,
+      esTicket: factura.esTicket ? 1 : 0, // Convertir boolean a INTEGER
     };
     
-    const result = stmt.run(facturaConPdfPath);
+    const result = stmt.run(facturaConDefaults);
     return result.lastInsertRowid as number;
   }
 

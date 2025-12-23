@@ -15,6 +15,8 @@ import { formatearMoneda } from '@render/utils/calculos'
 const TIPOS_COMPROBANTE = [
   { id: '1', nombre: 'Factura A' },
   { id: '6', nombre: 'Factura B' },
+  { id: 'ticket', nombre: 'Ticket' },
+  { id: 'consumidor-final', nombre: 'Consumidor Final' },
 ]
 
 const TIPOS_DOCUMENTO = [
@@ -53,6 +55,7 @@ interface FacturaLocal {
   ivas: string // JSON
   datosEmisor: string // JSON
   pdfPath?: string
+  esTicket?: number // SQLite usa INTEGER para boolean (0 o 1)
   createdAt: string
 }
 
@@ -84,6 +87,13 @@ export function ComprobantesEmitidos() {
   useEffect(() => {
     cargarFacturas()
   }, [])
+
+  // Ejecutar búsqueda automáticamente cuando cambia el tipo de comprobante
+  useEffect(() => {
+    if (tipoComprobante) {
+      handleBuscar()
+    }
+  }, [tipoComprobante])
 
   const cargarFacturas = async (filtros?: any) => {
     setLoading(true)
@@ -117,7 +127,8 @@ export function ComprobantesEmitidos() {
     if (fechaHasta) {
       filtros.fechaHasta = fechaHasta
     }
-    if (tipoComprobante) {
+    // Solo agregar cbteTipo si es un tipo numérico (Factura A o B)
+    if (tipoComprobante && tipoComprobante !== 'ticket' && tipoComprobante !== 'consumidor-final') {
       filtros.cbteTipo = parseInt(tipoComprobante)
     }
     if (tipoDoc) {
@@ -153,9 +164,22 @@ export function ComprobantesEmitidos() {
   }
 
   const getSortedFacturas = () => {
-    if (!sortField) return facturas
+    // Primero filtrar por tipo de comprobante especial si está seleccionado
+    let facturasFiltered = facturas
 
-    return [...facturas].sort((a, b) => {
+    if (tipoComprobante === 'ticket') {
+      // Solo mostrar tickets (esTicket === 1)
+      facturasFiltered = facturas.filter(f => f.esTicket === 1)
+    } else if (tipoComprobante === 'consumidor-final') {
+      // Solo mostrar facturas a consumidor final que NO sean tickets
+      facturasFiltered = facturas.filter(f => f.docTipo === 99 && f.esTicket !== 1)
+    }
+
+    // Si no hay campo de ordenamiento, devolver las facturas filtradas
+    if (!sortField) return facturasFiltered
+
+    // Ordenar las facturas filtradas
+    return [...facturasFiltered].sort((a, b) => {
       let aValue: any
       let bValue: any
 
@@ -504,7 +528,7 @@ export function ComprobantesEmitidos() {
       {facturas.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Resultados ({facturas.length})</CardTitle>
+            <CardTitle>Resultados ({getSortedFacturas().length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -551,7 +575,9 @@ export function ComprobantesEmitidos() {
                       className="cursor-pointer hover:bg-gray-50"
                       onClick={() => handleRowClick(factura)}
                     >
-                      <TableCell>{factura.docTipo === 99 ? 'C. Final' : factura.tipoFactura}</TableCell>
+                      <TableCell>
+                        {factura.esTicket === 1 ? 'Ticket' : factura.docTipo === 99 ? 'C. Final' : factura.tipoFactura}
+                      </TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
                       <TableCell>
                         {String(factura.ptoVta).padStart(5, '0')}-{String(factura.cbteDesde).padStart(8, '0')}
@@ -627,7 +653,10 @@ export function ComprobantesEmitidos() {
             <>
               <SheetHeader>
                 <SheetTitle>
-                  Factura {facturaSeleccionada.tipoFactura} {String(facturaSeleccionada.ptoVta).padStart(5, '0')}-{String(facturaSeleccionada.cbteDesde).padStart(8, '0')}
+                  {facturaSeleccionada.esTicket === 1 
+                    ? `Ticket ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
+                    : `Factura ${facturaSeleccionada.tipoFactura} ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
+                  }
                 </SheetTitle>
                 <SheetDescription>
                   Detalles de la factura emitida
@@ -645,7 +674,12 @@ export function ComprobantesEmitidos() {
                     <div>
                       <Label className="text-xs text-gray-500">Tipo de Comprobante</Label>
                       <p className="text-sm font-medium">
-                        {facturaSeleccionada.docTipo === 99 ? 'Consumidor Final' : `Factura ${facturaSeleccionada.tipoFactura}`}
+                        {facturaSeleccionada.esTicket === 1 
+                          ? 'Ticket' 
+                          : facturaSeleccionada.docTipo === 99 
+                            ? 'Consumidor Final' 
+                            : `Factura ${facturaSeleccionada.tipoFactura}`
+                        }
                       </p>
                     </div>
                     <div>

@@ -1,11 +1,15 @@
 import type { FormEvent } from 'react'
 import type {
   Articulo,
+  ArticuloTicket,
   FacturaResultadoData,
   FormData,
+  TicketFormData,
+  TicketResultadoData,
 } from './components'
 import type { DatosEmisor } from './components/ConfiguracionEmisor'
 import type { FacturaPDFData } from './components/facturaTemplate'
+import type { TicketPDFData } from './components/ticketTemplate'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
@@ -16,10 +20,13 @@ import { agruparIVAParaAFIP, agruparIVAPorAlicuota, calcularTotalesFactura, getN
 import {
   FacturaForm,
   FacturaResultado,
+  TicketForm,
+  TicketResultado,
 } from './components'
 import { ComprobantesEmitidos } from './components/ComprobantesEmitidos'
 import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
+import { generarHTMLTicket } from './components/ticketTemplate'
 
 function CrearFactura() {
   const { loading, error, clearError, crearFactura, generarQR, generarPDF, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura, actualizarPdfPath } = useArca()
@@ -35,7 +42,7 @@ function CrearFactura() {
     Domicilio: '',
     Articulos: [{
       codigo: '',
-      descripcion: 'Componentes electrónicos',
+      descripcion: 'Componente informático',
       cantidad: DEFAULTS.CANTIDAD_DEFAULT,
       unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
       precioUnitario: undefined,
@@ -66,6 +73,26 @@ function CrearFactura() {
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [_mostrarDatosCliente, setMostrarDatosCliente] = useState(false)
   const [pdfSavePath, setPdfSavePath] = useState<string>('')
+
+  // Estados para Tickets
+  const [ticketFormData, setTicketFormData] = useState<TicketFormData>({
+    CondicionVenta: 'efectivo',
+    CondicionIVA: '5', // Consumidor Final
+    IVA: '4', // 10.5%
+    Articulo: {
+      descripcion: '',
+      cantidad: DEFAULTS.CANTIDAD_DEFAULT,
+      unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
+      precioUnitario: 0,
+      alicuotaIVA: '4',
+    },
+    ImpNeto: '0.00',
+    ImpIVA: '0.00',
+    ImpTotal: '0.00',
+  })
+  const [ticketResultado, setTicketResultado] = useState<TicketResultadoData | null>(null)
+  const [ticketHtmlPreview, setTicketHtmlPreview] = useState<string | null>(null)
+  const [loadingTicketPrint, setLoadingTicketPrint] = useState(false)
 
   // Inicializar AFIP y cargar configuración al inicio
   useEffect(() => {
@@ -219,7 +246,7 @@ function CrearFactura() {
       Domicilio: '',
       Articulos: [{
         codigo: '',
-        descripcion: 'Componentes electrónicos',
+        descripcion: 'Componente informático',
         cantidad: DEFAULTS.CANTIDAD_DEFAULT,
         unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
         precioUnitario: undefined,
@@ -702,8 +729,272 @@ function CrearFactura() {
         { id: toastId },
       )
     }
-    
     setLoadingPDF(false)
+  }
+
+  // ====== Funciones para Tickets ======
+  
+  const recalcularTotalesTicket = (articulo: ArticuloTicket): void => {
+    const totalConIVA = articulo.cantidad * articulo.precioUnitario
+    
+    // Buscar la alícuota de IVA
+    const alicuota = ALICUOTAS_IVA.find(a => a.id === ticketFormData.IVA)
+    const porcentajeIVA = alicuota?.porcentaje || 0
+    
+    // Calcular el neto (sin IVA)
+    const impNeto = totalConIVA / (1 + porcentajeIVA / 100)
+    const impIVA = totalConIVA - impNeto
+
+    setTicketFormData(prev => ({
+      ...prev,
+      ImpNeto: impNeto.toFixed(2),
+      ImpIVA: impIVA.toFixed(2),
+      ImpTotal: totalConIVA.toFixed(2),
+    }))
+  }
+
+  const handleTicketInputChange = (field: keyof TicketFormData, value: string): void => {
+    setTicketFormData(prev => {
+      const newData = { ...prev, [field]: value }
+      
+      // Si se cambia el IVA, actualizar alícuota del artículo y recalcular
+      if (field === 'IVA') {
+        newData.Articulo = { ...newData.Articulo, alicuotaIVA: value }
+      }
+      
+      return newData
+    })
+
+    // Recalcular totales si cambió el IVA
+    if (field === 'IVA') {
+      setTimeout(() => recalcularTotalesTicket(ticketFormData.Articulo), 0)
+    }
+  }
+
+  const handleTicketArticuloChange = (field: keyof ArticuloTicket, value: string | number): void => {
+    const nuevoArticulo = { ...ticketFormData.Articulo, [field]: value }
+    setTicketFormData(prev => ({ ...prev, Articulo: nuevoArticulo }))
+    recalcularTotalesTicket(nuevoArticulo)
+  }
+
+  const limpiarFormularioTicket = (mantenerResultado = false): void => {
+    setTicketFormData({
+      CondicionVenta: 'efectivo',
+      CondicionIVA: '5',
+      IVA: '4',
+      Articulo: {
+        descripcion: '',
+        cantidad: DEFAULTS.CANTIDAD_DEFAULT,
+        unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
+        precioUnitario: 0,
+        alicuotaIVA: '4',
+      },
+      ImpNeto: '0.00',
+      ImpIVA: '0.00',
+      ImpTotal: '0.00',
+    })
+    if (!mantenerResultado) {
+      setTicketResultado(null)
+      setTicketHtmlPreview(null)
+    }
+  }
+
+  const handleSubmitTicket = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault()
+    clearError()
+
+    // Preparar IVA array - siempre un solo elemento para ticket
+    const alicuota = ALICUOTAS_IVA.find(a => a.id === ticketFormData.IVA)
+    const porcentajeIVA = alicuota?.porcentaje || 0
+    const impNeto = Number.parseFloat(ticketFormData.ImpNeto)
+    const impIVA = Number.parseFloat(ticketFormData.ImpIVA)
+
+    const ivaArray = [{
+      Id: Number.parseInt(ticketFormData.IVA),
+      BaseImp: impNeto,
+      Importe: impIVA,
+    }]
+
+    const ticketData = {
+      PtoVta: datosEmisor.puntoVenta,
+      CbteTipo: TIPOS_COMPROBANTE.FACTURA_B, // Ticket siempre es Factura B
+      Concepto: 1, // Siempre Productos
+      DocTipo: 99, // Consumidor Final
+      DocNro: 0, // Sin documento
+      ImpTotal: Number.parseFloat(ticketFormData.ImpTotal),
+      ImpNeto: impNeto,
+      ImpIVA: impIVA,
+      Iva: ivaArray,
+    }
+
+    const response = await crearFactura(ticketData)
+    
+    setTicketResultado({
+      ...response,
+      formData: { ...ticketFormData },
+    })
+
+    // Si el ticket se creó exitosamente, generar QR y vista previa
+    if (response.success && response.data) {
+      toast.success('Ticket generado correctamente')
+      
+      const qrData = {
+        ver: 1,
+        fecha: response.data.FchProceso,
+        cuit: Number.parseInt(datosEmisor.cuit),
+        ptoVta: response.data.PtoVta,
+        tipoCmp: response.data.CbteTipo,
+        nroCmp: response.data.CbteDesde,
+        importe: response.data.ImpTotal,
+        moneda: 'PES',
+        ctz: 1,
+        tipoDocRec: response.data.DocTipo,
+        nroDocRec: response.data.DocNro,
+        tipoCodAut: 'E',
+        codAut: response.data.CAE,
+      }
+
+      const qrResponse = await generarQR(qrData)
+      if (qrResponse.success && qrResponse.qrUrl) {
+        // Generar imagen del QR para el ticket
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResponse.qrUrl)}`
+        
+        // Convertir QR URL a base64
+        const qrImageResponse = await fetch(qrImageUrl)
+        const blob = await qrImageResponse.blob()
+        const qrBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+
+        const condicionIVANombre = getNombreCondicionIVA(ticketFormData.CondicionIVA, 'B')
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketFormData.CondicionVenta)?.nombre || 'Efectivo'
+
+        const ticketPDFData: TicketPDFData = {
+          ...response.data,
+          ImpNeto: impNeto,
+          ImpIVA: impIVA,
+          CondicionIVA: condicionIVANombre,
+          CondicionVenta: condicionVentaNombre,
+          Articulo: {
+            descripcion: ticketFormData.Articulo.descripcion,
+            cantidad: ticketFormData.Articulo.cantidad,
+            porcentajeIVA: porcentajeIVA,
+            precioUnitario: ticketFormData.Articulo.precioUnitario,
+            subtotal: ticketFormData.Articulo.cantidad * ticketFormData.Articulo.precioUnitario,
+          },
+          DatosEmisor: {
+            cuit: datosEmisor.cuit,
+            razonSocial: datosEmisor.razonSocial,
+            domicilio: datosEmisor.domicilio,
+            condicionIVA: datosEmisor.condicionIVA === '1'
+              ? 'Responsable Inscripto'
+              : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+            iibb: datosEmisor.iibb || 'Exento',
+            inicioActividades: datosEmisor.inicioActividades,
+          },
+        }
+
+        const htmlContent = generarHTMLTicket(ticketPDFData, qrBase64)
+        setTicketHtmlPreview(htmlContent)
+      }
+
+      // Guardar el ticket en la base de datos local
+      try {
+        const condicionIVANombre = getNombreCondicionIVA(ticketFormData.CondicionIVA, 'B')
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketFormData.CondicionVenta)?.nombre || 'Efectivo'
+
+        // Agrupar IVAs para guardar
+        const ivasAgrupados = [{
+          id: ticketFormData.IVA,
+          porcentaje: porcentajeIVA,
+          baseImponible: impNeto,
+          importeIVA: impIVA,
+        }]
+
+        const ticketGuardado = {
+          cae: response.data.CAE,
+          caeVencimiento: response.data.CAEFchVto,
+          fechaProceso: response.data.FchProceso,
+          ptoVta: response.data.PtoVta,
+          cbteTipo: response.data.CbteTipo,
+          cbteDesde: response.data.CbteDesde,
+          cbteHasta: response.data.CbteHasta,
+          docTipo: response.data.DocTipo,
+          docNro: response.data.DocNro,
+          impTotal: response.data.ImpTotal,
+          impNeto: impNeto,
+          impIVA: impIVA,
+          tipoFactura: 'B' as 'B',
+          concepto: 'Productos',
+          condicionIVA: condicionIVANombre,
+          condicionVenta: condicionVentaNombre,
+          razonSocial: 'Consumidor Final',
+          domicilio: '',
+          articulos: JSON.stringify([ticketFormData.Articulo]),
+          ivas: JSON.stringify(ivasAgrupados),
+          datosEmisor: JSON.stringify({
+            cuit: datosEmisor.cuit,
+            razonSocial: datosEmisor.razonSocial,
+            domicilio: datosEmisor.domicilio,
+            condicionIVA: datosEmisor.condicionIVA === '1'
+              ? 'Responsable Inscripto'
+              : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+            iibb: datosEmisor.iibb || 'Exento',
+            inicioActividades: datosEmisor.inicioActividades,
+          }),
+          esTicket: true, // Flag para identificar tickets
+        }
+
+        const saveResult = await guardarFactura(ticketGuardado)
+        if (saveResult.success && saveResult.id) {
+          console.log('✅ Ticket guardado en la base de datos local con ID:', saveResult.id)
+          // Guardar el ID del ticket en el estado
+          setTicketResultado(prev => prev ? { ...prev, facturaLocalId: saveResult.id } : prev)
+        }
+      } catch (error) {
+        console.error('Error al guardar ticket en BD local:', error)
+        // No bloqueamos el flujo si falla el guardado local
+      }
+    }
+
+    // Limpiar formulario si el ticket se creó exitosamente
+    if (response.success) {
+      limpiarFormularioTicket(true)
+    }
+  }
+
+  const handleImprimirTicket = async (): Promise<void> => {
+    if (!ticketHtmlPreview) return
+
+    setLoadingTicketPrint(true)
+    const toastId = `ticket-print-${Date.now()}`
+    toast.loading('Preparando impresión...', { id: toastId })
+
+    try {
+      // Crear una ventana oculta para imprimir
+      const printWindow = window.open('', '', 'width=302,height=800')
+      if (printWindow) {
+        printWindow.document.write(ticketHtmlPreview)
+        printWindow.document.close()
+        
+        // Esperar a que cargue el contenido
+        printWindow.onload = () => {
+          printWindow.focus()
+          printWindow.print()
+          printWindow.close()
+          toast.success('Impresión enviada', { id: toastId })
+        }
+      } else {
+        toast.error('No se pudo abrir la ventana de impresión', { id: toastId })
+      }
+    } catch (error) {
+      console.error('Error al imprimir:', error)
+      toast.error('Error al imprimir el ticket', { id: toastId })
+    } finally {
+      setLoadingTicketPrint(false)
+    }
   }
 
   return (
@@ -714,8 +1005,9 @@ function CrearFactura() {
       </div>
 
       <Tabs defaultValue="facturar" className="mt-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="facturar">Crear Factura</TabsTrigger>
+          <TabsTrigger value="ticket">Crear Ticket</TabsTrigger>
           <TabsTrigger value="comprobantes">Comprobantes Emitidos</TabsTrigger>
           <TabsTrigger value="configuracion">Configuración Emisor</TabsTrigger>
         </TabsList>
@@ -753,6 +1045,33 @@ function CrearFactura() {
                 pdfSavePath={pdfSavePath}
                 onSelectFolder={handleSelectFolder}
                 loadingPDF={loadingPDF}
+              />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="ticket">
+          <TicketForm
+            formData={ticketFormData}
+            loading={loading}
+            error={error}
+            onInputChange={handleTicketInputChange}
+            onArticuloChange={handleTicketArticuloChange}
+            onSubmit={handleSubmitTicket}
+            onLimpiar={() => limpiarFormularioTicket(false)}
+            onConfirmDialog={() => {
+              setTicketResultado(null)
+              setTicketHtmlPreview(null)
+            }}
+          />
+
+          {ticketResultado && (
+            <div className="mt-4">
+              <TicketResultado
+                resultado={ticketResultado}
+                htmlPreview={ticketHtmlPreview || undefined}
+                onImprimir={handleImprimirTicket}
+                loadingPrint={loadingTicketPrint}
               />
             </div>
           )}
