@@ -177,3 +177,14 @@ export function getNombreCondicionIVA(condicionIVA: string, tipoFactura: string)
   }
   return 'Responsable Inscripto'
 }
+
+/**
+ * Formatea un número como moneda en formato ARS
+ * Ejemplo: 2000000 -> $2.000.000,00
+ */
+export function formatearMoneda(valor: number): string {
+  return `$${valor.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}

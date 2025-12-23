@@ -71,6 +71,17 @@ function formatearFecha(fecha: string): string {
 }
 
 /**
+ * Formatea un número como moneda en formato ARS
+ * Ejemplo: 2000000 -> $2.000.000,00
+ */
+function formatearMoneda(valor: number): string {
+  return `$${valor.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+/**
  * Genera el HTML para el PDF de la factura
  * Este template se basa en el formato oficial de AFIP
  */
@@ -133,9 +144,9 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         <td>${articulo.descripcion}</td>
         <td>${articulo.cantidad.toFixed(2)}</td>
         <td>${articulo.unidadMedida || 'Unidad'}</td>
-        <td>$${precioUnitario.toFixed(2)}</td>
+        <td>${formatearMoneda(precioUnitario)}</td>
         <td>${articulo.porcentajeIVA}%</td>
-        <td>$${subtotal.toFixed(2)}</td>
+        <td>${formatearMoneda(subtotal)}</td>
       </tr>
       `
     } else {
@@ -146,8 +157,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         <td>${articulo.descripcion}</td>
         <td>${articulo.cantidad.toFixed(2)}</td>
         <td>${articulo.unidadMedida || 'Unidad'}</td>
-        <td>$${precioUnitario.toFixed(2)}</td>
-        <td>$${subtotal.toFixed(2)}</td>
+        <td>${formatearMoneda(precioUnitario)}</td>
+        <td>${formatearMoneda(subtotal)}</td>
       </tr>
       `
     }
@@ -162,9 +173,9 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>Producto/Servicio</td>
       <td>1.00</td>
       <td>Unidad</td>
-      <td>$${(facturaInfo.ImpNeto || 0).toFixed(2)}</td>
+      <td>${formatearMoneda(facturaInfo.ImpNeto || 0)}</td>
       <td>21%</td>
-      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
+      <td>${formatearMoneda(facturaInfo.ImpTotal || 0)}</td>
     </tr>
   `
       : `
@@ -173,8 +184,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
       <td>Producto/Servicio</td>
       <td>1.00</td>
       <td>Unidad</td>
-      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
-      <td>$${(facturaInfo.ImpTotal || 0).toFixed(2)}</td>
+      <td>${formatearMoneda(facturaInfo.ImpTotal || 0)}</td>
+      <td>${formatearMoneda(facturaInfo.ImpTotal || 0)}</td>
     </tr>
   `)
     : articulosHTML
@@ -184,8 +195,8 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     .map((iva) => {
       return `
       <div style="display: flex; justify-content: flex-end;">
-        <div style="width: 250px; text-align: right;"><strong>IVA ${iva.porcentaje}%: $</strong></div>
-        <div style="width: 120px; text-align: right;"><strong>${iva.importeIVA.toFixed(2)}</strong></div>
+        <div style="width: 250px; text-align: right;"><strong>IVA ${iva.porcentaje}%:</strong></div>
+        <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(iva.importeIVA)}</strong></div>
       </div>
     `;
     })
@@ -196,38 +207,38 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
     ? `
   <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin-top: 10px;">
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe Neto Gravado: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>${(facturaInfo.ImpNeto || 0).toFixed(2)}</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Neto Gravado:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(facturaInfo.ImpNeto || 0)}</strong></div>
     </div>
 
     ${ivas}
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(0)}</strong></div>
     </div>
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe Total: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Total:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(facturaInfo.ImpTotal)}</strong></div>
     </div>
   </div>
   `
     : `
   <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin-top: 10px;">
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Subtotal: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Subtotal:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(facturaInfo.ImpTotal)}</strong></div>
     </div>
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>0.00</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Otros Tributos:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(0)}</strong></div>
     </div>
 
     <div style="display: flex; justify-content: flex-end;">
-      <div style="width: 250px; text-align: right;"><strong>Importe Total: $</strong></div>
-      <div style="width: 120px; text-align: right;"><strong>${facturaInfo.ImpTotal.toFixed(2)}</strong></div>
+      <div style="width: 250px; text-align: right;"><strong>Importe Total:</strong></div>
+      <div style="width: 120px; text-align: right;"><strong>${formatearMoneda(facturaInfo.ImpTotal)}</strong></div>
     </div>
   </div>
   `
@@ -241,7 +252,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
         <div style="width: 50%; font-size: 12px;">
           <strong style="font-style: italic;"><u>Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</u></strong>
           <div style="margin-top: 5px; text-align: right;">
-            <strong>IVA Contenido: $ ${(facturaInfo.ImpIVA || 0).toFixed(2)}</strong>
+            <strong>IVA Contenido: ${formatearMoneda(facturaInfo.ImpIVA || 0)}</strong>
           </div>
         </div>
       </div>

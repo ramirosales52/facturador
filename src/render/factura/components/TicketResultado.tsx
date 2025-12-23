@@ -1,10 +1,9 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
-import { PDFActions } from './PDFActions'
-import { PDFPreview } from './PDFPreview'
-import type { FormData } from './FacturaForm'
+import { CheckCircle2, Printer, XCircle } from 'lucide-react'
+import { Button } from '@render/components/ui/button'
+import type { TicketFormData } from './TicketForm'
 import { formatearMoneda } from '@render/utils/calculos'
 
-export interface FacturaResultadoData {
+export interface TicketResultadoData {
   success: boolean
   data?: {
     CAE: string
@@ -20,42 +19,22 @@ export interface FacturaResultadoData {
   }
   facturaLocalId?: number
   error?: string
-  tipoFactura?: string
-  razonSocial?: string
-  formData?: FormData // Guardar los datos del formulario
+  formData?: TicketFormData
 }
 
-interface FacturaResultadoProps {
-  resultado: FacturaResultadoData
-  qrUrl: string | null
-  pdfUrl: string | null
-  onGenerarPDF: () => Promise<void>
+interface TicketResultadoProps {
+  resultado: TicketResultadoData
   htmlPreview?: string
-  pdfSavePath?: string
-  onSelectFolder?: () => Promise<void>
-  loadingPDF?: boolean
+  onImprimir?: () => void
+  loadingPrint?: boolean
 }
 
-export function FacturaResultado({ 
+export function TicketResultado({ 
   resultado, 
-  pdfUrl, 
-  onGenerarPDF, 
-  htmlPreview, 
-  pdfSavePath, 
-  onSelectFolder,
-  loadingPDF,
-}: FacturaResultadoProps) {
-  // Obtener nombre del tipo de documento
-  const getNombreTipoDoc = (tipo?: number): string => {
-    if (!tipo) return 'N/A'
-    switch (tipo) {
-      case 80: return 'CUIT'
-      case 96: return 'DNI'
-      case 99: return 'Consumidor Final'
-      default: return `Tipo ${tipo}`
-    }
-  }
-
+  htmlPreview,
+  onImprimir,
+  loadingPrint,
+}: TicketResultadoProps) {
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
       {resultado.success
@@ -63,15 +42,15 @@ export function FacturaResultado({
           <div>
             <p className="font-bold text-green-800 text-lg mb-4 flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
-              Factura creada exitosamente
+              Ticket creado exitosamente
             </p>
             
-            {/* Grid de 2 columnas con máximo 4 filas */}
+            {/* Grid de 2 columnas */}
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-green-800 mb-4">
               <div>
-                <span className="font-medium">Tipo de Factura:</span>
+                <span className="font-medium">Tipo:</span>
                 {' '}
-                {resultado.tipoFactura || 'N/A'}
+                Factura B - Ticket
               </div>
               <div>
                 <span className="font-medium">CAE:</span>
@@ -82,7 +61,7 @@ export function FacturaResultado({
               <div>
                 <span className="font-medium">Cliente:</span>
                 {' '}
-                {resultado.razonSocial || 'Consumidor Final'}
+                Consumidor Final
               </div>
               <div>
                 <span className="font-medium">Vencimiento CAE:</span>
@@ -91,38 +70,53 @@ export function FacturaResultado({
               </div>
               
               <div>
-                <span className="font-medium">Documento:</span>
-                {' '}
-                {getNombreTipoDoc(resultado.data?.DocTipo)} {resultado.data?.DocNro || ''}
-              </div>
-              <div>
                 <span className="font-medium">Comprobante Nro:</span>
                 {' '}
                 {String(resultado.data?.PtoVta).padStart(5, '0')}-{String(resultado.data?.CbteDesde).padStart(8, '0')}
               </div>
-              
               <div>
                 <span className="font-medium">Monto:</span>
                 {' '}
                 {resultado.data?.ImpTotal ? formatearMoneda(resultado.data.ImpTotal) : formatearMoneda(0)}
               </div>
-              <div>
-                <span className="font-medium">Punto de Venta:</span>
-                {' '}
-                {resultado.data?.PtoVta}
-              </div>
             </div>
 
-            {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={null} />}
+            {/* Vista previa del ticket */}
+            {htmlPreview && (
+              <div className="mt-4 mb-4">
+                <h3 className="font-medium text-green-800 mb-2">Vista Previa del Ticket</h3>
+                <div className="border border-green-400 rounded-md p-4 bg-white max-h-[600px] overflow-auto">
+                  <div className="mx-auto" style={{ width: '80mm' }}>
+                    <iframe
+                      srcDoc={htmlPreview}
+                      style={{ width: '100%', border: 'none', minHeight: '500px' }}
+                      title="Vista previa del ticket"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <PDFActions pdfUrl={pdfUrl} onGenerar={onGenerarPDF} pdfSavePath={pdfSavePath} onSelectFolder={onSelectFolder} loadingPDF={loadingPDF} />
+            {/* Botón de imprimir */}
+            {onImprimir && (
+              <div className="flex gap-3 mt-4">
+                <Button 
+                  onClick={onImprimir}
+                  disabled={loadingPrint}
+                  className="flex-1"
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  {loadingPrint ? 'Imprimiendo...' : 'Imprimir Ticket'}
+                </Button>
+              </div>
+            )}
           </div>
         )
         : (
           <div>
             <p className="font-bold text-red-800 text-lg mb-2 flex items-center gap-2">
               <XCircle className="h-5 w-5" />
-              Error al crear factura
+              Error al crear ticket
             </p>
             <p className="text-red-800">{resultado.error}</p>
           </div>
