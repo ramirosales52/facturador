@@ -71,9 +71,9 @@ body {
 
 .bill-container{
   border-collapse: collapse;
-  width: 80mm;
+  width: 76mm;
   margin: 0 auto;
-  font-family: 'Courier New', monospace;
+  font-family: Consolas, 'Courier New', monospace;
   font-size: 12px;
 }
 
@@ -87,8 +87,7 @@ body {
 }
 
 #qrcode {
-  width: 50%;
-  max-width: 150px;
+  width: 110px;
 }
 
 p {

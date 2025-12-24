@@ -12,9 +12,9 @@ import { formatearMoneda } from '@render/utils/calculos'
 
 export interface ArticuloTicket {
   descripcion: string
-  cantidad: number
+  cantidad: number | null
   unidadMedida: string
-  precioUnitario: number
+  precioUnitario: number | undefined
   alicuotaIVA: string
 }
 
@@ -175,9 +175,9 @@ export function TicketForm({
                       step="0.01"
                       min="0.01"
                       className="bg-white"
-                      value={formData.Articulo.cantidad}
+                      value={formData.Articulo.cantidad ?? ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        onArticuloChange('cantidad', e.target.value === '' ? 0 : Number.parseFloat(e.target.value))}
+                        onArticuloChange('cantidad', e.target.value === '' ? null : Number.parseFloat(e.target.value))}
                       required
                     />
                   </div>
@@ -221,7 +221,9 @@ export function TicketForm({
                 <div className="min-w-36 space-y-1">
                   <Label className="text-xs">Subtotal</Label>
                   <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
-                    {formatearMoneda(formData.Articulo.cantidad * formData.Articulo.precioUnitario)}
+                    {formData.Articulo.cantidad && formData.Articulo.precioUnitario 
+                      ? formatearMoneda(formData.Articulo.cantidad * formData.Articulo.precioUnitario)
+                      : formatearMoneda(0)}
                   </div>
                 </div>
               </div>

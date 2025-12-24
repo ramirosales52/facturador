@@ -1,7 +1,8 @@
-import { CheckCircle2, Printer, XCircle } from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff, Printer, XCircle } from 'lucide-react'
 import { Button } from '@render/components/ui/button'
 import type { TicketFormData } from './TicketForm'
 import { formatearMoneda } from '@render/utils/calculos'
+import { useEffect, useRef, useState } from 'react'
 
 export interface TicketResultadoData {
   success: boolean
@@ -35,6 +36,22 @@ export function TicketResultado({
   onImprimir,
   loadingPrint,
 }: TicketResultadoProps) {
+  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (containerRef.current && htmlPreview) {
+      // Limpiar contenido previo
+      containerRef.current.innerHTML = ''
+      
+      if (mostrarVistaPrevia) {
+        // Crear shadow DOM para aislar estilos
+        const shadow = containerRef.current.attachShadow({ mode: 'open' })
+        shadow.innerHTML = htmlPreview
+      }
+    }
+  }, [mostrarVistaPrevia, htmlPreview])
+
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
       {resultado.success
@@ -81,35 +98,50 @@ export function TicketResultado({
               </div>
             </div>
 
-            {/* Vista previa del ticket */}
-            {htmlPreview && (
-              <div className="mt-4 mb-4">
-                <h3 className="font-medium text-green-800 mb-2">Vista Previa del Ticket</h3>
-                <div className="border border-green-400 rounded-md p-4 bg-white max-h-[600px] overflow-auto">
-                  <div className="mx-auto" style={{ width: '80mm' }}>
-                    <iframe
-                      srcDoc={htmlPreview}
-                      style={{ width: '100%', border: 'none', minHeight: '500px' }}
-                      title="Vista previa del ticket"
+            {/* Botones de acción */}
+            <div className="flex flex-col gap-3 mt-4">
+              <Button
+                onClick={() => setMostrarVistaPrevia(!mostrarVistaPrevia)}
+                variant="outline"
+                className="w-full"
+              >
+                {mostrarVistaPrevia ? (
+                  <>
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    Ocultar Vista Previa
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Mostrar Vista Previa
+                  </>
+                )}
+              </Button>
+
+              {/* Vista previa del ticket (colapsable) */}
+              {mostrarVistaPrevia && (
+                <div className="border border-green-400 rounded-md p-4 bg-gray-100">
+                  <div className="flex justify-center">
+                    <div 
+                      ref={containerRef}
+                      style={{ width: '80mm', maxWidth: '100%' }}
+                      className="shadow-lg bg-white"
                     />
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Botón de imprimir */}
-            {onImprimir && (
-              <div className="flex gap-3 mt-4">
+              {onImprimir && (
                 <Button 
                   onClick={onImprimir}
                   disabled={loadingPrint}
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Printer className="mr-2 h-4 w-4" />
                   {loadingPrint ? 'Imprimiendo...' : 'Imprimir Ticket'}
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )
         : (
