@@ -34,6 +34,9 @@ export interface FormData {
   ImpIVA: string
   ImpTotal: string
   IVAGlobal?: string // Para Factura B
+  FchServDesde?: string // Fecha servicio desde (AAAAMMDD) - Obligatorio para concepto 2 y 3
+  FchServHasta?: string // Fecha servicio hasta (AAAAMMDD) - Obligatorio para concepto 2 y 3
+  FchVtoPago?: string // Fecha vencimiento pago (AAAAMMDD) - Obligatorio para concepto 2 y 3
 }
 
 // Re-exportar constantes para compatibilidad con código existente
@@ -115,6 +118,13 @@ export function FacturaForm({
 
     // Validar Condición IVA para Factura B
     if (formData.TipoFactura === 'B' && !formData.CondicionIVA) return false
+
+    // Validar fechas si el concepto es 2 (Servicios) o 3 (Productos y Servicios)
+    if (formData.Concepto === '2' || formData.Concepto === '3') {
+      if (!formData.FchServDesde || !formData.FchServHasta || !formData.FchVtoPago) {
+        return false
+      }
+    }
 
     return true
   }
@@ -292,6 +302,44 @@ export function FacturaForm({
               </>
             )}
           </div>
+
+          {/* Tercera fila: Fechas de servicio - Solo cuando Concepto es 2 o 3 */}
+          {(formData.Concepto === '2' || formData.Concepto === '3') && (
+            <div className="flex gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="FchServDesde" className="text-xs">Fecha Servicio Desde</Label>
+                <Input
+                  id="FchServDesde"
+                  type="date"
+                  value={formData.FchServDesde || ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('FchServDesde', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="FchServHasta" className="text-xs">Fecha Servicio Hasta</Label>
+                <Input
+                  id="FchServHasta"
+                  type="date"
+                  value={formData.FchServHasta || ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('FchServHasta', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="FchVtoPago" className="text-xs">Fecha Vencimiento Pago</Label>
+                <Input
+                  id="FchVtoPago"
+                  type="date"
+                  value={formData.FchVtoPago || ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => onInputChange('FchVtoPago', e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           {/* Datos del Cliente - Siempre visible */}
           <div className="space-y-3">

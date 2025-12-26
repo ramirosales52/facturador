@@ -255,6 +255,9 @@ function CrearFactura() {
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
+      FchServDesde: undefined,
+      FchServHasta: undefined,
+      FchVtoPago: undefined,
     })
     if (!mantenerResultado) {
       setResultado(null)
@@ -285,7 +288,12 @@ function CrearFactura() {
     const docNro = formData.DocTipo === '99' ? 0 : Number.parseInt(formData.DocNro)
     const concepto = Number.parseInt(formData.Concepto)
 
-    const facturaData = {
+    // Convertir fechas de formato YYYY-MM-DD a AAAAMMDD para AFIP
+    const convertirFecha = (fecha: string): string => {
+      return fecha.replace(/-/g, '')
+    }
+
+    const facturaData: any = {
       PtoVta: datosEmisor.puntoVenta,
       CbteTipo: cbteTipo,
       Concepto: concepto,
@@ -295,6 +303,19 @@ function CrearFactura() {
       ImpNeto: Number.parseFloat(formData.ImpNeto),
       ImpIVA: Number.parseFloat(formData.ImpIVA),
       Iva: ivaArray,
+    }
+
+    // Agregar campos de fecha si el concepto es 2 (Servicios) o 3 (Productos y Servicios)
+    if (concepto === 2 || concepto === 3) {
+      if (formData.FchServDesde) {
+        facturaData.FchServDesde = convertirFecha(formData.FchServDesde)
+      }
+      if (formData.FchServHasta) {
+        facturaData.FchServHasta = convertirFecha(formData.FchServHasta)
+      }
+      if (formData.FchVtoPago) {
+        facturaData.FchVtoPago = convertirFecha(formData.FchVtoPago)
+      }
     }
 
     const response = await crearFactura(facturaData)

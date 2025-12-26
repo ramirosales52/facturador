@@ -13,6 +13,9 @@ export class CreateArcaDto {
   ImpTrib?: number // Importe de tributos
   MonId?: string // Moneda (PES = Pesos)
   MonCotiz?: number // Cotización de la moneda
+  FchServDesde?: string // Fecha servicio desde (AAAAMMDD) - Obligatorio para concepto 2 y 3
+  FchServHasta?: string // Fecha servicio hasta (AAAAMMDD) - Obligatorio para concepto 2 y 3
+  FchVtoPago?: string // Fecha vencimiento pago (AAAAMMDD) - Obligatorio para concepto 2 y 3
   Iva?: Array<{
     Id: number // ID del tipo de IVA (3 = 0%, 4 = 10.5%, 5 = 21%, 6 = 27%)
     BaseImp: number // Base imponible

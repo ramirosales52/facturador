@@ -82,6 +82,7 @@ export function ComprobantesEmitidos() {
   const [tipoComprobante, setTipoComprobante] = useState('')
   const [tipoDoc, setTipoDoc] = useState('')
   const [nroDoc, setNroDoc] = useState('')
+  const [cliente, setCliente] = useState('')
 
   // Cargar facturas al montar el componente
   useEffect(() => {
@@ -147,6 +148,7 @@ export function ComprobantesEmitidos() {
     setTipoComprobante('')
     setTipoDoc('')
     setNroDoc('')
+    setCliente('')
     setSortField(null)
     setSortDirection('asc')
     cargarFacturas()
@@ -173,6 +175,14 @@ export function ComprobantesEmitidos() {
     } else if (tipoComprobante === 'consumidor-final') {
       // Solo mostrar facturas a consumidor final que NO sean tickets
       facturasFiltered = facturas.filter(f => f.docTipo === 99 && f.esTicket !== 1)
+    }
+
+    // Filtrar por cliente si hay texto de búsqueda
+    if (cliente.trim()) {
+      const clienteLower = cliente.toLowerCase().trim()
+      facturasFiltered = facturasFiltered.filter(f => 
+        f.razonSocial?.toLowerCase().includes(clienteLower)
+      )
     }
 
     // Si no hay campo de ordenamiento, devolver las facturas filtradas
@@ -432,7 +442,17 @@ export function ComprobantesEmitidos() {
 
           {/* Filtros avanzados colapsables */}
           {mostrarFiltros && (
-            <div className="flex gap-4 py-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4 border-t">
+              <div className="space-y-2">
+                <Label htmlFor="cliente">Cliente (Nombre o Razón Social)</Label>
+                <Input
+                  id="cliente"
+                  value={cliente}
+                  onChange={(e) => setCliente(e.target.value)}
+                  placeholder="Juan Pérez o Empresa SA"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="nroDoc">Número de Documento</Label>
                 <Input
