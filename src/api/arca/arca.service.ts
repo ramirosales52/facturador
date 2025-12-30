@@ -269,6 +269,29 @@ export class ArcaService {
   }
 
   /**
+   * Verificar si hay conexión a internet
+   */
+  private async checkInternetConnection(): Promise<boolean> {
+    try {
+      const https = await import('node:https')
+      return new Promise((resolve) => {
+        const req = https.request(
+          { host: 'www.google.com', port: 443, method: 'HEAD', timeout: 5000 },
+          () => resolve(true)
+        )
+        req.on('error', () => resolve(false))
+        req.on('timeout', () => {
+          req.destroy()
+          resolve(false)
+        })
+        req.end()
+      })
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Helper para manejar errores de forma consistente
    */
   private handleError(error: unknown): { success: false, error: string } {
@@ -277,15 +300,24 @@ export class ArcaService {
     if (error && typeof error === 'object') {
       const err = error as any
 
+      // Detectar errores de red/conexión
+      if (err.code === 'ENOTFOUND' || err.code === 'ENETUNREACH' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+        errorMessage = 'Sin conexión a internet'
+      }
       // Intentar obtener el mensaje más específico
-      if (err.data?.message) {
+      else if (err.data?.message) {
         errorMessage = err.data.message
       } else if (err.data?.data?.message) {
         errorMessage = err.data.data.message
       } else if (err.data?.data_errors?.params) {
         errorMessage = `Error de validación: ${JSON.stringify(err.data.data_errors.params)}`
       } else if (err.message) {
-        errorMessage = err.message
+        // Detectar mensajes de error de red comunes
+        if (err.message.includes('fetch failed') || err.message.includes('network') || err.message.includes('ENOTFOUND')) {
+          errorMessage = 'Sin conexión a internet'
+        } else {
+          errorMessage = err.message
+        }
       }
     } else if (error instanceof Error) {
       errorMessage = error.message
@@ -534,6 +566,15 @@ export class ArcaService {
    */
   async crearCertificadoDev(data: { cuit: string, username: string, password: string, token: string }) {
     try {
+      // Verificar conexión a internet antes de continuar
+      const hasInternet = await this.checkInternetConnection()
+      if (!hasInternet) {
+        return {
+          success: false,
+          error: 'Sin conexión a internet',
+        }
+      }
+
       console.log('Iniciando creación de certificado con datos:', {
         cuit: data.username, // El CUIT debe ser el del username
         username: data.username,
@@ -1047,6 +1088,15 @@ export class ArcaService {
    */
   async crearCertificadoProd(data: { cuit: string, username: string, password: string, alias: string, token: string }) {
     try {
+      // Verificar conexión a internet antes de continuar
+      const hasInternet = await this.checkInternetConnection()
+      if (!hasInternet) {
+        return {
+          success: false,
+          error: 'Sin conexión a internet',
+        }
+      }
+
       console.log('Iniciando creación de certificado de PRODUCCIÓN con datos:', {
         cuit: data.username,
         username: data.username,

@@ -1,7 +1,7 @@
 import type { ChangeEvent, FormEvent } from 'react'
 import { useState } from 'react'
 import { Button } from '@render/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@render/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@render/components/ui/dialog'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
