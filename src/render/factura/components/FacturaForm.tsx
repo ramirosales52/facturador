@@ -132,11 +132,13 @@ export function FacturaForm({
   return (
     <Card>
       <CardHeader className="flex justify-between">
-        <div>
+        <div className='flex flex-col gap-2'>
           <CardTitle>
             Factura {formData.TipoFactura}
           </CardTitle>
-          <CardDescription>Complete los datos del cliente y los artículos</CardDescription>
+          <CardDescription>
+            Complete los datos de la factura
+          </CardDescription>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="TipoFactura" className="text-sm">Tipo de Factura</Label>
@@ -176,10 +178,10 @@ export function FacturaForm({
                   {TIPOS_DOCUMENTO
                     .filter(tipo => formData.TipoFactura === 'A' ? tipo.id === '80' : true)
                     .map(tipo => (
-                    <SelectItem key={tipo.id} value={tipo.id}>
-                      {tipo.nombre}
-                    </SelectItem>
-                  ))}
+                      <SelectItem key={tipo.id} value={tipo.id}>
+                        {tipo.nombre}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
