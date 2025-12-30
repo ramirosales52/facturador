@@ -55,16 +55,13 @@ export function PDFPreview({ htmlContent, qrUrl }: PDFPreviewProps) {
       </Button>
 
       {mostrarPreview && (
-        <div className="mt-4 border border-gray-300 rounded-lg overflow-hidden">
-          <div className="bg-gray-100 p-2 text-sm text-gray-600">
-            Vista previa del PDF
-          </div>
-          <div className="bg-white overflow-auto" style={{ maxHeight: '800px' }}>
+        <div className="mt-4 bg-gray-100 p-4 rounded-lg shadow">
+          <div className="bg-white overflow-auto rounded shadow-md mx-auto" style={{ maxHeight: '800px', width: '210mm', maxWidth: '100%' }}>
             <iframe
               srcDoc={htmlConQR}
               title="PDF Preview"
               className="w-full border-0"
-              style={{ height: '1100px', minHeight: '1100px' }}
+              style={{ height: '297mm', minHeight: '297mm' }}
               sandbox="allow-same-origin"
             />
           </div>

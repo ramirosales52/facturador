@@ -344,7 +344,7 @@ export class ArcaService {
       }
 
       // Datos de la factura con valores por defecto
-      const data = {
+      const data: any = {
         CantReg: 1, // Cantidad de comprobantes a registrar
         PtoVta: ptoVta, // Punto de venta
         CbteTipo: cbteTipo, // Tipo de comprobante
@@ -370,6 +370,19 @@ export class ArcaService {
             Importe: createArcaDto.ImpIVA, // Importe de IVA
           },
         ],
+      }
+
+      // Agregar campos de fecha si el concepto es 2 (Servicios) o 3 (Productos y Servicios)
+      if (concepto === 2 || concepto === 3) {
+        if (createArcaDto.FchServDesde) {
+          data.FchServDesde = Number.parseInt(createArcaDto.FchServDesde)
+        }
+        if (createArcaDto.FchServHasta) {
+          data.FchServHasta = Number.parseInt(createArcaDto.FchServHasta)
+        }
+        if (createArcaDto.FchVtoPago) {
+          data.FchVtoPago = Number.parseInt(createArcaDto.FchVtoPago)
+        }
       }
 
       const result = await this.afip.ElectronicBilling.createVoucher(data)

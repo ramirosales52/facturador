@@ -80,10 +80,10 @@ function CrearFactura() {
     CondicionIVA: '5', // Consumidor Final
     IVA: '4', // 10.5%
     Articulo: {
-      descripcion: '',
+      descripcion: 'Componente informático',
       cantidad: DEFAULTS.CANTIDAD_DEFAULT,
       unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
-      precioUnitario: 0,
+      precioUnitario: undefined,
       alicuotaIVA: '4',
     },
     ImpNeto: '0.00',
@@ -255,6 +255,9 @@ function CrearFactura() {
       ImpNeto: '0.00',
       ImpIVA: '0.00',
       ImpTotal: '0.00',
+      FchServDesde: undefined,
+      FchServHasta: undefined,
+      FchVtoPago: undefined,
     })
     if (!mantenerResultado) {
       setResultado(null)
@@ -285,7 +288,12 @@ function CrearFactura() {
     const docNro = formData.DocTipo === '99' ? 0 : Number.parseInt(formData.DocNro)
     const concepto = Number.parseInt(formData.Concepto)
 
-    const facturaData = {
+    // Convertir fechas de formato YYYY-MM-DD a AAAAMMDD para AFIP
+    const convertirFecha = (fecha: string): string => {
+      return fecha.replace(/-/g, '')
+    }
+
+    const facturaData: any = {
       PtoVta: datosEmisor.puntoVenta,
       CbteTipo: cbteTipo,
       Concepto: concepto,
@@ -295,6 +303,19 @@ function CrearFactura() {
       ImpNeto: Number.parseFloat(formData.ImpNeto),
       ImpIVA: Number.parseFloat(formData.ImpIVA),
       Iva: ivaArray,
+    }
+
+    // Agregar campos de fecha si el concepto es 2 (Servicios) o 3 (Productos y Servicios)
+    if (concepto === 2 || concepto === 3) {
+      if (formData.FchServDesde) {
+        facturaData.FchServDesde = convertirFecha(formData.FchServDesde)
+      }
+      if (formData.FchServHasta) {
+        facturaData.FchServHasta = convertirFecha(formData.FchServHasta)
+      }
+      if (formData.FchVtoPago) {
+        facturaData.FchVtoPago = convertirFecha(formData.FchVtoPago)
+      }
     }
 
     const response = await crearFactura(facturaData)
@@ -735,7 +756,9 @@ function CrearFactura() {
   // ====== Funciones para Tickets ======
   
   const recalcularTotalesTicket = (articulo: ArticuloTicket): void => {
-    const totalConIVA = articulo.cantidad * articulo.precioUnitario
+    const cantidad = articulo.cantidad || 0
+    const precioUnitario = articulo.precioUnitario || 0
+    const totalConIVA = cantidad * precioUnitario
     
     // Buscar la alícuota de IVA
     const alicuota = ALICUOTAS_IVA.find(a => a.id === ticketFormData.IVA)
@@ -783,10 +806,10 @@ function CrearFactura() {
       CondicionIVA: '5',
       IVA: '4',
       Articulo: {
-        descripcion: '',
+        descripcion: 'Componente informático',
         cantidad: DEFAULTS.CANTIDAD_DEFAULT,
         unidadMedida: DEFAULTS.UNIDAD_MEDIDA_DEFAULT,
-        precioUnitario: 0,
+        precioUnitario: undefined,
         alicuotaIVA: '4',
       },
       ImpNeto: '0.00',
@@ -829,14 +852,18 @@ function CrearFactura() {
 
     const response = await crearFactura(ticketData)
     
+    // Guardar una copia de los datos del formulario antes de limpiarlo
+    const ticketDataCopy = { ...ticketFormData }
+    
     setTicketResultado({
       ...response,
-      formData: { ...ticketFormData },
+      formData: ticketDataCopy,
     })
 
-    // Si el ticket se creó exitosamente, generar QR y vista previa
+    // Si el ticket se creó exitosamente, limpiar formulario inmediatamente
     if (response.success && response.data) {
       toast.success('Ticket generado correctamente')
+      limpiarFormularioTicket(true)
       
       const qrData = {
         ver: 1,
@@ -868,8 +895,8 @@ function CrearFactura() {
           reader.readAsDataURL(blob)
         })
 
-        const condicionIVANombre = getNombreCondicionIVA(ticketFormData.CondicionIVA, 'B')
-        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketFormData.CondicionVenta)?.nombre || 'Efectivo'
+        const condicionIVANombre = getNombreCondicionIVA(ticketDataCopy.CondicionIVA, 'B')
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketDataCopy.CondicionVenta)?.nombre || 'Efectivo'
 
         const ticketPDFData: TicketPDFData = {
           ...response.data,
@@ -878,11 +905,11 @@ function CrearFactura() {
           CondicionIVA: condicionIVANombre,
           CondicionVenta: condicionVentaNombre,
           Articulo: {
-            descripcion: ticketFormData.Articulo.descripcion,
-            cantidad: ticketFormData.Articulo.cantidad,
+            descripcion: ticketDataCopy.Articulo.descripcion,
+            cantidad: ticketDataCopy.Articulo.cantidad || 0,
             porcentajeIVA: porcentajeIVA,
-            precioUnitario: ticketFormData.Articulo.precioUnitario,
-            subtotal: ticketFormData.Articulo.cantidad * ticketFormData.Articulo.precioUnitario,
+            precioUnitario: ticketDataCopy.Articulo.precioUnitario || 0,
+            subtotal: (ticketDataCopy.Articulo.cantidad || 0) * (ticketDataCopy.Articulo.precioUnitario || 0),
           },
           DatosEmisor: {
             cuit: datosEmisor.cuit,
@@ -902,12 +929,12 @@ function CrearFactura() {
 
       // Guardar el ticket en la base de datos local
       try {
-        const condicionIVANombre = getNombreCondicionIVA(ticketFormData.CondicionIVA, 'B')
-        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketFormData.CondicionVenta)?.nombre || 'Efectivo'
+        const condicionIVANombre = getNombreCondicionIVA(ticketDataCopy.CondicionIVA, 'B')
+        const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === ticketDataCopy.CondicionVenta)?.nombre || 'Efectivo'
 
         // Agrupar IVAs para guardar
         const ivasAgrupados = [{
-          id: ticketFormData.IVA,
+          id: ticketDataCopy.IVA,
           porcentaje: porcentajeIVA,
           baseImponible: impNeto,
           importeIVA: impIVA,
@@ -932,7 +959,7 @@ function CrearFactura() {
           condicionVenta: condicionVentaNombre,
           razonSocial: 'Consumidor Final',
           domicilio: '',
-          articulos: JSON.stringify([ticketFormData.Articulo]),
+          articulos: JSON.stringify([ticketDataCopy.Articulo]),
           ivas: JSON.stringify(ivasAgrupados),
           datosEmisor: JSON.stringify({
             cuit: datosEmisor.cuit,
@@ -958,40 +985,43 @@ function CrearFactura() {
         // No bloqueamos el flujo si falla el guardado local
       }
     }
-
-    // Limpiar formulario si el ticket se creó exitosamente
-    if (response.success) {
-      limpiarFormularioTicket(true)
-    }
   }
 
   const handleImprimirTicket = async (): Promise<void> => {
     if (!ticketHtmlPreview) return
 
     setLoadingTicketPrint(true)
-    const toastId = `ticket-print-${Date.now()}`
-    toast.loading('Preparando impresión...', { id: toastId })
 
     try {
-      // Crear una ventana oculta para imprimir
-      const printWindow = window.open('', '', 'width=302,height=800')
-      if (printWindow) {
-        printWindow.document.write(ticketHtmlPreview)
-        printWindow.document.close()
+      // Crear un iframe oculto para imprimir sin mostrar ventanas
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'absolute'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      iframe.style.border = 'none'
+      iframe.style.visibility = 'hidden'
+      
+      document.body.appendChild(iframe)
+      
+      const iframeDoc = iframe.contentWindow?.document
+      if (iframeDoc) {
+        iframeDoc.open()
+        iframeDoc.write(ticketHtmlPreview)
+        iframeDoc.close()
         
-        // Esperar a que cargue el contenido
-        printWindow.onload = () => {
-          printWindow.focus()
-          printWindow.print()
-          printWindow.close()
-          toast.success('Impresión enviada', { id: toastId })
+        // Esperar a que cargue el contenido antes de imprimir
+        iframe.onload = () => {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+          
+          // Remover el iframe después de imprimir
+          setTimeout(() => {
+            document.body.removeChild(iframe)
+          }, 100)
         }
-      } else {
-        toast.error('No se pudo abrir la ventana de impresión', { id: toastId })
       }
     } catch (error) {
       console.error('Error al imprimir:', error)
-      toast.error('Error al imprimir el ticket', { id: toastId })
     } finally {
       setLoadingTicketPrint(false)
     }
