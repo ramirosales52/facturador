@@ -77,10 +77,7 @@ export function TicketForm({
   return (
     <Card>
       <CardHeader className="flex justify-between">
-        <div>
-          <CardTitle>Ticket - Factura B</CardTitle>
-          <CardDescription>Consumidor Final - Un solo artículo</CardDescription>
-        </div>
+        <CardTitle>Ticket</CardTitle>
       </CardHeader>
 
       <Separator />
@@ -221,7 +218,7 @@ export function TicketForm({
                 <div className="min-w-36 space-y-1">
                   <Label className="text-xs">Subtotal</Label>
                   <div className="bg-white border rounded-md px-2 text-sm font-medium h-9 flex items-center">
-                    {formData.Articulo.cantidad && formData.Articulo.precioUnitario 
+                    {formData.Articulo.cantidad && formData.Articulo.precioUnitario
                       ? formatearMoneda(formData.Articulo.cantidad * formData.Articulo.precioUnitario)
                       : formatearMoneda(0)}
                   </div>

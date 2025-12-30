@@ -183,7 +183,7 @@ export function ComprobantesEmitidos() {
     // Filtrar por cliente si hay texto de búsqueda
     if (cliente.trim()) {
       const clienteLower = cliente.toLowerCase().trim()
-      facturasFiltered = facturasFiltered.filter(f => 
+      facturasFiltered = facturasFiltered.filter(f =>
         f.razonSocial?.toLowerCase().includes(clienteLower)
       )
     }
@@ -386,7 +386,7 @@ export function ComprobantesEmitidos() {
     setSheetOpen(true)
     setMostrarVistaPrevia(false)
     setTicketHtml('')
-    
+
     // Si es un ticket, generar el HTML de la vista previa
     if (factura.esTicket === 1) {
       await generarHTMLTicketPreview(factura)
@@ -397,14 +397,14 @@ export function ComprobantesEmitidos() {
     try {
       const articulos = JSON.parse(factura.articulos)
       const datosEmisor = JSON.parse(factura.datosEmisor)
-      
+
       // El ticket solo tiene un artículo
       const articulo = articulos[0]
-      
+
       // Obtener alícuota de IVA
       const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
       const porcentajeIVA = alicuota?.porcentaje || 0
-      
+
       const ticketData = {
         CAE: factura.cae,
         CAEFchVto: factura.caeVencimiento,
@@ -425,7 +425,7 @@ export function ComprobantesEmitidos() {
         },
         DatosEmisor: datosEmisor,
       }
-      
+
       // Generar QR base64
       const qrData = {
         ver: 1,
@@ -442,9 +442,9 @@ export function ComprobantesEmitidos() {
         tipoCodAut: 'E',
         codAut: factura.cae,
       }
-      
+
       const qrResponse = await generarQR(qrData)
-      
+
       if (qrResponse.success && qrResponse.qrUrl) {
         const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResponse.qrUrl)}`
         const qrImageResponse = await fetch(qrImageUrl)
@@ -454,7 +454,7 @@ export function ComprobantesEmitidos() {
           reader.onloadend = () => resolve(reader.result as string)
           reader.readAsDataURL(blob)
         })
-        
+
         const html = generarHTMLTicket(ticketData, qrBase64)
         setTicketHtml(html)
       }
@@ -474,20 +474,20 @@ export function ComprobantesEmitidos() {
       iframe.style.height = '0'
       iframe.style.border = 'none'
       iframe.style.visibility = 'hidden'
-      
+
       document.body.appendChild(iframe)
-      
+
       const iframeDoc = iframe.contentWindow?.document
       if (iframeDoc) {
         iframeDoc.open()
         iframeDoc.write(ticketHtml)
         iframeDoc.close()
-        
+
         // Esperar a que cargue el contenido antes de imprimir
         iframe.onload = () => {
           iframe.contentWindow?.focus()
           iframe.contentWindow?.print()
-          
+
           // Remover el iframe después de imprimir
           setTimeout(() => {
             document.body.removeChild(iframe)
@@ -561,12 +561,12 @@ export function ComprobantesEmitidos() {
           {mostrarFiltros && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4 border-t">
               <div className="space-y-2">
-                <Label htmlFor="cliente">Cliente (Nombre o Razón Social)</Label>
+                <Label htmlFor="cliente">Cliente</Label>
                 <Input
                   id="cliente"
                   value={cliente}
                   onChange={(e) => setCliente(e.target.value)}
-                  placeholder="Juan Pérez o Empresa SA"
+                  placeholder="Juan Pérez o Empresa"
                 />
               </div>
 
@@ -790,7 +790,7 @@ export function ComprobantesEmitidos() {
             <>
               <SheetHeader>
                 <SheetTitle>
-                  {facturaSeleccionada.esTicket === 1 
+                  {facturaSeleccionada.esTicket === 1
                     ? `Ticket ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
                     : `Factura ${facturaSeleccionada.tipoFactura} ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
                   }
@@ -811,10 +811,10 @@ export function ComprobantesEmitidos() {
                     <div>
                       <Label className="text-xs text-gray-500">Tipo de Comprobante</Label>
                       <p className="text-sm font-medium">
-                        {facturaSeleccionada.esTicket === 1 
-                          ? 'Ticket' 
-                          : facturaSeleccionada.docTipo === 99 
-                            ? 'Consumidor Final' 
+                        {facturaSeleccionada.esTicket === 1
+                          ? 'Ticket'
+                          : facturaSeleccionada.docTipo === 99
+                            ? 'Consumidor Final'
                             : `Factura ${facturaSeleccionada.tipoFactura}`
                         }
                       </p>

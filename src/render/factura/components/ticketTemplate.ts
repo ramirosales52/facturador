@@ -49,6 +49,14 @@ export function generarHTMLTicket(
     }).format(valor)
   }
 
+  const formatearCUIT = (cuit: string): string => {
+    // Formato: 20111111112 -> 20-11111111-2
+    if (cuit.length === 11) {
+      return `${cuit.substring(0, 2)}-${cuit.substring(2, 10)}-${cuit.substring(10, 11)}`
+    }
+    return cuit
+  }
+
   return `
 <!DOCTYPE html>
 <html>
@@ -131,21 +139,25 @@ table table tr td:last-child{
 <table class="bill-container">
 <tr>
 <td class="padding-b-3">
-<p><strong>Razón social:</strong> ${data.DatosEmisor.razonSocial}</p>
-<p><strong>Dirección:</strong> ${data.DatosEmisor.domicilio}</p>
-<p><strong>C.U.I.T.:</strong> ${data.DatosEmisor.cuit}</p>
-<p><strong>${data.DatosEmisor.condicionIVA.toUpperCase()}</strong></p>
-${data.DatosEmisor.iibb ? `<p><strong>IIBB:</strong> ${data.DatosEmisor.iibb}</p>` : ''}
-<p><strong>Inicio de actividad:</strong> ${data.DatosEmisor.inicioActividades}</p>
+<p style="font-size: 14px"><strong> ${data.DatosEmisor.razonSocial.toUpperCase()}</strong></p>
+<p>${formatearCUIT(data.DatosEmisor.cuit)}</p>
+<p>${data.DatosEmisor.condicionIVA}</p>
+${data.DatosEmisor.iibb ? `<p>IIBB: ${data.DatosEmisor.iibb}</p>` : ''}
+<p>I. Actividad: ${data.DatosEmisor.inicioActividades}</p>
+<p>${data.DatosEmisor.domicilio}</p>
 </td>
 </tr>
 <tr>
 <td class="border-top padding-t-3 padding-b-3">
-<p class="text-center text-lg">FACTURA B</p>
-<p class="text-center">Código 06</p>
-<p><strong>P.V:</strong> ${String(data.PtoVta).padStart(5, '0')}</p>
-<p><strong>Nro:</strong> ${String(data.CbteDesde).padStart(8, '0')}</p>
-<p><strong>Fecha:</strong> ${formatearFecha(data.FchProceso)}</p>
+<div style="display: flex; justify-content: space-between;">
+<span><strong>FACTURA</strong></span>
+<span><strong>B</strong></span>
+<span><strong>${String(data.PtoVta).padStart(4, '0')}-${String(data.CbteDesde).padStart(8, '0')}</strong></span>
+</div>
+<div style="display: flex; justify-content: space-between;">
+<span>Cod. 06</span>
+<span>${formatearFecha(data.FchProceso)}</span>
+</div>
 <p><strong>Concepto:</strong> Productos</p>
 </td>
 </tr>
@@ -157,48 +169,41 @@ ${data.DatosEmisor.iibb ? `<p><strong>IIBB:</strong> ${data.DatosEmisor.iibb}</p
 </tr>
 <tr>
 <td class="border-top padding-t-3 padding-b-3">
-<div>
-<table>
-<tr>
-<td><strong>Cant</strong></td>
-<td><strong>Descripción</strong></td>
-<td><strong>IVA</strong></td>
-<td><strong>Precio</strong></td>
-</tr>
-<tr>
-<td>${data.Articulo.cantidad}</td>
-<td>${data.Articulo.descripcion}</td>
-<td>${data.Articulo.porcentajeIVA}%</td>
-<td>${formatearMoneda(data.Articulo.subtotal)}</td>
-</tr>
-</table>
+<div style="display: flex; justify-content: space-between;">
+<span><strong>Cant./Precio Unit.</strong></span>
+<span><strong>Importe</strong></span>
 </div>
+<p><strong>Descripción</strong></p>
+<p style="border-bottom: 1px dashed #000; margin: 4px 0;"></p>
+<div style="display: flex; justify-content: space-between;">
+<span>${data.Articulo.cantidad} x ${formatearMoneda(data.Articulo.precioUnitario)}</span>
+<span>${formatearMoneda(data.Articulo.subtotal)}</span>
+</div>
+<p>${data.Articulo.descripcion}</p>
 </td>
 </tr>
 <tr>
 <td class="border-top padding-t-3 padding-b-3">
-<div>
-<table>
-<tr>
-<td><strong>Subtotal (sin IVA):</strong></td>
-<td>${formatearMoneda(data.ImpNeto)}</td>
-</tr>
-<tr>
-<td><strong>IVA (${data.Articulo.porcentajeIVA}%):</strong></td>
-<td>${formatearMoneda(data.ImpIVA)}</td>
-</tr>
-<tr>
-<td><strong>TOTAL:</strong></td>
-<td><strong>${formatearMoneda(data.ImpTotal)}</strong></td>
-</tr>
-</table>
+<div style="display: flex; justify-content: space-between;">
+<span>SUBTOTAL:</span>
+<span>$${formatearMoneda(data.ImpTotal)}</span>
+</div>
+<div style="display: flex; justify-content: space-between;">
+<span><strong>TOTAL:</strong></span>
+<span><strong>$${formatearMoneda(data.ImpTotal)}</strong></span>
+</div>
+<p style="border-bottom: 1px dashed #000; margin: 4px 0;"></p>
+<p style="font-size: 10px; margin: 4px 0;">Régimen de Transparencia Fiscal (Ley 27.743)</p>
+<div style="display: flex; justify-content: space-between; font-size: 11px;">
+<span>IVA Contenido</span>
+<span>$${formatearMoneda(data.ImpIVA)}</span>
 </div>
 </td>
 </tr>
 <tr>
 <td class="border-top padding-t-3">
-<p><strong>CAE:</strong> ${data.CAE}</p>
-<p><strong>Vto:</strong> ${formatearFecha(data.CAEFchVto)}</p>
+<p>CAE: <strong>${data.CAE}</strong></p>
+<p>VTO: <strong>${formatearFecha(data.CAEFchVto)}</strong></p>
 </td>
 </tr>
 <tr class="text-center">
