@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye, EyeOff, Printer, XCircle } from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff, FileText, FolderOpen, Printer, XCircle } from 'lucide-react'
 import { Button } from '@render/components/ui/button'
 import type { TicketFormData } from './TicketForm'
 import { formatearMoneda } from '@render/utils/calculos'
@@ -28,6 +28,9 @@ interface TicketResultadoProps {
   htmlPreview?: string
   onImprimir?: () => void
   loadingPrint?: boolean
+  onDescargarPDF?: () => void
+  loadingPDF?: boolean
+  pdfUrl?: string | null
 }
 
 export function TicketResultado({ 
@@ -35,6 +38,9 @@ export function TicketResultado({
   htmlPreview,
   onImprimir,
   loadingPrint,
+  onDescargarPDF,
+  loadingPDF,
+  pdfUrl,
 }: TicketResultadoProps) {
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -51,6 +57,19 @@ export function TicketResultado({
       }
     }
   }, [mostrarVistaPrevia, htmlPreview])
+
+  const handleAbrirCarpeta = async () => {
+    if (!pdfUrl) return
+    try {
+      // @ts-ignore - Electron API
+      if (window.electron?.shell?.openPath) {
+        // @ts-ignore
+        await window.electron.shell.openPath(pdfUrl)
+      }
+    } catch (error) {
+      console.error('Error al abrir carpeta:', error)
+    }
+  }
 
   return (
     <div className={`mt-6 p-4 rounded-md ${resultado.success ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
@@ -130,6 +149,32 @@ export function TicketResultado({
                   </div>
                 </div>
               )}
+
+              {/* Botones de PDF */}
+              <div className="grid grid-cols-2 gap-2">
+                {onDescargarPDF && (
+                  <Button
+                    onClick={onDescargarPDF}
+                    disabled={loadingPDF}
+                    variant={pdfUrl ? 'outline' : 'default'}
+                    className="w-full"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {loadingPDF ? 'Generando...' : pdfUrl ? 'Regenerar PDF' : 'Generar PDF'}
+                  </Button>
+                )}
+
+                {pdfUrl && (
+                  <Button
+                    onClick={handleAbrirCarpeta}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Abrir Carpeta
+                  </Button>
+                )}
+              </div>
 
               {onImprimir && (
                 <Button 

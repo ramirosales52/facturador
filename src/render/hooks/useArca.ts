@@ -143,6 +143,14 @@ export function useArca() {
     })
   }
 
+  const generarPDFTicket = async (ticketInfo: any): Promise<PDFResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post<PDFResponse>(`${apiUrl}/generar-pdf-ticket`, ticketInfo)
+      return response.data
+    })
+  }
+
   const obtenerCUITDesdeDNI = async (dni: string): Promise<{ success: boolean, data?: { cuit: number }, error?: string }> => {
     // No usamos handleRequest para no afectar el estado de error global
     try {
@@ -288,6 +296,7 @@ export function useArca() {
     crearFactura,
     generarQR,
     generarPDF,
+    generarPDFTicket,
     obtenerCUITDesdeDNI,
     consultarContribuyente,
     getPuntosVentaHabilitados,

@@ -29,7 +29,7 @@ import { generarHTMLFactura } from './components/facturaTemplate'
 import { generarHTMLTicket } from './components/ticketTemplate'
 
 function CrearFactura() {
-  const { loading, error, clearError, crearFactura, generarQR, generarPDF, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura, actualizarPdfPath } = useArca()
+  const { loading, error, clearError, crearFactura, generarQR, generarPDF, generarPDFTicket, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura, actualizarPdfPath } = useArca()
 
   const [formData, setFormData] = useState<FormData>({
     TipoFactura: DEFAULTS.TIPO_FACTURA,
@@ -93,6 +93,8 @@ function CrearFactura() {
   const [ticketResultado, setTicketResultado] = useState<TicketResultadoData | null>(null)
   const [ticketHtmlPreview, setTicketHtmlPreview] = useState<string | null>(null)
   const [loadingTicketPrint, setLoadingTicketPrint] = useState(false)
+  const [loadingTicketPDF, setLoadingTicketPDF] = useState(false)
+  const [ticketPdfUrl, setTicketPdfUrl] = useState<string | null>(null)
 
   // Inicializar AFIP y cargar configuración al inicio
   useEffect(() => {
@@ -1027,6 +1029,90 @@ function CrearFactura() {
     }
   }
 
+  const handleDescargarPDFTicket = async (): Promise<void> => {
+    if (!ticketResultado?.data || !ticketResultado?.formData)
+      return
+
+    setLoadingTicketPDF(true)
+    const toastId = `pdf-ticket-${Date.now()}`
+    toast.loading('Generando PDF del Ticket...', { id: toastId })
+
+    // Usar los datos guardados en el resultado
+    const datosTicket = ticketResultado.formData
+
+    // Buscar la alícuota de IVA
+    const alicuota = ALICUOTAS_IVA.find(a => a.id === datosTicket.IVA)
+    const porcentajeIVA = alicuota?.porcentaje || 0
+
+    // Obtener nombre de condición IVA
+    const condicionIVANombre = getNombreCondicionIVA(datosTicket.CondicionIVA, 'B')
+    const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === datosTicket.CondicionVenta)?.nombre || 'Efectivo'
+
+    // Crear datos para el PDF del ticket
+    const ticketPdfData: TicketPDFData = {
+      CAE: ticketResultado.data.CAE,
+      CAEFchVto: ticketResultado.data.CAEFchVto,
+      CbteDesde: ticketResultado.data.CbteDesde,
+      PtoVta: ticketResultado.data.PtoVta || datosEmisor.puntoVenta,
+      FchProceso: ticketResultado.data.FchProceso || new Date().toISOString().split('T')[0].replace(/-/g, ''),
+      ImpTotal: ticketResultado.data.ImpTotal || 0,
+      ImpNeto: Number.parseFloat(datosTicket.ImpNeto),
+      ImpIVA: Number.parseFloat(datosTicket.ImpIVA),
+      CondicionIVA: condicionIVANombre,
+      CondicionVenta: condicionVentaNombre,
+      Articulo: {
+        descripcion: datosTicket.Articulo.descripcion,
+        cantidad: datosTicket.Articulo.cantidad || 0,
+        porcentajeIVA: porcentajeIVA,
+        precioUnitario: datosTicket.Articulo.precioUnitario || 0,
+        subtotal: (datosTicket.Articulo.cantidad || 0) * (datosTicket.Articulo.precioUnitario || 0),
+      },
+      DatosEmisor: {
+        cuit: datosEmisor.cuit,
+        razonSocial: datosEmisor.razonSocial,
+        domicilio: datosEmisor.domicilio,
+        condicionIVA: datosEmisor.condicionIVA === '1'
+          ? 'Responsable Inscripto'
+          : datosEmisor.condicionIVA === '6' ? 'Responsable Monotributo' : 'Exento',
+        iibb: datosEmisor.iibb || 'Exento',
+        inicioActividades: datosEmisor.inicioActividades,
+      },
+      // Agregar carpeta de destino personalizada
+      customPath: pdfSavePath || undefined,
+    }
+
+    const pdfResponse = await generarPDFTicket(ticketPdfData)
+
+    if (pdfResponse.success && pdfResponse.filePath) {
+      setTicketPdfUrl(pdfResponse.filePath)
+
+      // Si existe el ID del ticket guardado localmente, actualizar el pdfPath
+      if (ticketResultado?.facturaLocalId) {
+        try {
+          await actualizarPdfPath(ticketResultado.facturaLocalId, pdfResponse.filePath)
+          console.log('✅ PDF path del ticket actualizado en la base de datos local')
+        } catch (error) {
+          console.error('Error al actualizar PDF path en BD local:', error)
+        }
+      }
+
+      toast.success(
+        'PDF del Ticket generado exitosamente',
+        {
+          id: toastId,
+          description: pdfResponse.message || 'El archivo está guardado',
+          duration: 3000,
+        },
+      )
+    } else {
+      toast.error(
+        `Error al generar PDF: ${pdfResponse.error}`,
+        { id: toastId },
+      )
+    }
+    setLoadingTicketPDF(false)
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="mb-4">
@@ -1102,6 +1188,9 @@ function CrearFactura() {
                 htmlPreview={ticketHtmlPreview || undefined}
                 onImprimir={handleImprimirTicket}
                 loadingPrint={loadingTicketPrint}
+                onDescargarPDF={handleDescargarPDFTicket}
+                loadingPDF={loadingTicketPDF}
+                pdfUrl={ticketPdfUrl}
               />
             </div>
           )}

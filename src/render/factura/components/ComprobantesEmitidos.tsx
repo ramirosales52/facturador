@@ -61,7 +61,7 @@ interface FacturaLocal {
 }
 
 export function ComprobantesEmitidos() {
-  const { obtenerFacturas, generarPDF, actualizarPdfPath, generarQR } = useArca()
+  const { obtenerFacturas, generarPDF, generarPDFTicket, actualizarPdfPath, generarQR } = useArca()
 
   const [loading, setLoading] = useState(false)
   const [facturas, setFacturas] = useState<FacturaLocal[]>([])
@@ -266,40 +266,75 @@ export function ComprobantesEmitidos() {
         { id: '5', nombre: '21%', porcentaje: 21 },
       ]
 
-      const articulosConPorcentaje = articulos.map((articulo: any) => {
+      let response: any
+
+      // Si es un ticket, usar el endpoint específico de tickets
+      if (factura.esTicket === 1) {
+        // El ticket solo tiene un artículo
+        const articulo = articulos[0]
         const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
-        return {
-          ...articulo,
-          porcentajeIVA: alicuota?.porcentaje || 0,
+        const porcentajeIVA = alicuota?.porcentaje || 0
+
+        const ticketPdfData = {
+          CAE: factura.cae,
+          CAEFchVto: factura.caeVencimiento,
+          CbteDesde: factura.cbteDesde,
+          PtoVta: factura.ptoVta,
+          FchProceso: factura.fechaProceso,
+          ImpTotal: factura.impTotal,
+          ImpNeto: factura.impNeto,
+          ImpIVA: factura.impIVA,
+          CondicionIVA: factura.condicionIVA,
+          CondicionVenta: factura.condicionVenta,
+          Articulo: {
+            descripcion: articulo.descripcion,
+            cantidad: articulo.cantidad,
+            porcentajeIVA: porcentajeIVA,
+            precioUnitario: articulo.precioUnitario,
+            subtotal: articulo.cantidad * articulo.precioUnitario,
+          },
+          DatosEmisor: datosEmisor,
+          customPath: selectedPath,
         }
-      })
 
-      // Preparar datos para el PDF con la carpeta seleccionada
-      const pdfData = {
-        PtoVta: factura.ptoVta,
-        CbteTipo: factura.cbteTipo,
-        CbteDesde: factura.cbteDesde,
-        DocTipo: factura.docTipo,
-        DocNro: factura.docNro,
-        ImpTotal: factura.impTotal,
-        ImpNeto: factura.impNeto,
-        ImpIVA: factura.impIVA,
-        CAE: factura.cae,
-        CAEFchVto: factura.caeVencimiento,
-        FchProceso: factura.fechaProceso,
-        TipoFactura: factura.tipoFactura,
-        RazonSocial: factura.razonSocial,
-        Domicilio: factura.domicilio,
-        Concepto: factura.concepto,
-        CondicionVenta: factura.condicionVenta,
-        CondicionIVA: factura.condicionIVA,
-        Articulos: articulosConPorcentaje,
-        IVAsAgrupados: ivas,
-        DatosEmisor: datosEmisor,
-        customPath: selectedPath, // Pasar la carpeta seleccionada
+        response = await generarPDFTicket(ticketPdfData)
+      } else {
+        // Factura normal
+        const articulosConPorcentaje = articulos.map((articulo: any) => {
+          const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+          return {
+            ...articulo,
+            porcentajeIVA: alicuota?.porcentaje || 0,
+          }
+        })
+
+        // Preparar datos para el PDF con la carpeta seleccionada
+        const pdfData = {
+          PtoVta: factura.ptoVta,
+          CbteTipo: factura.cbteTipo,
+          CbteDesde: factura.cbteDesde,
+          DocTipo: factura.docTipo,
+          DocNro: factura.docNro,
+          ImpTotal: factura.impTotal,
+          ImpNeto: factura.impNeto,
+          ImpIVA: factura.impIVA,
+          CAE: factura.cae,
+          CAEFchVto: factura.caeVencimiento,
+          FchProceso: factura.fechaProceso,
+          TipoFactura: factura.tipoFactura,
+          RazonSocial: factura.razonSocial,
+          Domicilio: factura.domicilio,
+          Concepto: factura.concepto,
+          CondicionVenta: factura.condicionVenta,
+          CondicionIVA: factura.condicionIVA,
+          Articulos: articulosConPorcentaje,
+          IVAsAgrupados: ivas,
+          DatosEmisor: datosEmisor,
+          customPath: selectedPath,
+        }
+
+        response = await generarPDF(pdfData)
       }
-
-      const response = await generarPDF(pdfData)
 
       if (response.success && response.filePath) {
         // Actualizar el pdfPath en la base de datos

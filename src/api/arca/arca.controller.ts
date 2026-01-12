@@ -39,6 +39,14 @@ export class ArcaController {
   }
 
   /**
+   * Generar PDF de un ticket
+   */
+  @Post('generar-pdf-ticket')
+  generatePDFTicket(@Body() ticketInfo: any) {
+    return this.arcaService.generatePDFTicket(ticketInfo)
+  }
+
+  /**
    * Obtener CUIT a partir de un DNI
    */
   @Get('dni-to-cuit/:dni')

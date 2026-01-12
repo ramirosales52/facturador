@@ -24,6 +24,7 @@ export interface TicketPDFData {
     iibb?: string
     inicioActividades: string
   }
+  customPath?: string
 }
 
 export function generarHTMLTicket(

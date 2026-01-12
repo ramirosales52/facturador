@@ -15,11 +15,11 @@ export class ArcaService {
   private accessToken?: string
 
   constructor(private readonly databaseService: DatabaseService) {
-    // this.afip = new Afip({
-    //   CUIT: 20409378472,
-    //   access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
-    // })
-    // this.cuitActual = 20409378472
+    this.afip = new Afip({
+      CUIT: 20409378472,
+      access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+    })
+    this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
   }
 
@@ -28,21 +28,21 @@ export class ArcaService {
   }
 
   configurarCUIT(cuit: number) {
-    this.cuitActual = cuit
-    const { certContent, keyContent } = this.loadCertificates(cuit)
-    
-    const config: any = {
-      CUIT: cuit,
-      production: ArcaConfig.production,
-      cert: certContent,
-      key: keyContent,
-    }
-    
-    if (this.accessToken) {
-      config.access_token = this.accessToken
-    }
-    
-    this.afip = new Afip(config)
+    // this.cuitActual = cuit
+    // const { certContent, keyContent } = this.loadCertificates(cuit)
+    //
+    // const config: any = {
+    //   CUIT: cuit,
+    //   production: ArcaConfig.production,
+    //   cert: certContent,
+    //   key: keyContent,
+    // }
+    //
+    // if (this.accessToken) {
+    //   config.access_token = this.accessToken
+    // }
+    //
+    // this.afip = new Afip(config)
   }
 
   getCUITActual(): number | undefined {
@@ -347,6 +347,8 @@ export class ArcaService {
       const cbteTipo = createArcaDto.CbteTipo || 11
       console.log(`  - Consultando último comprobante: PtoVta=${ptoVta}, CbteTipo=${cbteTipo}`)
       const lastVoucher = await this.afip.ElectronicBilling.getLastVoucher(ptoVta, cbteTipo)
+
+      console.log(`  - Último comprobante autorizado: ${lastVoucher}`)
 
       // Usar DocTipo y Concepto del DTO si vienen, si no usar por defecto
       const docTipo = createArcaDto.DocTipo || 80
@@ -989,6 +991,139 @@ export class ArcaService {
     }
     catch (error) {
       console.error('Error al generar PDF:', error)
+      return this.handleError(error)
+    }
+  }
+
+  /**
+   * Generar PDF del Ticket usando Puppeteer
+   */
+  async generatePDFTicket(ticketInfo: {
+    PtoVta: number
+    CbteDesde: number
+    ImpTotal: number
+    ImpNeto: number
+    ImpIVA: number
+    CAE: string
+    CAEFchVto: string
+    FchProceso: string
+    CondicionIVA: string
+    CondicionVenta: string
+    Articulo: {
+      descripcion: string
+      cantidad: number
+      porcentajeIVA: number
+      precioUnitario: number
+      subtotal: number
+    }
+    DatosEmisor: {
+      cuit: string
+      razonSocial: string
+      domicilio: string
+      condicionIVA: string
+      iibb?: string
+      inicioActividades: string
+    }
+    customPath?: string
+  }) {
+    try {
+      // Generar QR para incluir en el PDF
+      const fecha = ticketInfo.FchProceso || new Date().toISOString().split('T')[0]
+
+      const qrResult = await this.generateQR({
+        ver: 1,
+        fecha,
+        cuit: this.cuitActual || 0,
+        ptoVta: ticketInfo.PtoVta,
+        tipoCmp: 6, // Factura B
+        nroCmp: ticketInfo.CbteDesde,
+        importe: ticketInfo.ImpTotal,
+        moneda: 'PES',
+        ctz: 1,
+        tipoDocRec: 99, // Consumidor Final
+        nroDocRec: 0,
+        tipoCodAut: 'E',
+        codAut: ticketInfo.CAE,
+      })
+
+      // Verificar que se generó el QR correctamente
+      if (!qrResult.success || !qrResult.qrUrl) {
+        const errorMsg = 'error' in qrResult ? qrResult.error : 'Error desconocido al generar QR'
+        throw new Error(`Error al generar QR: ${errorMsg}`)
+      }
+
+      // Generar URL del QR code como imagen y convertirla a base64
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResult.qrUrl || '')}`
+      const qrImageBase64 = await this.urlToBase64(qrImageUrl)
+
+      if (!qrImageBase64) {
+        throw new Error('Error al descargar y convertir el código QR')
+      }
+
+      // Importar y usar la función de generación de HTML desde ticketTemplate
+      const { generarHTMLTicket } = await import('@render/factura/components/ticketTemplate')
+      const html = generarHTMLTicket(ticketInfo, qrImageBase64)
+
+      // Nombre del archivo: Ticket_[ptoVta]-[nroComprobante].pdf
+      const nroComprobante = String(ticketInfo.CbteDesde).padStart(8, '0')
+      const ptoVta = String(ticketInfo.PtoVta).padStart(4, '0')
+      const fileName = `Ticket_${ptoVta}-${nroComprobante}.pdf`
+
+      // Directorio de destino
+      let outputDir: string
+      if (ticketInfo.customPath && existsSync(ticketInfo.customPath)) {
+        outputDir = ticketInfo.customPath
+      } else {
+        const desktopPath = join(homedir(), 'Desktop')
+        outputDir = desktopPath
+      }
+
+      // Crear el directorio si no existe
+      if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true })
+      }
+
+      // Ruta completa del archivo PDF
+      const pdfPath = join(outputDir, fileName)
+
+      // Generar PDF usando Puppeteer
+      const browser = await puppeteer.launch({
+        executablePath: puppeteer.executablePath(),
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      })
+
+      const page = await browser.newPage()
+
+      // Configurar el contenido HTML
+      await page.setContent(html, { waitUntil: 'networkidle0' })
+
+      // Generar el PDF con tamaño de ticket (80mm de ancho)
+      await page.pdf({
+        path: pdfPath,
+        width: '80mm',
+        height: '200mm', // Alto suficiente para el contenido
+        margin: {
+          top: '2mm',
+          right: '2mm',
+          bottom: '2mm',
+          left: '2mm',
+        },
+        printBackground: true,
+      })
+
+      await browser.close()
+
+      return {
+        success: true,
+        filePath: pdfPath,
+        fileName,
+        qrUrl: qrResult.qrUrl || undefined,
+        message: pdfPath,
+      }
+    }
+    catch (error) {
+      console.error('Error al generar PDF de Ticket:', error)
       return this.handleError(error)
     }
   }
