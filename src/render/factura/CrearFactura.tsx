@@ -92,7 +92,6 @@ function CrearFactura() {
   })
   const [ticketResultado, setTicketResultado] = useState<TicketResultadoData | null>(null)
   const [ticketHtmlPreview, setTicketHtmlPreview] = useState<string | null>(null)
-  const [loadingTicketPrint, setLoadingTicketPrint] = useState(false)
   const [loadingTicketPDF, setLoadingTicketPDF] = useState(false)
   const [ticketPdfUrl, setTicketPdfUrl] = useState<string | null>(null)
 
@@ -989,46 +988,6 @@ function CrearFactura() {
     }
   }
 
-  const handleImprimirTicket = async (): Promise<void> => {
-    if (!ticketHtmlPreview) return
-
-    setLoadingTicketPrint(true)
-
-    try {
-      // Crear un iframe oculto para imprimir sin mostrar ventanas
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'absolute'
-      iframe.style.width = '0'
-      iframe.style.height = '0'
-      iframe.style.border = 'none'
-      iframe.style.visibility = 'hidden'
-      
-      document.body.appendChild(iframe)
-      
-      const iframeDoc = iframe.contentWindow?.document
-      if (iframeDoc) {
-        iframeDoc.open()
-        iframeDoc.write(ticketHtmlPreview)
-        iframeDoc.close()
-        
-        // Esperar a que cargue el contenido antes de imprimir
-        iframe.onload = () => {
-          iframe.contentWindow?.focus()
-          iframe.contentWindow?.print()
-          
-          // Remover el iframe después de imprimir
-          setTimeout(() => {
-            document.body.removeChild(iframe)
-          }, 100)
-        }
-      }
-    } catch (error) {
-      console.error('Error al imprimir:', error)
-    } finally {
-      setLoadingTicketPrint(false)
-    }
-  }
-
   const handleDescargarPDFTicket = async (): Promise<void> => {
     if (!ticketResultado?.data || !ticketResultado?.formData)
       return
@@ -1186,11 +1145,11 @@ function CrearFactura() {
               <TicketResultado
                 resultado={ticketResultado}
                 htmlPreview={ticketHtmlPreview || undefined}
-                onImprimir={handleImprimirTicket}
-                loadingPrint={loadingTicketPrint}
-                onDescargarPDF={handleDescargarPDFTicket}
+                onGenerarPDF={handleDescargarPDFTicket}
                 loadingPDF={loadingTicketPDF}
                 pdfUrl={ticketPdfUrl}
+                pdfSavePath={pdfSavePath}
+                onSelectFolder={handleSelectFolder}
               />
             </div>
           )}
