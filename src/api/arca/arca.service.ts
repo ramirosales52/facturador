@@ -17,7 +17,8 @@ export class ArcaService {
   constructor(private readonly databaseService: DatabaseService) {
     this.afip = new Afip({
       CUIT: 20409378472,
-      access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+      // access_token: 'ofWDsYzAgBEWtVQF5U1IjmIiDQfd2DxjgF5aZ52V1TWrBNdy1oe5PGyUCpHzY8QS'
+      access_token: 'OSCVcrAviSzvmHzIFVuGhMAyO8zA6AhMoJJSacfylIoUVoL7xfsmYhESEKzhHEUw'
     })
     this.cuitActual = 20409378472
     console.log('CUIT no configurado. Se debe configurar desde la interfaz de usuario.')
@@ -1098,11 +1099,19 @@ export class ArcaService {
       // Configurar el contenido HTML
       await page.setContent(html, { waitUntil: 'networkidle0' })
 
-      // Generar el PDF con tamaño de ticket (80mm de ancho)
+      // Generar el PDF con tamaño de ticket (80mm de ancho, alto automático)
+      // Primero obtenemos la altura real del contenido
+      const bodyHeight = await page.evaluate(() => {
+        return document.body.scrollHeight
+      })
+      
+      // Convertir pixels a mm (aproximadamente 3.78 pixels por mm)
+      const heightInMm = Math.ceil(bodyHeight / 3.78) + 10 // +10mm de margen extra
+
       await page.pdf({
         path: pdfPath,
         width: '80mm',
-        height: '200mm', // Alto suficiente para el contenido
+        height: `${heightInMm}mm`,
         margin: {
           top: '2mm',
           right: '2mm',

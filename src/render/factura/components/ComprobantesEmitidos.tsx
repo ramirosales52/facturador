@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@render/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@render/components/ui/table'
 import { Separator } from '@render/components/ui/separator'
+import { Tabs, TabsList, TabsTrigger } from '@render/components/ui/tabs'
 import { ArrowUpDown, ChevronDown, ChevronUp, Eye, EyeOff, FileText, Filter, FolderOpen, Loader2, Printer, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -13,13 +14,6 @@ import { useArca } from '../../hooks/useArca'
 import { formatearMoneda } from '@render/utils/calculos'
 import { generarHTMLTicket } from './ticketTemplate'
 import { generarHTMLFactura } from './facturaTemplate'
-
-const TIPOS_COMPROBANTE = [
-  { id: '1', nombre: 'Factura A' },
-  { id: '6', nombre: 'Factura B' },
-  { id: 'ticket', nombre: 'Ticket' },
-  { id: 'consumidor-final', nombre: 'Consumidor Final' },
-]
 
 const TIPOS_DOCUMENTO = [
   { id: '80', nombre: 'CUIT' },
@@ -84,7 +78,7 @@ export function ComprobantesEmitidos() {
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
-  const [tipoComprobante, setTipoComprobante] = useState('')
+  const [tabActivo, setTabActivo] = useState('todos')
   const [tipoDoc, setTipoDoc] = useState('')
   const [nroDoc, setNroDoc] = useState('')
   const [cliente, setCliente] = useState('')
@@ -93,13 +87,6 @@ export function ComprobantesEmitidos() {
   useEffect(() => {
     cargarFacturas()
   }, [])
-
-  // Ejecutar búsqueda automáticamente cuando cambia el tipo de comprobante
-  useEffect(() => {
-    if (tipoComprobante) {
-      handleBuscar()
-    }
-  }, [tipoComprobante])
 
   const cargarFacturas = async (filtros?: any) => {
     setLoading(true)
@@ -133,10 +120,6 @@ export function ComprobantesEmitidos() {
     if (fechaHasta) {
       filtros.fechaHasta = fechaHasta
     }
-    // Solo agregar cbteTipo si es un tipo numérico (Factura A o B)
-    if (tipoComprobante && tipoComprobante !== 'ticket' && tipoComprobante !== 'consumidor-final') {
-      filtros.cbteTipo = parseInt(tipoComprobante)
-    }
     if (tipoDoc) {
       filtros.docTipo = parseInt(tipoDoc)
     }
@@ -150,7 +133,7 @@ export function ComprobantesEmitidos() {
   const handleLimpiarFiltros = () => {
     setFechaDesde('')
     setFechaHasta('')
-    setTipoComprobante('')
+    setTabActivo('todos')
     setTipoDoc('')
     setNroDoc('')
     setCliente('')
@@ -171,16 +154,23 @@ export function ComprobantesEmitidos() {
   }
 
   const getSortedFacturas = () => {
-    // Primero filtrar por tipo de comprobante especial si está seleccionado
+    // Primero filtrar por tipo de comprobante según el tab activo
     let facturasFiltered = facturas
 
-    if (tipoComprobante === 'ticket') {
+    if (tabActivo === 'ticket') {
       // Solo mostrar tickets (esTicket === 1)
       facturasFiltered = facturas.filter(f => f.esTicket === 1)
-    } else if (tipoComprobante === 'consumidor-final') {
+    } else if (tabActivo === 'consumidor-final') {
       // Solo mostrar facturas a consumidor final que NO sean tickets
       facturasFiltered = facturas.filter(f => f.docTipo === 99 && f.esTicket !== 1)
+    } else if (tabActivo === 'factura-a') {
+      // Solo Factura A (cbteTipo = 1)
+      facturasFiltered = facturas.filter(f => f.cbteTipo === 1 && f.esTicket !== 1)
+    } else if (tabActivo === 'factura-b') {
+      // Solo Factura B (cbteTipo = 6) que no sean tickets ni consumidor final
+      facturasFiltered = facturas.filter(f => f.cbteTipo === 6 && f.esTicket !== 1 && f.docTipo !== 99)
     }
+    // Si tabActivo === 'todos', no filtramos
 
     // Filtrar por cliente si hay texto de búsqueda
     if (cliente.trim()) {
@@ -220,6 +210,27 @@ export function ComprobantesEmitidos() {
       return 0
     })
   }
+
+  // Contadores por tipo de comprobante (considerando filtro de cliente)
+  const getContadores = () => {
+    // Aplicar filtro de cliente primero si existe
+    let facturasBase = facturas
+    if (cliente.trim()) {
+      const clienteLower = cliente.toLowerCase().trim()
+      facturasBase = facturas.filter(f =>
+        f.razonSocial?.toLowerCase().includes(clienteLower)
+      )
+    }
+
+    const todos = facturasBase.length
+    const facturaA = facturasBase.filter(f => f.cbteTipo === 1 && f.esTicket !== 1).length
+    const facturaB = facturasBase.filter(f => f.cbteTipo === 6 && f.esTicket !== 1 && f.docTipo !== 99).length
+    const consumidorFinal = facturasBase.filter(f => f.docTipo === 99 && f.esTicket !== 1).length
+    const tickets = facturasBase.filter(f => f.esTicket === 1).length
+    return { todos, facturaA, facturaB, consumidorFinal, tickets }
+  }
+
+  const contadores = getContadores()
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
@@ -700,22 +711,6 @@ export function ComprobantesEmitidos() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tipoComprobante">Tipo de Comprobante</Label>
-                <Select value={tipoComprobante} onValueChange={setTipoComprobante}>
-                  <SelectTrigger id="tipoComprobante">
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_COMPROBANTE.map((tipo) => (
-                      <SelectItem key={tipo.id} value={tipo.id}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           )}
 
@@ -766,13 +761,46 @@ export function ComprobantesEmitidos() {
         </CardContent>
       </Card>
 
+      {/* Tabs de tipo de comprobante */}
+      <Tabs value={tabActivo} onValueChange={setTabActivo} className="w-full">
+        <TabsList className="w-full grid grid-cols-5">
+          <TabsTrigger value="todos" className="flex items-center gap-2">
+            Todos
+            <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.todos}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="factura-a" className="flex items-center gap-2">
+            Factura A
+            <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.facturaA}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="factura-b" className="flex items-center gap-2">
+            Factura B
+            <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.facturaB}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="consumidor-final" className="flex items-center gap-2">
+            C. Final
+            <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.consumidorFinal}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="ticket" className="flex items-center gap-2">
+            Ticket
+            <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.tickets}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Tabla de resultados */}
       {facturas.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Resultados ({getSortedFacturas().length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
