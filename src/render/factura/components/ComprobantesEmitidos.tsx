@@ -543,6 +543,38 @@ export function ComprobantesEmitidos() {
         DatosEmisor: datosEmisor,
       }
 
+      // Cargar logos como base64 para la vista previa
+      let logoForPreview = ''
+      let arcaLogoForPreview = ''
+      
+      try {
+        const logoModule = await import('../../assets/logo.png')
+        const logoPath = logoModule.default
+        const response = await fetch(logoPath)
+        const blob = await response.blob()
+        logoForPreview = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+      } catch (error) {
+        console.error('Error cargando logo para vista previa:', error)
+      }
+
+      try {
+        const arcaLogoModule = await import('../../assets/ARCA.png')
+        const arcaLogoPath = arcaLogoModule.default
+        const response = await fetch(arcaLogoPath)
+        const blob = await response.blob()
+        arcaLogoForPreview = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+      } catch (error) {
+        console.error('Error cargando logo ARCA para vista previa:', error)
+      }
+
       // Generar QR
       const qrData = {
         ver: 1,
@@ -563,7 +595,9 @@ export function ComprobantesEmitidos() {
       const qrResponse = await generarQR(qrData)
 
       if (qrResponse.success && qrResponse.qrUrl) {
-        const html = generarHTMLFactura(pdfData, qrResponse.qrUrl, Number.parseInt(datosEmisor.cuit))
+        // Usar servicio externo para generar imagen QR
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResponse.qrUrl)}`
+        const html = generarHTMLFactura(pdfData, qrImageUrl, Number.parseInt(datosEmisor.cuit), logoForPreview, arcaLogoForPreview)
         setFacturaHtml(html)
       }
     } catch (error) {
@@ -1061,17 +1095,28 @@ export function ComprobantesEmitidos() {
                 {/* Vista previa de la factura */}
                 {mostrarVistaPrevia && facturaSeleccionada.esTicket !== 1 && facturaHtml && (
                   <div className="bg-gray-100 p-2 flex justify-center overflow-hidden">
-                    <div className="border bg-white shadow-lg" style={{ width: '210mm', maxWidth: '100%' }}>
-                      <iframe
-                        srcDoc={facturaHtml}
-                        style={{
-                          width: '210mm',
-                          height: '600px',
-                          border: 'none',
-                          display: 'block',
-                        }}
-                        title="Vista previa de la factura"
-                      />
+                    <div 
+                      className="origin-top"
+                      style={{ 
+                        transform: 'scale(0.72)',
+                        width: '210mm',
+                        height: '297mm',
+                        marginBottom: '-300px',
+                      }}
+                    >
+                      <div className="border bg-white shadow-lg">
+                        <iframe
+                          srcDoc={facturaHtml}
+                          style={{
+                            width: '210mm',
+                            height: '297mm',
+                            border: 'none',
+                            display: 'block',
+                          }}
+                          title="Vista previa de la factura"
+                          scrolling="no"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

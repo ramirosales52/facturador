@@ -96,7 +96,7 @@ body {
 }
 
 #qrcode {
-  width: 110px;
+  width: 80px;
 }
 
 p {
