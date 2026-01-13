@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
 import { formatearMoneda } from '@render/utils/calculos'
 import { generarHTMLTicket } from './ticketTemplate'
+import { generarHTMLFactura } from './facturaTemplate'
 
 const TIPOS_COMPROBANTE = [
   { id: '1', nombre: 'Factura A' },
@@ -72,6 +73,7 @@ export function ComprobantesEmitidos() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
   const [ticketHtml, setTicketHtml] = useState<string>('')
+  const [facturaHtml, setFacturaHtml] = useState<string>('')
 
   // Estado de ordenamiento
   type SortField = 'tipoFactura' | 'fechaProceso' | 'impTotal' | null
@@ -421,10 +423,14 @@ export function ComprobantesEmitidos() {
     setSheetOpen(true)
     setMostrarVistaPrevia(false)
     setTicketHtml('')
+    setFacturaHtml('')
 
     // Si es un ticket, generar el HTML de la vista previa
     if (factura.esTicket === 1) {
       await generarHTMLTicketPreview(factura)
+    } else {
+      // Si es una factura normal, generar el HTML de la vista previa
+      await generarHTMLFacturaPreview(factura)
     }
   }
 
@@ -498,40 +504,70 @@ export function ComprobantesEmitidos() {
     }
   }
 
-  const handleImprimirTicket = async () => {
-    if (!ticketHtml) return
-
+  const generarHTMLFacturaPreview = async (factura: FacturaLocal) => {
     try {
-      // Crear un iframe oculto para imprimir
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'absolute'
-      iframe.style.width = '0'
-      iframe.style.height = '0'
-      iframe.style.border = 'none'
-      iframe.style.visibility = 'hidden'
+      const articulos = JSON.parse(factura.articulos)
+      const ivas = JSON.parse(factura.ivas)
+      const datosEmisor = JSON.parse(factura.datosEmisor)
 
-      document.body.appendChild(iframe)
-
-      const iframeDoc = iframe.contentWindow?.document
-      if (iframeDoc) {
-        iframeDoc.open()
-        iframeDoc.write(ticketHtml)
-        iframeDoc.close()
-
-        // Esperar a que cargue el contenido antes de imprimir
-        iframe.onload = () => {
-          iframe.contentWindow?.focus()
-          iframe.contentWindow?.print()
-
-          // Remover el iframe después de imprimir
-          setTimeout(() => {
-            document.body.removeChild(iframe)
-          }, 100)
+      // Agregar porcentajeIVA a los artículos
+      const articulosConPorcentaje = articulos.map((articulo: any) => {
+        const alicuota = ALICUOTAS_IVA.find(a => a.id === articulo.alicuotaIVA)
+        return {
+          ...articulo,
+          porcentajeIVA: alicuota?.porcentaje || 0,
         }
+      })
+
+      // Preparar datos para el HTML
+      const pdfData = {
+        PtoVta: factura.ptoVta,
+        CbteTipo: factura.cbteTipo,
+        CbteDesde: factura.cbteDesde,
+        DocTipo: factura.docTipo,
+        DocNro: factura.docNro,
+        ImpTotal: factura.impTotal,
+        ImpNeto: factura.impNeto,
+        ImpIVA: factura.impIVA,
+        CAE: factura.cae,
+        CAEFchVto: factura.caeVencimiento,
+        FchProceso: factura.fechaProceso,
+        TipoFactura: factura.tipoFactura,
+        RazonSocial: factura.razonSocial,
+        Domicilio: factura.domicilio,
+        Concepto: factura.concepto,
+        CondicionVenta: factura.condicionVenta,
+        CondicionIVA: factura.condicionIVA,
+        Articulos: articulosConPorcentaje,
+        IVAsAgrupados: ivas,
+        DatosEmisor: datosEmisor,
+      }
+
+      // Generar QR
+      const qrData = {
+        ver: 1,
+        fecha: factura.fechaProceso,
+        cuit: Number.parseInt(datosEmisor.cuit),
+        ptoVta: factura.ptoVta,
+        tipoCmp: factura.cbteTipo,
+        nroCmp: factura.cbteDesde,
+        importe: factura.impTotal,
+        moneda: 'PES',
+        ctz: 1,
+        tipoDocRec: factura.docTipo,
+        nroDocRec: factura.docNro,
+        tipoCodAut: 'E',
+        codAut: factura.cae,
+      }
+
+      const qrResponse = await generarQR(qrData)
+
+      if (qrResponse.success && qrResponse.qrUrl) {
+        const html = generarHTMLFactura(pdfData, qrResponse.qrUrl, Number.parseInt(datosEmisor.cuit))
+        setFacturaHtml(html)
       }
     } catch (error) {
-      console.error('Error al imprimir:', error)
-      toast.error('Error al imprimir el ticket')
+      console.error('Error al generar vista previa de la factura:', error)
     }
   }
 
@@ -982,115 +1018,114 @@ export function ComprobantesEmitidos() {
 
                 <Separator />
 
-                {/* Vista previa del ticket (solo para tickets) */}
-                {facturaSeleccionada.esTicket === 1 && (
-                  <>
-                    <div>
-                      <Button
-                        onClick={() => setMostrarVistaPrevia(!mostrarVistaPrevia)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        {mostrarVistaPrevia ? (
-                          <>
-                            <EyeOff className="mr-2 h-4 w-4" />
-                            Ocultar Vista Previa
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Mostrar Vista Previa
-                          </>
-                        )}
-                      </Button>
-                    </div>
-
-                    {mostrarVistaPrevia && ticketHtml && (
-                      <div className="bg-gray-100 p-2 flex justify-center overflow-hidden">
-                        <div className="border bg-white shadow-lg" style={{ width: '80mm' }}>
-                          <iframe
-                            srcDoc={ticketHtml}
-                            style={{
-                              width: '80mm',
-                              height: '550px',
-                              border: 'none',
-                              display: 'block',
-                            }}
-                            title="Vista previa del ticket"
-                            scrolling="no"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <Separator />
-                  </>
-                )}
-
-                {/* Acciones */}
+                {/* Vista previa (para tickets y facturas) */}
                 <div>
-                  <div className="flex flex-col gap-2">
-                    {facturaSeleccionada.esTicket === 1 ? (
-                      /* Botones para tickets */
-                      <Button
-                        onClick={handleImprimirTicket}
-                        disabled={!ticketHtml}
-                        variant="default"
-                        className="w-full"
-                      >
-                        <Printer className="mr-2 h-4 w-4" />
-                        Imprimir Ticket
-                      </Button>
-                    ) : (
-                      /* Botones para facturas normales */
+                  <Button
+                    onClick={() => setMostrarVistaPrevia(!mostrarVistaPrevia)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {mostrarVistaPrevia ? (
                       <>
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRegenerarPDF(facturaSeleccionada)
-                          }}
-                          disabled={regenerandoPDF === facturaSeleccionada.id}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          {regenerandoPDF === facturaSeleccionada.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Regenerando PDF...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Regenerar PDF
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleImprimir(facturaSeleccionada.pdfPath!)
-                          }}
-                          disabled={!facturaSeleccionada.pdfPath}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          <Printer className="mr-2 h-4 w-4" />
-                          Imprimir
-                        </Button>
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAbrirCarpeta(facturaSeleccionada.pdfPath!)
-                          }}
-                          disabled={!facturaSeleccionada.pdfPath}
-                          variant="default"
-                          className="w-full"
-                        >
-                          <FolderOpen className="mr-2 h-4 w-4" />
-                          Abrir Carpeta
-                        </Button>
+                        <EyeOff className="mr-2 h-4 w-4" />
+                        Ocultar Vista Previa
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Mostrar Vista Previa
                       </>
                     )}
+                  </Button>
+                </div>
+
+                {/* Vista previa del ticket */}
+                {mostrarVistaPrevia && facturaSeleccionada.esTicket === 1 && ticketHtml && (
+                  <div className="bg-gray-100 p-2 flex justify-center overflow-hidden">
+                    <div className="border bg-white shadow-lg" style={{ width: '80mm' }}>
+                      <iframe
+                        srcDoc={ticketHtml}
+                        style={{
+                          width: '80mm',
+                          height: '550px',
+                          border: 'none',
+                          display: 'block',
+                        }}
+                        title="Vista previa del ticket"
+                        scrolling="no"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Vista previa de la factura */}
+                {mostrarVistaPrevia && facturaSeleccionada.esTicket !== 1 && facturaHtml && (
+                  <div className="bg-gray-100 p-2 flex justify-center overflow-hidden">
+                    <div className="border bg-white shadow-lg" style={{ width: '210mm', maxWidth: '100%' }}>
+                      <iframe
+                        srcDoc={facturaHtml}
+                        style={{
+                          width: '210mm',
+                          height: '600px',
+                          border: 'none',
+                          display: 'block',
+                        }}
+                        title="Vista previa de la factura"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Acciones - Mismo flujo para tickets y facturas */}
+                <div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRegenerarPDF(facturaSeleccionada)
+                      }}
+                      disabled={regenerandoPDF === facturaSeleccionada.id}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {regenerandoPDF === facturaSeleccionada.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Regenerando PDF...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Regenerar PDF
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleImprimir(facturaSeleccionada.pdfPath!)
+                      }}
+                      disabled={!facturaSeleccionada.pdfPath}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Imprimir
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAbrirCarpeta(facturaSeleccionada.pdfPath!)
+                      }}
+                      disabled={!facturaSeleccionada.pdfPath}
+                      variant="default"
+                      className="w-full"
+                    >
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      Abrir Carpeta
+                    </Button>
                   </div>
                 </div>
               </div>
