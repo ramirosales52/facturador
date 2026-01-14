@@ -820,12 +820,16 @@ function CrearFactura() {
     if (!mantenerResultado) {
       setTicketResultado(null)
       setTicketHtmlPreview(null)
+      setTicketPdfUrl(null)
     }
   }
 
   const handleSubmitTicket = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
     clearError()
+
+    // Limpiar el PDF anterior al crear un nuevo ticket
+    setTicketPdfUrl(null)
 
     // Preparar IVA array - siempre un solo elemento para ticket
     const alicuota = ALICUOTAS_IVA.find(a => a.id === ticketFormData.IVA)
