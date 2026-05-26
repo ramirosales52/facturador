@@ -856,7 +856,7 @@ export function ComprobantesEmitidos() {
                         {factura.razonSocial || '-'}
                       </TableCell>
                       <TableCell>{factura.docNro || '-'}</TableCell>
-                      <TableCell className="text-center font-semibold">
+                      <TableCell className="text-right font-semibold">
                         {formatearMoneda(factura.impTotal)}
                       </TableCell>
                       <TableCell className="font-mono text-xs" onClick={(e) => e.stopPropagation()}>
