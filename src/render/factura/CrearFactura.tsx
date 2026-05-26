@@ -10,9 +10,11 @@ import type {
 import type { DatosEmisor } from './components/ConfiguracionEmisor'
 import type { FacturaPDFData } from './components/facturaTemplate'
 import type { TicketPDFData } from './components/ticketTemplate'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@render/components/ui/tabs'
+import { Button } from '@render/components/ui/button'
+import { Separator } from '@render/components/ui/separator'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
+import { FileText, ListOrdered, ReceiptText, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import { ALICUOTAS_IVA, CONCEPTOS, CONDICIONES_VENTA, DEFAULTS, TIPOS_COMPROBANTE } from '../constants/afip'
 import { useArca } from '../hooks/useArca'
@@ -27,6 +29,17 @@ import { ComprobantesEmitidos } from './components/ComprobantesEmitidos'
 import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
 import { generarHTMLFactura } from './components/facturaTemplate'
 import { generarHTMLTicket } from './components/ticketTemplate'
+import logo from '../assets/logo.png'
+import type { LucideIcon } from 'lucide-react'
+
+type Seccion = 'facturar' | 'ticket' | 'comprobantes' | 'configuracion'
+
+const secciones: Array<{ value: Seccion; label: string; icon: LucideIcon }> = [
+  { value: 'facturar', label: 'Crear Factura', icon: FileText },
+  { value: 'ticket', label: 'Crear Ticket', icon: ReceiptText },
+  { value: 'comprobantes', label: 'Comprobantes Emitidos', icon: ListOrdered },
+  { value: 'configuracion', label: 'Configuración Emisor', icon: Settings },
+]
 
 function CrearFactura() {
   const { loading, error, clearError, crearFactura, generarQR, generarPDF, generarPDFTicket, obtenerCUITDesdeDNI, consultarContribuyente, guardarFactura, actualizarPdfPath } = useArca()
@@ -94,6 +107,7 @@ function CrearFactura() {
   const [ticketHtmlPreview, setTicketHtmlPreview] = useState<string | null>(null)
   const [loadingTicketPDF, setLoadingTicketPDF] = useState(false)
   const [ticketPdfUrl, setTicketPdfUrl] = useState<string | null>(null)
+  const [seccionActiva, setSeccionActiva] = useState<Seccion>('facturar')
 
   // Inicializar AFIP y cargar configuración al inicio
   useEffect(() => {
@@ -755,16 +769,16 @@ function CrearFactura() {
   }
 
   // ====== Funciones para Tickets ======
-  
+
   const recalcularTotalesTicket = (articulo: ArticuloTicket): void => {
     const cantidad = articulo.cantidad || 0
     const precioUnitario = articulo.precioUnitario || 0
     const totalConIVA = cantidad * precioUnitario
-    
+
     // Buscar la alícuota de IVA
     const alicuota = ALICUOTAS_IVA.find(a => a.id === ticketFormData.IVA)
     const porcentajeIVA = alicuota?.porcentaje || 0
-    
+
     // Calcular el neto (sin IVA)
     const impNeto = totalConIVA / (1 + porcentajeIVA / 100)
     const impIVA = totalConIVA - impNeto
@@ -780,12 +794,12 @@ function CrearFactura() {
   const handleTicketInputChange = (field: keyof TicketFormData, value: string): void => {
     setTicketFormData(prev => {
       const newData = { ...prev, [field]: value }
-      
+
       // Si se cambia el IVA, actualizar alícuota del artículo y recalcular
       if (field === 'IVA') {
         newData.Articulo = { ...newData.Articulo, alicuotaIVA: value }
       }
-      
+
       return newData
     })
 
@@ -856,10 +870,10 @@ function CrearFactura() {
     }
 
     const response = await crearFactura(ticketData)
-    
+
     // Guardar una copia de los datos del formulario antes de limpiarlo
     const ticketDataCopy = { ...ticketFormData }
-    
+
     setTicketResultado({
       ...response,
       formData: ticketDataCopy,
@@ -869,7 +883,7 @@ function CrearFactura() {
     if (response.success && response.data) {
       toast.success('Ticket generado correctamente')
       limpiarFormularioTicket(true)
-      
+
       const qrData = {
         ver: 1,
         fecha: response.data.FchProceso,
@@ -890,7 +904,7 @@ function CrearFactura() {
       if (qrResponse.success && qrResponse.qrUrl) {
         // Generar imagen del QR para el ticket
         const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrResponse.qrUrl)}`
-        
+
         // Convertir QR URL a base64
         const qrImageResponse = await fetch(qrImageUrl)
         const blob = await qrImageResponse.blob()
@@ -1076,102 +1090,129 @@ function CrearFactura() {
     setLoadingTicketPDF(false)
   }
 
-  return (
-    <div className="container mx-auto p-4 max-w-6xl">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold mb-1">Facturación Electrónica</h1>
-        <p className="text-sm text-gray-600">Crear facturas A y B</p>
-      </div>
+  const contenido = () => {
+    switch (seccionActiva) {
+      case 'facturar':
+        return (
+          <>
+            <FacturaForm
+              formData={formData}
+              loading={loading}
+              error={error}
+              onInputChange={handleInputChange}
+              onArticuloAdd={handleArticuloAdd}
+              onArticuloRemove={handleArticuloRemove}
+              onArticuloChange={handleArticuloChange}
+              onSubmit={handleSubmit}
+              onLimpiar={() => limpiarFormulario(false)}
+              onConsultarContribuyente={handleConsultarContribuyente}
+              loadingContribuyente={loadingContribuyente}
+              onConfirmDialog={() => {
+                setResultado(null)
+                setQrUrl(null)
+                setPdfUrl(null)
+                setHtmlPreview(null)
+              }}
+            />
 
-      <Tabs defaultValue="facturar" className="mt-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="facturar">Crear Factura</TabsTrigger>
-          <TabsTrigger value="ticket">Crear Ticket</TabsTrigger>
-          <TabsTrigger value="comprobantes">Comprobantes Emitidos</TabsTrigger>
-          <TabsTrigger value="configuracion">Configuración Emisor</TabsTrigger>
-        </TabsList>
+            {resultado && (
+              <div className="mt-4">
+                <FacturaResultado
+                  resultado={resultado}
+                  qrUrl={qrUrl}
+                  pdfUrl={pdfUrl}
+                  onGenerarPDF={handleDescargarPDF}
+                  htmlPreview={htmlPreview || undefined}
+                  pdfSavePath={pdfSavePath}
+                  onSelectFolder={handleSelectFolder}
+                  loadingPDF={loadingPDF}
+                />
+              </div>
+            )}
+          </>
+        )
+      case 'ticket':
+        return (
+          <>
+            <TicketForm
+              formData={ticketFormData}
+              loading={loading}
+              error={error}
+              onInputChange={handleTicketInputChange}
+              onArticuloChange={handleTicketArticuloChange}
+              onSubmit={handleSubmitTicket}
+              onLimpiar={() => limpiarFormularioTicket(false)}
+              onConfirmDialog={() => {
+                setTicketResultado(null)
+                setTicketHtmlPreview(null)
+              }}
+            />
 
-        <TabsContent value="facturar">
-          <FacturaForm
-            formData={formData}
-            loading={loading}
-            error={error}
-            onInputChange={handleInputChange}
-            onArticuloAdd={handleArticuloAdd}
-            onArticuloRemove={handleArticuloRemove}
-            onArticuloChange={handleArticuloChange}
-            onSubmit={handleSubmit}
-            onLimpiar={() => limpiarFormulario(false)}
-            onConsultarContribuyente={handleConsultarContribuyente}
-            loadingContribuyente={loadingContribuyente}
-            onConfirmDialog={() => {
-              // Ocultar el resultado anterior cuando se confirma crear una nueva factura
-              setResultado(null)
-              setQrUrl(null)
-              setPdfUrl(null)
-              setHtmlPreview(null)
-            }}
-          />
-
-          {resultado && (
-            <div className="mt-4">
-              <FacturaResultado
-                resultado={resultado}
-                qrUrl={qrUrl}
-                pdfUrl={pdfUrl}
-                onGenerarPDF={handleDescargarPDF}
-                htmlPreview={htmlPreview || undefined}
-                pdfSavePath={pdfSavePath}
-                onSelectFolder={handleSelectFolder}
-                loadingPDF={loadingPDF}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="ticket">
-          <TicketForm
-            formData={ticketFormData}
-            loading={loading}
-            error={error}
-            onInputChange={handleTicketInputChange}
-            onArticuloChange={handleTicketArticuloChange}
-            onSubmit={handleSubmitTicket}
-            onLimpiar={() => limpiarFormularioTicket(false)}
-            onConfirmDialog={() => {
-              setTicketResultado(null)
-              setTicketHtmlPreview(null)
-            }}
-          />
-
-          {ticketResultado && (
-            <div className="mt-4">
-              <TicketResultado
-                resultado={ticketResultado}
-                htmlPreview={ticketHtmlPreview || undefined}
-                onGenerarPDF={handleDescargarPDFTicket}
-                loadingPDF={loadingTicketPDF}
-                pdfUrl={ticketPdfUrl}
-                pdfSavePath={pdfSavePath}
-                onSelectFolder={handleSelectFolder}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="comprobantes">
-          <ComprobantesEmitidos />
-        </TabsContent>
-
-        <TabsContent value="configuracion">
+            {ticketResultado && (
+              <div className="mt-4">
+                <TicketResultado
+                  resultado={ticketResultado}
+                  htmlPreview={ticketHtmlPreview || undefined}
+                  onGenerarPDF={handleDescargarPDFTicket}
+                  loadingPDF={loadingTicketPDF}
+                  pdfUrl={ticketPdfUrl}
+                  pdfSavePath={pdfSavePath}
+                  onSelectFolder={handleSelectFolder}
+                />
+              </div>
+            )}
+          </>
+        )
+      case 'comprobantes':
+        return <ComprobantesEmitidos />
+      case 'configuracion':
+        return (
           <ConfiguracionEmisor
             onGuardar={handleGuardarEmisor}
             onBuscarCUIT={handleBuscarEmisor}
             datosIniciales={datosEmisor}
             loadingBusqueda={loadingEmisor}
           />
-        </TabsContent>
-      </Tabs>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <aside className="fixed inset-y-0 left-0 flex w-72 flex-col border-r bg-muted/20 p-4">
+        <div className="flex items-center justify-center gap-3 px-2 py-1.5">
+          <img src={logo} alt="Logo" className="size-28 rounded-md object-contain" />
+        </div>
+
+        <Separator className="my-4" />
+
+        <nav className="flex flex-col gap-1">
+          {secciones.map(seccion => (
+            <Button
+              key={seccion.value}
+              variant={seccionActiva === seccion.value ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setSeccionActiva(seccion.value)}
+            >
+              <seccion.icon data-icon="inline-start" className='size-5' />
+              {seccion.label}
+            </Button>
+          ))}
+        </nav>
+      </aside>
+
+      <main className="min-h-screen pl-72">
+        <div className="mx-auto w-full max-w-6xl p-6">
+          <div className="flex items-center gap-3 px-2 py-1.5">
+            <h1 className="text-2xl font-bold">Facturación Electrónica</h1>
+            <p className="text-sm text-muted-foreground">Crear facturas A y B</p>
+          </div>
+
+          {contenido()}
+        </div>
+      </main>
     </div>
   )
 }
