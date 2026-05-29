@@ -23,6 +23,14 @@ export class ArcaController {
   }
 
   /**
+   * Crear una nota de crédito electrónica
+   */
+  @Post('nota-credito')
+  createNotaCredito(@Body() createArcaDto: CreateArcaDto) {
+    return this.arcaService.create(createArcaDto)
+  }
+
+  /**
    * Generar código QR para una factura
    */
   @Post('generar-qr')
@@ -212,6 +220,8 @@ export class ArcaController {
     docNro: number
     razonSocial: string
     domicilio: string
+    condicionIVA: string
+    condicionVenta: string
     items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
     fecha?: string
   }) {
@@ -232,6 +242,8 @@ export class ArcaController {
           domicilio: result.remito.domicilio,
           cai: result.remito.cai,
           caiVencimiento: result.remito.caiVencimiento,
+          condicionIVA: result.remito.condicionIVA,
+          condicionVenta: result.remito.condicionVenta,
           estado: result.remito.estado,
           proximoNumero: result.cai.proximoNumero,
         },
@@ -270,6 +282,9 @@ export class ArcaController {
     @Query('docTipo') docTipo?: string,
     @Query('ptoVta') ptoVta?: string,
     @Query('cbteTipo') cbteTipo?: string,
+    @Query('cbteAsocTipo') cbteAsocTipo?: string,
+    @Query('cbteAsocPtoVta') cbteAsocPtoVta?: string,
+    @Query('cbteAsocNro') cbteAsocNro?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
@@ -282,6 +297,9 @@ export class ArcaController {
       if (docTipo) filtros.docTipo = parseInt(docTipo)
       if (ptoVta) filtros.ptoVta = parseInt(ptoVta)
       if (cbteTipo) filtros.cbteTipo = parseInt(cbteTipo)
+      if (cbteAsocTipo) filtros.cbteAsocTipo = parseInt(cbteAsocTipo)
+      if (cbteAsocPtoVta) filtros.cbteAsocPtoVta = parseInt(cbteAsocPtoVta)
+      if (cbteAsocNro) filtros.cbteAsocNro = parseInt(cbteAsocNro)
       if (limit) filtros.limit = parseInt(limit)
       if (offset) filtros.offset = parseInt(offset)
 

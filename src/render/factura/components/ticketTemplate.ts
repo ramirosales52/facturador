@@ -80,7 +80,7 @@ body {
 
 .bill-container{
   border-collapse: collapse;
-  width: 76mm;
+  width: 80mm;
   margin: 0 auto;
   font-family: Consolas, 'Courier New', monospace;
   font-size: 12px;

@@ -7,6 +7,7 @@ export interface Articulo {
   unidadMedida: string
   precioUnitario: number // Ahora representa el precio FINAL (con IVA incluido)
   alicuotaIVA: string
+  subtotal?: number
 }
 
 export interface TotalesFactura {
@@ -134,6 +135,85 @@ export function agruparIVAPorAlicuota(articulos: Articulo[]): IVAAgrupado[] {
     baseImponible: Number.parseFloat(valores.baseImponible.toFixed(2)),
     importeIVA: Number.parseFloat(valores.importeIVA.toFixed(2)),
   }))
+}
+
+function redondearMoneda(valor: number): number {
+  return Number.parseFloat(valor.toFixed(2))
+}
+
+export interface NotaCreditoParcialResultado {
+  articulos: Articulo[]
+  ivasAgrupados: IVAAgrupado[]
+  impNeto: number
+  impIVA: number
+  impTotal: number
+}
+
+/**
+ * Calcula una nota de crédito parcial prorrateando los importes originales.
+ */
+export function prepararNotaCreditoParcial(articulos: Articulo[], montoAcreditar: number): NotaCreditoParcialResultado {
+  const totalesOriginales = calcularTotalesFactura(articulos)
+  const montoObjetivo = redondearMoneda(Math.max(montoAcreditar, 0))
+  const totalOriginal = redondearMoneda(totalesOriginales.total)
+
+  if (montoObjetivo <= 0 || totalOriginal <= 0 || montoObjetivo >= totalOriginal) {
+    const ivasAgrupados = agruparIVAPorAlicuota(articulos)
+
+    return {
+      articulos,
+      ivasAgrupados,
+      impNeto: redondearMoneda(totalesOriginales.neto),
+      impIVA: redondearMoneda(totalesOriginales.iva),
+      impTotal: totalOriginal,
+    }
+  }
+
+  const factor = montoObjetivo / totalOriginal
+
+  const articulosAjustados = articulos.map(არტiculo => {
+    const subtotalOriginal = calcularSubtotal(articulo)
+    const subtotalAjustado = subtotalOriginal * factor
+    const precioUnitario = (Number(articulo.cantidad) || 0) > 0
+      ? subtotalAjustado / Number(articulo.cantidad)
+      : subtotalAjustado
+
+    return {
+      ...articulo,
+      precioUnitario,
+      subtotal: redondearMoneda(subtotalAjustado),
+    }
+  })
+
+  const ivasAgrupados = agruparIVAPorAlicuota(articulosAjustados)
+  let impNeto = redondearMoneda(ivasAgrupados.reduce((acc, iva) => acc + iva.baseImponible, 0))
+  let impIVA = redondearMoneda(ivasAgrupados.reduce((acc, iva) => acc + iva.importeIVA, 0))
+
+  const totalCalculado = redondearMoneda(impNeto + impIVA)
+  const diferencia = redondearMoneda(montoObjetivo - totalCalculado)
+
+  if (diferencia !== 0 && ivasAgrupados.length > 0) {
+    const indiceAjuste = [...ivasAgrupados].reverse().findIndex(iva => redondearMoneda(iva.importeIVA) !== 0)
+    const indiceFinal = indiceAjuste === -1 ? ivasAgrupados.length - 1 : ivasAgrupados.length - 1 - indiceAjuste
+    const grupo = ivasAgrupados[indiceFinal]
+
+    if (redondearMoneda(grupo.importeIVA) !== 0) {
+      grupo.importeIVA = redondearMoneda(grupo.importeIVA + diferencia)
+    } else {
+      grupo.baseImponible = redondearMoneda(grupo.baseImponible + diferencia)
+    }
+
+    impNeto = redondearMoneda(ivasAgrupados.reduce((acc, iva) => acc + iva.baseImponible, 0))
+    impIVA = redondearMoneda(ivasAgrupados.reduce((acc, iva) => acc + iva.importeIVA, 0))
+  }
+
+  return {
+    articulos: articulosAjustados,
+    ivasAgrupados,
+    impNeto,
+    impIVA,
+    impTotal: redondearMoneda(impNeto + impIVA),
+  }
 }
 
 /**

@@ -34,13 +34,29 @@ interface IVA {
 }
 
 interface CreateFacturaDto {
+  PtoVta?: number
   CbteTipo: number
+  Concepto?: number
   DocTipo: number
   DocNro: number
+  CondicionIVAReceptorId?: number
+  CbtesAsoc?: Array<{
+    Tipo: number
+    PtoVta: number
+    Nro: number
+  }>
   ImpTotal: number
   ImpNeto: number
   ImpIVA: number
   Iva: IVA[]
+  ImpTotConc?: number
+  ImpOpEx?: number
+  ImpTrib?: number
+  MonId?: string
+  MonCotiz?: number
+  FchServDesde?: string
+  FchServHasta?: string
+  FchVtoPago?: string
 }
 
 interface FacturaResponse {
@@ -129,6 +145,14 @@ export function useArca() {
     return handleRequest(async () => {
       const apiUrl = await getApiUrl()
       const response = await axios.post<FacturaResponse>(`${apiUrl}/factura`, data)
+      return response.data
+    })
+  }
+
+  const crearNotaCredito = async (data: CreateFacturaDto): Promise<FacturaResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post<FacturaResponse>(`${apiUrl}/nota-credito`, data)
       return response.data
     })
   }
@@ -247,6 +271,9 @@ export function useArca() {
     docTipo?: number
     ptoVta?: number
     cbteTipo?: number
+    cbteAsocTipo?: number
+    cbteAsocPtoVta?: number
+    cbteAsocNro?: number
     limit?: number
     offset?: number
   }): Promise<{ success: boolean, data?: any[], total?: number, error?: string }> => {
@@ -260,6 +287,9 @@ export function useArca() {
       if (filtros?.docTipo) params.append('docTipo', filtros.docTipo.toString())
       if (filtros?.ptoVta) params.append('ptoVta', filtros.ptoVta.toString())
       if (filtros?.cbteTipo) params.append('cbteTipo', filtros.cbteTipo.toString())
+      if (filtros?.cbteAsocTipo) params.append('cbteAsocTipo', filtros.cbteAsocTipo.toString())
+      if (filtros?.cbteAsocPtoVta) params.append('cbteAsocPtoVta', filtros.cbteAsocPtoVta.toString())
+      if (filtros?.cbteAsocNro) params.append('cbteAsocNro', filtros.cbteAsocNro.toString())
       if (filtros?.limit) params.append('limit', filtros.limit.toString())
       if (filtros?.offset) params.append('offset', filtros.offset.toString())
 
@@ -366,6 +396,8 @@ export function useArca() {
     docNro: number
     razonSocial: string
     domicilio: string
+    condicionIVA: string
+    condicionVenta: string
     items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
     fecha?: string
   }): Promise<RemitoResponse> => {
@@ -385,6 +417,7 @@ export function useArca() {
     error,
     clearError,
     crearFactura,
+    crearNotaCredito,
     generarQR,
     generarPDF,
     generarPDFTicket,

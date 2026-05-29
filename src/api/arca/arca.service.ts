@@ -5,7 +5,7 @@ import Afip from '@afipsdk/afip.js'
 import { Injectable } from '@nestjs/common'
 import puppeteer from 'puppeteer'
 import { DatabaseService } from '../../main/database/database.service'
-import { ArcaConfig } from './arca.config'
+import { ArcaConfig, TiposComprobante } from './arca.config'
 import { CreateArcaDto } from './dto/create-arca.dto'
 
 @Injectable()
@@ -404,6 +404,22 @@ export class ArcaService {
             Importe: createArcaDto.ImpIVA, // Importe de IVA
           },
         ],
+        ...(createArcaDto.CbtesAsoc?.length ? { CbtesAsoc: createArcaDto.CbtesAsoc } : {}),
+      }
+
+      const esNotaODebito = [
+        TiposComprobante.NOTA_DEBITO_A,
+        TiposComprobante.NOTA_DEBITO_B,
+        TiposComprobante.NOTA_DEBITO_C,
+        TiposComprobante.NOTA_CREDITO_A,
+        TiposComprobante.NOTA_CREDITO_B,
+        TiposComprobante.NOTA_CREDITO_C,
+      ].includes(cbteTipo)
+
+      if (createArcaDto.CbtesAsoc?.length) {
+        data.CbtesAsoc = createArcaDto.CbtesAsoc
+      } else if (esNotaODebito) {
+        throw new Error('CbtesAsoc es obligatorio para notas de crédito y débito')
       }
 
       // Agregar campos de fecha si el concepto es 2 (Servicios) o 3 (Productos y Servicios)
@@ -779,6 +795,7 @@ export class ArcaService {
     try {
       // Generar QR para incluir en el PDF
       const fecha = facturaInfo.FchProceso || new Date().toISOString().split('T')[0]
+      const esNotaCredito = facturaInfo.CbteTipo === 3 || facturaInfo.CbteTipo === 8
 
       const qrResult = await this.generateQR({
         ver: 1,
@@ -858,6 +875,13 @@ export class ArcaService {
       )
 
       // Nombre del archivo
+      const sanitizarNombre = (valor: string) => valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+
       // Formato para Consumidor Final: CFinal_[nroComprobante]_[datos]
       // Formato para otros: [tipoFactura]_[nroComprobante]_[nombre]_[cuit]
 
@@ -866,6 +890,11 @@ export class ArcaService {
 
       // Verificar si es Consumidor Final (DocTipo 99)
       const esConsumidorFinal = facturaInfo.DocTipo === 99
+      const tipoFacturaLetra = facturaInfo.TipoFactura || (
+        facturaInfo.CbteTipo === 1 || facturaInfo.CbteTipo === 2 || facturaInfo.CbteTipo === 3
+          ? 'A'
+          : 'B'
+      )
 
       // Verificar si tiene datos del cliente (nombre o CUIT)
       const tieneRazonSocial = facturaInfo.RazonSocial && facturaInfo.RazonSocial.trim() !== ''
@@ -873,28 +902,26 @@ export class ArcaService {
 
       let nombreArchivo = ''
 
-      if (esConsumidorFinal) {
+      if (esNotaCredito) {
+        const prefijo = `NC_${tipoFacturaLetra}`
+
+        if (tieneRazonSocial && tieneDocNro) {
+          nombreArchivo = `${prefijo}_${nroComprobante}_${sanitizarNombre(facturaInfo.RazonSocial!)}_${facturaInfo.DocNro}.pdf`
+        } else if (tieneRazonSocial) {
+          nombreArchivo = `${prefijo}_${nroComprobante}_${sanitizarNombre(facturaInfo.RazonSocial!)}.pdf`
+        } else if (tieneDocNro) {
+          nombreArchivo = `${prefijo}_${nroComprobante}_${facturaInfo.DocNro}.pdf`
+        } else {
+          nombreArchivo = `${prefijo}_${nroComprobante}.pdf`
+        }
+      } else if (esConsumidorFinal) {
         // Para Consumidor Final, usar "CFinal" al inicio
         if (tieneRazonSocial && tieneDocNro) {
           // Tiene nombre y CUIT: CFinal_[nroComprobante]_[nombre]_[cuit]
-          const razonSocialLimpia = facturaInfo.RazonSocial!
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
-            .replace(/[^a-zA-Z0-9\s]/g, '') // Quitar caracteres especiales excepto espacios
-            .trim()
-            .replace(/\s+/g, '_') // Reemplazar espacios por _
-
-          nombreArchivo = `CFinal_${nroComprobante}_${razonSocialLimpia}_${facturaInfo.DocNro}.pdf`
+          nombreArchivo = `CFinal_${nroComprobante}_${sanitizarNombre(facturaInfo.RazonSocial!)}_${facturaInfo.DocNro}.pdf`
         } else if (tieneRazonSocial) {
           // Solo tiene nombre: CFinal_[nroComprobante]_[nombre]
-          const razonSocialLimpia = facturaInfo.RazonSocial!
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9\s]/g, '')
-            .trim()
-            .replace(/\s+/g, '_')
-
-          nombreArchivo = `CFinal_${nroComprobante}_${razonSocialLimpia}.pdf`
+          nombreArchivo = `CFinal_${nroComprobante}_${sanitizarNombre(facturaInfo.RazonSocial!)}.pdf`
         } else if (tieneDocNro) {
           // Solo tiene CUIT: CFinal_[nroComprobante]_[cuit]
           nombreArchivo = `CFinal_${nroComprobante}_${facturaInfo.DocNro}.pdf`
@@ -904,18 +931,11 @@ export class ArcaService {
         }
       } else {
         // No es Consumidor Final: usar letra de factura (A o B)
-        const tipoFacturaLetra = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
-
         if (tieneRazonSocial || tieneDocNro) {
           let nombreParte = ''
 
           if (tieneRazonSocial) {
-            nombreParte = facturaInfo.RazonSocial!
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .replace(/[^a-zA-Z0-9\s]/g, '')
-              .trim()
-              .replace(/\s+/g, '_')
+            nombreParte = sanitizarNombre(facturaInfo.RazonSocial!)
           }
 
           if (tieneDocNro) {
@@ -1351,6 +1371,8 @@ export class ArcaService {
     docNro: number
     razonSocial: string
     domicilio: string
+    condicionIVA?: string
+    condicionVenta?: string
     items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
     fecha?: string
     customPath?: string
@@ -1363,6 +1385,8 @@ export class ArcaService {
         docNro: data.docNro,
         razonSocial: data.razonSocial,
         domicilio: data.domicilio,
+        condicionIVA: data.condicionIVA ?? '5',
+        condicionVenta: data.condicionVenta ?? 'efectivo',
         items: data.items,
         fecha: data.fecha,
       })

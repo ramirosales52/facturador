@@ -1,5 +1,6 @@
 import { Button } from '@render/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/card'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@render/components/ui/dialog'
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
@@ -11,7 +12,7 @@ import { ArrowUpDown, ChevronDown, ChevronUp, Eye, EyeOff, FileText, Filter, Fol
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useArca } from '../../hooks/useArca'
-import { formatearMoneda } from '@render/utils/calculos'
+import { agruparIVAPorAlicuota, formatearMoneda, prepararNotaCreditoParcial } from '@render/utils/calculos'
 import { generarHTMLTicket } from './ticketTemplate'
 import { generarHTMLFactura } from './facturaTemplate'
 
@@ -52,22 +53,32 @@ interface FacturaLocal {
   datosEmisor: string // JSON
   pdfPath?: string
   esTicket?: number // SQLite usa INTEGER para boolean (0 o 1)
+  cbteAsocTipo?: number | null
+  cbteAsocPtoVta?: number | null
+  cbteAsocNro?: number | null
   createdAt: string
 }
 
 export function ComprobantesEmitidos() {
-  const { obtenerFacturas, generarPDF, generarPDFTicket, actualizarPdfPath, generarQR } = useArca()
+  const { obtenerFacturas, crearFactura, guardarFactura, generarPDF, generarPDFTicket, actualizarPdfPath, generarQR } = useArca()
 
   const [loading, setLoading] = useState(false)
   const [facturas, setFacturas] = useState<FacturaLocal[]>([])
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [regenerandoPDF, setRegenerandoPDF] = useState<number | null>(null)
+  const [generandoNotaCredito, setGenerandoNotaCredito] = useState<number | null>(null)
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<FacturaLocal | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false)
   const [ticketHtml, setTicketHtml] = useState<string>('')
   const [facturaHtml, setFacturaHtml] = useState<string>('')
+  const [notaCreditoDialogOpen, setNotaCreditoDialogOpen] = useState(false)
+  const [notaCreditoMontoTipo, setNotaCreditoMontoTipo] = useState<'total' | 'parcial'>('total')
+  const [notaCreditoMonto, setNotaCreditoMonto] = useState('')
+  const [historicoNotaCredito, setHistoricoNotaCredito] = useState<FacturaLocal[]>([])
+  const [historicoNotaCreditoLoading, setHistoricoNotaCreditoLoading] = useState(false)
+  
 
   // Estado de ordenamiento
   type SortField = 'tipoFactura' | 'fechaProceso' | 'impTotal' | null
@@ -161,14 +172,14 @@ export function ComprobantesEmitidos() {
       // Solo mostrar tickets (esTicket === 1)
       facturasFiltered = facturas.filter(f => f.esTicket === 1)
     } else if (tabActivo === 'consumidor-final') {
-      // Solo mostrar facturas a consumidor final que NO sean tickets
-      facturasFiltered = facturas.filter(f => f.docTipo === 99 && f.esTicket !== 1)
+      // Solo mostrar facturas B a consumidor final que NO sean tickets
+      facturasFiltered = facturas.filter(f => f.cbteTipo === 6 && f.docTipo === 99 && f.esTicket !== 1)
     } else if (tabActivo === 'factura-a') {
-      // Solo Factura A (cbteTipo = 1)
       facturasFiltered = facturas.filter(f => f.cbteTipo === 1 && f.esTicket !== 1)
     } else if (tabActivo === 'factura-b') {
-      // Solo Factura B (cbteTipo = 6) que no sean tickets ni consumidor final
-      facturasFiltered = facturas.filter(f => f.cbteTipo === 6 && f.esTicket !== 1 && f.docTipo !== 99)
+      facturasFiltered = facturas.filter(f => f.cbteTipo === 6 && f.docTipo !== 99 && f.esTicket !== 1)
+    } else if (tabActivo === 'nc') {
+      facturasFiltered = facturas.filter(f => (f.cbteTipo === 3 || f.cbteTipo === 8) && f.esTicket !== 1)
     }
     // Si tabActivo === 'todos', no filtramos
 
@@ -224,10 +235,11 @@ export function ComprobantesEmitidos() {
 
     const todos = facturasBase.length
     const facturaA = facturasBase.filter(f => f.cbteTipo === 1 && f.esTicket !== 1).length
-    const facturaB = facturasBase.filter(f => f.cbteTipo === 6 && f.esTicket !== 1 && f.docTipo !== 99).length
-    const consumidorFinal = facturasBase.filter(f => f.docTipo === 99 && f.esTicket !== 1).length
+    const facturaB = facturasBase.filter(f => f.cbteTipo === 6 && f.docTipo !== 99 && f.esTicket !== 1).length
+    const nc = facturasBase.filter(f => (f.cbteTipo === 3 || f.cbteTipo === 8) && f.esTicket !== 1).length
+    const consumidorFinal = facturasBase.filter(f => f.cbteTipo === 6 && f.docTipo === 99 && f.esTicket !== 1).length
     const tickets = facturasBase.filter(f => f.esTicket === 1).length
-    return { todos, facturaA, facturaB, consumidorFinal, tickets }
+    return { todos, facturaA, facturaB, nc, consumidorFinal, tickets }
   }
 
   const contadores = getContadores()
@@ -239,6 +251,26 @@ export function ComprobantesEmitidos() {
     return sortDirection === 'asc'
       ? <ChevronUp className="ml-2 h-4 w-4" />
       : <ChevronDown className="ml-2 h-4 w-4" />
+  }
+
+  const getTipoComprobanteLabel = (factura: FacturaLocal): string => {
+    if (factura.esTicket === 1) return 'Ticket'
+    if (factura.cbteTipo === 3) return 'NC A'
+    if (factura.cbteTipo === 8) return 'NC B'
+    if (factura.cbteTipo === 6 && factura.docTipo === 99) return 'C. Final'
+    if (factura.cbteTipo === 1) return 'Factura A'
+    if (factura.cbteTipo === 6) return 'Factura B'
+    return `Comprobante ${factura.cbteTipo}`
+  }
+
+  const getTipoComprobanteDetalle = (factura: FacturaLocal): string => {
+    if (factura.esTicket === 1) return 'Ticket'
+    if (factura.cbteTipo === 3) return 'Nota de Crédito A'
+    if (factura.cbteTipo === 8) return 'Nota de Crédito B'
+    if (factura.cbteTipo === 6 && factura.docTipo === 99) return 'Consumidor Final'
+    if (factura.cbteTipo === 1) return 'Factura A'
+    if (factura.cbteTipo === 6) return 'Factura B'
+    return `Comprobante ${factura.cbteTipo}`
   }
 
   const handleRegenerarPDF = async (factura: FacturaLocal) => {
@@ -379,6 +411,156 @@ export function ComprobantesEmitidos() {
     }
   }
 
+  const handleGenerarNotaCredito = async (factura: FacturaLocal, montoAcreditar?: number) => {
+    if (factura.esTicket === 1) {
+      toast.error('No se puede generar nota de crédito desde un ticket')
+      return
+    }
+
+    const esFacturaA = factura.cbteTipo === 1
+    const esFacturaB = factura.cbteTipo === 6
+
+    if (!esFacturaA && !esFacturaB) {
+      toast.error('Solo se puede generar nota de crédito desde Factura A o B')
+      return
+    }
+
+    setGenerandoNotaCredito(factura.id)
+    const toastId = `nc-${factura.id}-${Date.now()}`
+    toast.loading('Generando nota de crédito...', { id: toastId })
+
+    try {
+      const articulos = JSON.parse(factura.articulos)
+      let ivasAgrupados = agruparIVAPorAlicuota(articulos)
+      let impTotal = factura.impTotal
+      let impNeto = factura.impNeto
+      let impIVA = factura.impIVA
+      let articulosNC = articulos
+
+      if (montoAcreditar !== undefined && montoAcreditar < factura.impTotal) {
+        const parcial = prepararNotaCreditoParcial(articulos, montoAcreditar)
+        articulosNC = parcial.articulos
+        ivasAgrupados = parcial.ivasAgrupados
+        impNeto = parcial.impNeto
+        impIVA = parcial.impIVA
+        impTotal = parcial.impTotal
+      }
+
+      const tipoNotaCredito = factura.cbteTipo === 1 ? 3 : 8
+      const tipoAsociado = factura.cbteTipo === 1 ? 1 : 6
+      const condicionIVAReceptorId = factura.cbteTipo === 1 ? 1 : 5
+      const tipoFactura = factura.cbteTipo === 1 ? 'A' as const : 'B' as const
+      const concepto = factura.concepto === 'Servicios' ? 2 : factura.concepto === 'Productos y Servicios' ? 3 : 1
+      const fechaServicio = factura.fechaProceso.replace(/-/g, '')
+      const documentoEsConsumidorFinal = factura.cbteTipo === 6 || factura.docTipo === 99
+      const docTipo = factura.cbteTipo === 6 ? 99 : factura.docTipo
+      const docNro = documentoEsConsumidorFinal ? 0 : factura.docNro
+
+      const notaCreditoData = {
+        PtoVta: factura.ptoVta,
+        CbteTipo: tipoNotaCredito,
+        Concepto: concepto,
+        DocTipo: docTipo,
+        DocNro: docNro,
+        CondicionIVAReceptorId: condicionIVAReceptorId,
+        CbtesAsoc: [{ Tipo: tipoAsociado, PtoVta: factura.ptoVta, Nro: factura.cbteDesde }],
+        ImpTotal: impTotal,
+        ImpNeto: impNeto,
+        ImpIVA: impIVA,
+        ImpTotConc: 0,
+        ImpOpEx: 0,
+        ImpTrib: 0,
+        MonId: 'PES',
+        MonCotiz: 1,
+        ...(concepto === 2 || concepto === 3
+          ? {
+              FchServDesde: fechaServicio,
+              FchServHasta: fechaServicio,
+              FchVtoPago: fechaServicio,
+            }
+          : {}),
+        Iva: ivasAgrupados.map(iva => ({
+          Id: Number.parseInt(iva.id),
+          BaseImp: iva.baseImponible,
+          Importe: iva.importeIVA,
+        })),
+      }
+
+      const response = await crearFactura(notaCreditoData)
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'No se pudo generar la nota de crédito')
+      }
+
+      const notaCreditoGuardada = {
+        cae: response.data.CAE,
+        caeVencimiento: response.data.CAEFchVto,
+        fechaProceso: response.data.FchProceso,
+        ptoVta: response.data.PtoVta,
+        cbteTipo: response.data.CbteTipo,
+        cbteDesde: response.data.CbteDesde,
+        cbteHasta: response.data.CbteHasta,
+        docTipo: response.data.DocTipo,
+        docNro: response.data.DocNro,
+        impTotal: response.data.ImpTotal,
+        impNeto: impNeto,
+        impIVA: impIVA,
+        tipoFactura,
+        concepto: factura.concepto,
+        condicionIVA: factura.condicionIVA,
+        condicionVenta: factura.condicionVenta,
+        razonSocial: factura.razonSocial || '',
+        domicilio: factura.domicilio || '',
+        articulos: JSON.stringify(articulosNC),
+        ivas: JSON.stringify(ivasAgrupados),
+        datosEmisor: factura.datosEmisor,
+        cbteAsocTipo: tipoAsociado,
+        cbteAsocPtoVta: factura.ptoVta,
+        cbteAsocNro: factura.cbteDesde,
+      }
+
+      const saveResult = await guardarFactura(notaCreditoGuardada)
+
+      if (!saveResult.success || !saveResult.id) {
+        throw new Error(saveResult.error || 'No se pudo guardar la nota de crédito')
+      }
+
+      await cargarFacturas()
+
+      toast.dismiss(toastId)
+      toast.success(`Nota de crédito ${tipoFactura} generada exitosamente`, {
+        description: `Comprobante ${String(response.data.PtoVta).padStart(5, '0')}-${String(response.data.CbteDesde).padStart(8, '0')}`,
+      })
+    } catch (error: any) {
+      toast.dismiss(toastId)
+      toast.error(`Error al generar nota de crédito: ${error.message || 'Error inesperado'}`)
+    } finally {
+      setGenerandoNotaCredito(null)
+    }
+  }
+
+  const handleConfirmNotaCredito = async () => {
+    if (!facturaSeleccionada) return
+
+    const monto = notaCreditoMontoTipo === 'parcial'
+      ? Number.parseFloat(notaCreditoMonto)
+      : undefined
+
+    if (notaCreditoMontoTipo === 'parcial' && (!monto || monto <= 0)) {
+      toast.error('Ingrese un monto a acreditar válido')
+      return
+    }
+
+    if (notaCreditoMontoTipo === 'parcial' && monto && monto > facturaSeleccionada.impTotal) {
+      toast.error('El monto no puede superar el total de la factura')
+      return
+    }
+
+    setNotaCreditoDialogOpen(false)
+    await handleGenerarNotaCredito(facturaSeleccionada, monto)
+    await cargarHistoricoNC(facturaSeleccionada)
+  }
+
   const handleAbrirCarpeta = async (pdfPath: string) => {
     try {
       // @ts-ignore - Electron API
@@ -429,12 +611,42 @@ export function ComprobantesEmitidos() {
     return `${day}/${month}/${year}`
   }
 
+  const cargarHistoricoNC = async (factura: FacturaLocal) => {
+    if (factura.esTicket === 1 || (factura.cbteTipo !== 1 && factura.cbteTipo !== 6)) {
+      setHistoricoNotaCredito([])
+      return
+    }
+
+    setHistoricoNotaCreditoLoading(true)
+    try {
+      const response = await obtenerFacturas({
+        cbteAsocTipo: factura.cbteTipo,
+        cbteAsocPtoVta: factura.ptoVta,
+        cbteAsocNro: factura.cbteDesde,
+      })
+      if (response.success && response.data) {
+        setHistoricoNotaCredito(response.data)
+      } else {
+        setHistoricoNotaCredito([])
+      }
+    } catch {
+      setHistoricoNotaCredito([])
+    } finally {
+      setHistoricoNotaCreditoLoading(false)
+    }
+  }
+
   const handleRowClick = async (factura: FacturaLocal) => {
     setFacturaSeleccionada(factura)
     setSheetOpen(true)
     setMostrarVistaPrevia(false)
     setTicketHtml('')
     setFacturaHtml('')
+    setNotaCreditoDialogOpen(false)
+    setNotaCreditoMontoTipo('total')
+    setNotaCreditoMonto('')
+
+    await cargarHistoricoNC(factura)
 
     // Si es un ticket, generar el HTML de la vista previa
     if (factura.esTicket === 1) {
@@ -763,7 +975,7 @@ export function ComprobantesEmitidos() {
 
       {/* Tabs de tipo de comprobante */}
       <Tabs value={tabActivo} onValueChange={setTabActivo} className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="todos" className="flex items-center gap-2">
             Todos
             <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
@@ -780,6 +992,12 @@ export function ComprobantesEmitidos() {
             Factura B
             <span className="bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
               {contadores.facturaB}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="nc" className="flex items-center gap-2">
+            N. Credito
+            <span className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-md font-medium">
+              {contadores.nc}
             </span>
           </TabsTrigger>
           <TabsTrigger value="consumidor-final" className="flex items-center gap-2">
@@ -840,13 +1058,13 @@ export function ComprobantesEmitidos() {
                 </TableHeader>
                 <TableBody>
                   {getSortedFacturas().map((factura) => (
-                    <TableRow
-                      key={factura.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleRowClick(factura)}
-                    >
+                      <TableRow
+                        key={factura.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleRowClick(factura)}
+                      >
                       <TableCell>
-                        {factura.esTicket === 1 ? 'Ticket' : factura.docTipo === 99 ? 'C. Final' : factura.tipoFactura}
+                        {getTipoComprobanteLabel(factura)}
                       </TableCell>
                       <TableCell>{formatearFecha(factura.fechaProceso)}</TableCell>
                       <TableCell>
@@ -921,13 +1139,13 @@ export function ComprobantesEmitidos() {
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           {facturaSeleccionada && (
             <>
-              <SheetHeader>
-                <SheetTitle>
-                  {facturaSeleccionada.esTicket === 1
-                    ? `Ticket ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
-                    : `Factura ${facturaSeleccionada.tipoFactura} ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
-                  }
-                </SheetTitle>
+                <SheetHeader>
+                  <SheetTitle>
+                    {facturaSeleccionada.esTicket === 1
+                      ? `Ticket ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
+                      : `${getTipoComprobanteDetalle(facturaSeleccionada)} ${String(facturaSeleccionada.ptoVta).padStart(5, '0')}-${String(facturaSeleccionada.cbteDesde).padStart(8, '0')}`
+                    }
+                  </SheetTitle>
                 <SheetDescription>
                   Detalles de la factura emitida
                 </SheetDescription>
@@ -944,12 +1162,7 @@ export function ComprobantesEmitidos() {
                     <div>
                       <Label className="text-xs text-gray-500">Tipo de Comprobante</Label>
                       <p className="text-sm font-medium">
-                        {facturaSeleccionada.esTicket === 1
-                          ? 'Ticket'
-                          : facturaSeleccionada.docTipo === 99
-                            ? 'Consumidor Final'
-                            : `Factura ${facturaSeleccionada.tipoFactura}`
-                        }
+                        {getTipoComprobanteDetalle(facturaSeleccionada)}
                       </p>
                     </div>
                     <div>
@@ -962,6 +1175,26 @@ export function ComprobantesEmitidos() {
                     </div>
                   </div>
                 </div>
+
+                {facturaSeleccionada.esTicket !== 1 && facturaSeleccionada.cbteTipo !== 3 && facturaSeleccionada.cbteTipo !== 8 && (
+                  <div>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setNotaCreditoDialogOpen(true)
+                      }}
+                      disabled={generandoNotaCredito === facturaSeleccionada.id}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      {generandoNotaCredito === facturaSeleccionada.id
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <FileText className="mr-2 h-4 w-4" />
+                      }
+                      Generar Nota de Crédito {facturaSeleccionada.tipoFactura}
+                    </Button>
+                  </div>
+                )}
 
                 <Separator />
 
@@ -1077,6 +1310,37 @@ export function ComprobantesEmitidos() {
                     </div>
                   </div>
                 </div>
+
+                {/* Histórico de Notas de Crédito */}
+                {facturaSeleccionada.esTicket !== 1 && facturaSeleccionada.cbteTipo !== 3 && facturaSeleccionada.cbteTipo !== 8 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Notas de Crédito Asociadas</h3>
+                      {historicoNotaCreditoLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                        </div>
+                      ) : historicoNotaCredito.length === 0 ? (
+                        <p className="text-sm text-gray-500">No se emitieron notas de crédito para esta factura</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {historicoNotaCredito.map((nc) => (
+                            <div key={nc.id} className="border rounded-lg p-3 flex justify-between items-center">
+                              <div>
+                                <p className="text-sm font-medium">
+                                  NC {nc.tipoFactura} {String(nc.ptoVta).padStart(5, '0')}-{String(nc.cbteDesde).padStart(8, '0')}
+                                </p>
+                                <p className="text-xs text-gray-500">{formatearFecha(nc.fechaProceso)}</p>
+                              </div>
+                              <span className="text-sm font-semibold">{formatearMoneda(nc.impTotal)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <Separator />
 
@@ -1206,6 +1470,94 @@ export function ComprobantesEmitidos() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={notaCreditoDialogOpen} onOpenChange={setNotaCreditoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Nota de Crédito</DialogTitle>
+          </DialogHeader>
+          <Separator />
+
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                <p className="text-sm">
+                  Factura <b>{facturaSeleccionada.tipoFactura}</b> — <b>{String(facturaSeleccionada.ptoVta).padStart(5, '0')}-{String(facturaSeleccionada.cbteDesde).padStart(8, '0')}</b>
+                </p>
+                <p className="text-sm text-gray-600">{facturaSeleccionada.razonSocial}</p>
+                <p className="text-sm font-semibold">Total original: {formatearMoneda(facturaSeleccionada.impTotal)}</p>
+              </div>
+
+              {/* Histórico de NCs en el dialog */}
+              {historicoNotaCredito.length > 0 && (
+                <div>
+                  <Label className="text-xs text-amber-600 font-semibold">
+                    Se emitieron {historicoNotaCredito.length} nota(s) de crédito previa(s):
+                  </Label>
+                  <div className="mt-1 space-y-1">
+                    {historicoNotaCredito.map((nc) => (
+                      <div key={nc.id} className="flex justify-between text-sm bg-amber-50 rounded px-2 py-1">
+                        <span className="font-mono text-xs">
+                          NC {nc.tipoFactura} {String(nc.ptoVta).padStart(5, '0')}-{String(nc.cbteDesde).padStart(8, '0')}
+                        </span>
+                        <span className="font-medium text-xs">{formatearMoneda(nc.impTotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Monto a acreditar</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="montoTipo"
+                      checked={notaCreditoMontoTipo === 'total'}
+                      onChange={() => setNotaCreditoMontoTipo('total')}
+                    />
+                    <span className="text-sm">Total ({formatearMoneda(facturaSeleccionada.impTotal)})</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="montoTipo"
+                      checked={notaCreditoMontoTipo === 'parcial'}
+                      onChange={() => setNotaCreditoMontoTipo('parcial')}
+                    />
+                    <span className="text-sm">Parcial</span>
+                  </label>
+                </div>
+                {notaCreditoMontoTipo === 'parcial' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max={facturaSeleccionada.impTotal}
+                      placeholder="0.00"
+                      value={notaCreditoMonto}
+                      onChange={(e) => setNotaCreditoMonto(e.target.value)}
+                    />
+                    <span className="text-xs text-gray-400">Máx: {formatearMoneda(facturaSeleccionada.impTotal)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNotaCreditoDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleConfirmNotaCredito}>
+              Generar Nota de Crédito
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

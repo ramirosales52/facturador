@@ -91,8 +91,10 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   const ptoVta = String(facturaInfo.PtoVta).padStart(4, '0')
   const nroComp = String(facturaInfo.CbteDesde).padStart(8, '0')
 
-  // Determinar tipo de factura basado en CbteTipo (1 = A, 6 = B)
-  const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 ? 'A' : 'B')
+  // Determinar tipo de comprobante basado en CbteTipo
+  const tipoFactura = facturaInfo.TipoFactura || (facturaInfo.CbteTipo === 1 || facturaInfo.CbteTipo === 2 || facturaInfo.CbteTipo === 3 ? 'A' : 'B')
+  const esNotaCredito = facturaInfo.CbteTipo === 3 || facturaInfo.CbteTipo === 8
+  const tituloComprobante = esNotaCredito ? `Nota de Crédito ${tipoFactura}` : `Factura ${tipoFactura}`
   const codigoComprobante = String(facturaInfo.CbteTipo).padStart(2, '0')
   const condicionIVA = facturaInfo.CondicionIVA || ''
   const razonSocial = facturaInfo.RazonSocial || ''
@@ -262,7 +264,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   return `<!doctype html>
     <html>
       <head>
-        <title>Factura ${tipoFactura}</title>
+        <title>${tituloComprobante}</title>
         <style type="text/css">
           * {
             box-sizing: border-box;
@@ -489,7 +491,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
           <tr class="bill-emitter-row">
             <td>
               <div class="bill-type">
-                ${tipoFactura}
+                ${esNotaCredito ? 'NC' : tipoFactura}
                 <div
                   style="
                     text-align: center;
@@ -520,7 +522,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
             </td>
             <td>
               <div>
-                <div class="text-lg">Factura</div>
+                <div class="text-lg">${esNotaCredito ? `Nota de Crédito ${tipoFactura}` : 'Factura'}</div>
                 <p><strong>Nro: ${ptoVta}-${nroComp}</strong></p>
                 <p><strong>Fecha de Emisión:</strong> ${fecha}</p>
                 <p><strong>CUIT:</strong> ${emisor.cuit}</p>

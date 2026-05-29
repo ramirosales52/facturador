@@ -1,6 +1,11 @@
 export class CreateArcaDto {
   PtoVta?: number // Punto de venta (por defecto 1)
   CbteTipo?: number // Tipo de comprobante (11 = Factura C)
+  CbtesAsoc?: Array<{
+    Tipo: number // Tipo de comprobante asociado
+    PtoVta: number // Punto de venta del comprobante asociado
+    Nro: number // Número del comprobante asociado
+  }> // Requerido para notas de crédito/débito
   Concepto?: number // 1 = Productos, 2 = Servicios, 3 = Productos y Servicios
   DocTipo?: number // Tipo de documento (99 = Consumidor Final, 80 = CUIT, etc.)
   DocNro?: number // Número de documento

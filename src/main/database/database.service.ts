@@ -18,6 +18,12 @@ export interface FacturaGuardada {
   impTotal: number;
   impNeto: number;
   impIVA: number;
+  cbteAsocTipo?: number;
+  cbteAsocPtoVta?: number;
+  cbteAsocNro?: number;
+  fchServDesde?: string;
+  fchServHasta?: string;
+  fchVtoPago?: string;
   
   // Datos adicionales del formulario
   tipoFactura: 'A' | 'B';
@@ -71,6 +77,8 @@ export interface RemitoGuardado {
   items: string;
   cai: string;
   caiVencimiento: string;
+  condicionIVA: string;
+  condicionVenta: string;
   estado: 'emitido' | 'anulado';
   createdAt?: string;
 }
@@ -110,6 +118,12 @@ export class DatabaseService implements OnModuleInit {
         impTotal REAL NOT NULL,
         impNeto REAL NOT NULL,
         impIVA REAL NOT NULL,
+        cbteAsocTipo INTEGER,
+        cbteAsocPtoVta INTEGER,
+        cbteAsocNro INTEGER,
+        fchServDesde TEXT,
+        fchServHasta TEXT,
+        fchVtoPago TEXT,
         tipoFactura TEXT NOT NULL,
         concepto TEXT NOT NULL,
         condicionIVA TEXT NOT NULL,
@@ -172,12 +186,30 @@ export class DatabaseService implements OnModuleInit {
       }
     }
 
+    for (const statement of [
+      'ALTER TABLE facturas ADD COLUMN cbteAsocTipo INTEGER;',
+      'ALTER TABLE facturas ADD COLUMN cbteAsocPtoVta INTEGER;',
+      'ALTER TABLE facturas ADD COLUMN cbteAsocNro INTEGER;',
+      'ALTER TABLE facturas ADD COLUMN fchServDesde TEXT;',
+      'ALTER TABLE facturas ADD COLUMN fchServHasta TEXT;',
+      'ALTER TABLE facturas ADD COLUMN fchVtoPago TEXT;',
+    ]) {
+      try {
+        this.db.exec(statement)
+      } catch (error: any) {
+        if (!error.message.includes('duplicate column name'))
+          console.error('Error al migrar facturas:', error)
+      }
+    }
+
     // Migración: agregar datos de cliente al remito si no existen
     for (const statement of [
       'ALTER TABLE remitos ADD COLUMN docTipo INTEGER NOT NULL DEFAULT 80;',
       'ALTER TABLE remitos ADD COLUMN docNro INTEGER NOT NULL DEFAULT 0;',
       "ALTER TABLE remitos ADD COLUMN razonSocial TEXT NOT NULL DEFAULT '';",
       "ALTER TABLE remitos ADD COLUMN domicilio TEXT NOT NULL DEFAULT '';",
+      "ALTER TABLE remitos ADD COLUMN condicionIVA TEXT NOT NULL DEFAULT '5';",
+      "ALTER TABLE remitos ADD COLUMN condicionVenta TEXT NOT NULL DEFAULT 'efectivo';",
     ]) {
       try {
         this.db.exec(statement);
@@ -210,11 +242,11 @@ export class DatabaseService implements OnModuleInit {
     const stmt = this.db.prepare(`
       INSERT INTO facturas (
         cae, caeVencimiento, fechaProceso, ptoVta, cbteTipo, cbteDesde, cbteHasta,
-        docTipo, docNro, impTotal, impNeto, impIVA, tipoFactura, concepto,
+        docTipo, docNro, impTotal, impNeto, impIVA, cbteAsocTipo, cbteAsocPtoVta, cbteAsocNro, fchServDesde, fchServHasta, fchVtoPago, tipoFactura, concepto,
         condicionIVA, condicionVenta, razonSocial, domicilio, articulos, ivas, datosEmisor, pdfPath, esTicket
       ) VALUES (
         @cae, @caeVencimiento, @fechaProceso, @ptoVta, @cbteTipo, @cbteDesde, @cbteHasta,
-        @docTipo, @docNro, @impTotal, @impNeto, @impIVA, @tipoFactura, @concepto,
+        @docTipo, @docNro, @impTotal, @impNeto, @impIVA, @cbteAsocTipo, @cbteAsocPtoVta, @cbteAsocNro, @fchServDesde, @fchServHasta, @fchVtoPago, @tipoFactura, @concepto,
         @condicionIVA, @condicionVenta, @razonSocial, @domicilio, @articulos, @ivas, @datosEmisor, @pdfPath, @esTicket
       )
     `);
@@ -224,6 +256,12 @@ export class DatabaseService implements OnModuleInit {
       ...factura,
       pdfPath: factura.pdfPath || null,
       esTicket: factura.esTicket ? 1 : 0, // Convertir boolean a INTEGER
+      cbteAsocTipo: factura.cbteAsocTipo ?? null,
+      cbteAsocPtoVta: factura.cbteAsocPtoVta ?? null,
+      cbteAsocNro: factura.cbteAsocNro ?? null,
+      fchServDesde: factura.fchServDesde ?? null,
+      fchServHasta: factura.fchServHasta ?? null,
+      fchVtoPago: factura.fchVtoPago ?? null,
     };
     
     const result = stmt.run(facturaConDefaults);
@@ -240,6 +278,9 @@ export class DatabaseService implements OnModuleInit {
     docTipo?: number;
     ptoVta?: number;
     cbteTipo?: number;
+    cbteAsocTipo?: number;
+    cbteAsocPtoVta?: number;
+    cbteAsocNro?: number;
     limit?: number;
     offset?: number;
   }): FacturaGuardada[] {
@@ -274,6 +315,21 @@ export class DatabaseService implements OnModuleInit {
     if (filtros?.cbteTipo) {
       query += ' AND cbteTipo = @cbteTipo';
       params.cbteTipo = filtros.cbteTipo;
+    }
+
+    if (filtros?.cbteAsocTipo !== undefined) {
+      query += ' AND cbteAsocTipo = @cbteAsocTipo';
+      params.cbteAsocTipo = filtros.cbteAsocTipo;
+    }
+
+    if (filtros?.cbteAsocPtoVta !== undefined) {
+      query += ' AND cbteAsocPtoVta = @cbteAsocPtoVta';
+      params.cbteAsocPtoVta = filtros.cbteAsocPtoVta;
+    }
+
+    if (filtros?.cbteAsocNro !== undefined) {
+      query += ' AND cbteAsocNro = @cbteAsocNro';
+      params.cbteAsocNro = filtros.cbteAsocNro;
     }
 
     query += ' ORDER BY fechaProceso DESC, id DESC';
@@ -318,6 +374,9 @@ export class DatabaseService implements OnModuleInit {
     docTipo?: number;
     ptoVta?: number;
     cbteTipo?: number;
+    cbteAsocTipo?: number;
+    cbteAsocPtoVta?: number;
+    cbteAsocNro?: number;
   }): number {
     let query = 'SELECT COUNT(*) as count FROM facturas WHERE 1=1';
     const params: any = {};
@@ -352,6 +411,21 @@ export class DatabaseService implements OnModuleInit {
       params.cbteTipo = filtros.cbteTipo;
     }
 
+    if (filtros?.cbteAsocTipo !== undefined) {
+      query += ' AND cbteAsocTipo = @cbteAsocTipo';
+      params.cbteAsocTipo = filtros.cbteAsocTipo;
+    }
+
+    if (filtros?.cbteAsocPtoVta !== undefined) {
+      query += ' AND cbteAsocPtoVta = @cbteAsocPtoVta';
+      params.cbteAsocPtoVta = filtros.cbteAsocPtoVta;
+    }
+
+    if (filtros?.cbteAsocNro !== undefined) {
+      query += ' AND cbteAsocNro = @cbteAsocNro';
+      params.cbteAsocNro = filtros.cbteAsocNro;
+    }
+
     const stmt = this.db.prepare(query);
     const result = stmt.get(params) as { count: number };
     return result.count;
@@ -376,25 +450,44 @@ export class DatabaseService implements OnModuleInit {
   }
 
   guardarCaiRemito(cai: CaiRemitoGuardado): number {
-    const stmt = this.db.prepare(`
-      INSERT INTO cai_remitos (
-        cai, puntoVenta, numeroDesde, numeroHasta, proximoNumero, fechaVencimiento, activo
-      ) VALUES (
-        @cai, @puntoVenta, @numeroDesde, @numeroHasta, @proximoNumero, @fechaVencimiento, @activo
-      )
-    `)
+    const transaction = this.db.transaction(() => {
+      this.db.prepare('UPDATE cai_remitos SET activo = 0 WHERE puntoVenta = ? AND activo = 1').run(cai.puntoVenta)
 
-    const result = stmt.run({
-      ...cai,
-      proximoNumero: cai.proximoNumero || cai.numeroDesde,
-      activo: cai.activo ? 1 : 0,
+      const maxUsado = this.db.prepare('SELECT MAX(numero) as maxNum FROM remitos WHERE puntoVenta = ?').get(cai.puntoVenta) as { maxNum: number | null }
+      const proximoInicial = maxUsado.maxNum != null
+        ? Math.max(cai.numeroDesde, maxUsado.maxNum + 1)
+        : cai.numeroDesde
+
+      if (proximoInicial > cai.numeroHasta) {
+        throw new Error(
+          `No hay números disponibles en el rango ${cai.numeroDesde}-${cai.numeroHasta}. El próximo número disponible es ${proximoInicial}.`
+        )
+      }
+
+      const stmt = this.db.prepare(`
+        INSERT INTO cai_remitos (
+          cai, puntoVenta, numeroDesde, numeroHasta, proximoNumero, fechaVencimiento, activo
+        ) VALUES (
+          @cai, @puntoVenta, @numeroDesde, @numeroHasta, @proximoNumero, @fechaVencimiento, @activo
+        )
+      `)
+
+      const result = stmt.run({
+        ...cai,
+        proximoNumero: proximoInicial,
+        activo: 1,
+      })
+
+      return result.lastInsertRowid as number
     })
 
-    return result.lastInsertRowid as number
+    return transaction()
   }
 
   actualizarCaiRemito(id: number, cai: CaiRemitoGuardado): boolean {
-    const actual = this.db.prepare('SELECT proximoNumero FROM cai_remitos WHERE id = ?').get(id) as { proximoNumero?: number } | undefined
+    const actual = this.db.prepare('SELECT proximoNumero, numeroDesde FROM cai_remitos WHERE id = ?').get(id) as { proximoNumero: number; numeroDesde: number } | undefined
+    const proximoActual = actual?.proximoNumero ?? cai.proximoNumero
+    const nuevoProximo = Math.max(proximoActual, cai.numeroDesde)
 
     const stmt = this.db.prepare(`
       UPDATE cai_remitos
@@ -411,7 +504,7 @@ export class DatabaseService implements OnModuleInit {
     const result = stmt.run({
       id,
       ...cai,
-      proximoNumero: actual?.proximoNumero ?? cai.proximoNumero ?? cai.numeroDesde,
+      proximoNumero: nuevoProximo,
       activo: cai.activo ? 1 : 0,
     })
 
@@ -465,7 +558,13 @@ export class DatabaseService implements OnModuleInit {
   }
 
   obtenerAlertasCaiRemitos(puntoVenta?: number): Array<{ id: number; tipo: 'vencimiento' | 'agotado'; cai: string; mensaje: string }> {
-    let query = 'SELECT * FROM cai_remitos WHERE activo = 1'
+    let query = `
+      SELECT *
+      FROM cai_remitos
+      WHERE activo = 1
+        AND DATE(fechaVencimiento) >= DATE('now')
+        AND proximoNumero <= numeroHasta
+    `
     const params: any = {}
 
     if (typeof puntoVenta === 'number') {
@@ -473,32 +572,34 @@ export class DatabaseService implements OnModuleInit {
       params.puntoVenta = puntoVenta
     }
 
-    const cais = this.db.prepare(query).all(params) as CaiRemitoGuardado[]
+    query += ' ORDER BY id DESC LIMIT 1'
+
+    const cai = this.db.prepare(query).get(params) as CaiRemitoGuardado | undefined
+    if (!cai) return []
+
     const hoy = new Date()
     const alertas: Array<{ id: number; tipo: 'vencimiento' | 'agotado'; cai: string; mensaje: string }> = []
 
-    for (const cai of cais) {
-      const fechaVencimiento = new Date(cai.fechaVencimiento)
-      const diasRestantes = Math.ceil((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
-      const disponibles = this.calcularNumerosDisponibles(cai.id!)
+    const fechaVencimiento = new Date(cai.fechaVencimiento)
+    const diasRestantes = Math.ceil((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+    const disponibles = this.calcularNumerosDisponibles(cai.id!)
 
-      if (diasRestantes <= 15) {
-        alertas.push({
-          id: cai.id!,
-          tipo: 'vencimiento',
-          cai: cai.cai,
-          mensaje: `El CAI ${cai.cai} vence en ${Math.max(0, diasRestantes)} días`,
-        })
-      }
+    if (diasRestantes <= 15) {
+      alertas.push({
+        id: cai.id!,
+        tipo: 'vencimiento',
+        cai: cai.cai,
+        mensaje: `El CAI ${cai.cai} vence en ${Math.max(0, diasRestantes)} días`,
+      })
+    }
 
-      if (disponibles <= 10) {
-        alertas.push({
-          id: cai.id!,
-          tipo: 'agotado',
-          cai: cai.cai,
-          mensaje: `El CAI ${cai.cai} tiene solo ${disponibles} números disponibles`,
-        })
-      }
+    if (disponibles <= 10) {
+      alertas.push({
+        id: cai.id!,
+        tipo: 'agotado',
+        cai: cai.cai,
+        mensaje: `El CAI ${cai.cai} tiene solo ${disponibles} números disponibles`,
+      })
     }
 
     return alertas
@@ -512,6 +613,8 @@ export class DatabaseService implements OnModuleInit {
     razonSocial: string
     domicilio: string
     cliente: string
+    condicionIVA: string
+    condicionVenta: string
     items: Array<{
       descripcion: string
       cantidad: number
@@ -572,14 +675,16 @@ export class DatabaseService implements OnModuleInit {
         items: JSON.stringify(data.items),
         cai: cai.cai,
         caiVencimiento: cai.fechaVencimiento,
+        condicionIVA: data.condicionIVA,
+        condicionVenta: data.condicionVenta,
         estado: 'emitido',
       }
 
       const insert = this.db.prepare(`
         INSERT INTO remitos (
-          puntoVenta, numero, fecha, cliente, docTipo, docNro, razonSocial, domicilio, items, cai, caiVencimiento, estado
+          puntoVenta, numero, fecha, cliente, docTipo, docNro, razonSocial, domicilio, items, cai, caiVencimiento, condicionIVA, condicionVenta, estado
         ) VALUES (
-          @puntoVenta, @numero, @fecha, @cliente, @docTipo, @docNro, @razonSocial, @domicilio, @items, @cai, @caiVencimiento, @estado
+          @puntoVenta, @numero, @fecha, @cliente, @docTipo, @docNro, @razonSocial, @domicilio, @items, @cai, @caiVencimiento, @condicionIVA, @condicionVenta, @estado
         )
       `).run(remitoData)
 

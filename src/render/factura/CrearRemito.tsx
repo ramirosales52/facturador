@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@render/components/ui/
 import { Input } from '@render/components/ui/input'
 import { Label } from '@render/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@render/components/ui/select'
-import { Separator } from '@render/components/ui/separator'
-import { ALICUOTAS_IVA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
+import { ALICUOTAS_IVA, CONDICIONES_IVA, CONDICIONES_VENTA, TIPOS_DOCUMENTO, UNIDADES_MEDIDA } from '@render/constants/afip'
 import { formatearMoneda } from '@render/utils/calculos'
 import { useArca } from '../hooks/useArca'
 import { PDFActions } from './components/PDFActions'
@@ -59,6 +58,8 @@ type RemitoResultado = {
     docNro: number
     razonSocial: string
     domicilio: string
+    condicionVenta: string
+    condicionIVA: string
     items: ItemRemito[]
   }
 }
@@ -72,7 +73,7 @@ type IvaAgrupado = {
 
 export default function CrearRemito() {
   const arca = useArca()
-  const { guardarCaiRemito, actualizarCaiRemito, listarCaiRemitos, getAlertasCaiRemitos, emitirRemito, generarPDFRemito, obtenerCUITDesdeDNI, consultarContribuyente } = arca
+  const { guardarCaiRemito, listarCaiRemitos, getAlertasCaiRemitos, emitirRemito, generarPDFRemito, obtenerCUITDesdeDNI, consultarContribuyente } = arca
   const [cais, setCais] = useState<CaiRemito[]>([])
   const [alertas, setAlertas] = useState<Array<{ tipo: string; cai: string; mensaje: string }>>([])
   const [resultado, setResultado] = useState<RemitoResultado | null>(null)
@@ -81,7 +82,7 @@ export default function CrearRemito() {
   const [modoCai, setModoCai] = useState<'view' | 'edit'>('edit')
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [htmlPreview, setHtmlPreview] = useState<string | null>(null)
-  const [caiForm, setCaiForm] = useState({ cai: '', puntoVenta: 1, numeroDesde: 1, numeroHasta: 1, fechaVencimiento: '', activo: true })
+  const [caiForm, setCaiForm] = useState({ cai: '', puntoVenta: 0, numeroDesde: 0, numeroHasta: 0, fechaVencimiento: '', activo: true })
   const [datosEmisor, setDatosEmisor] = useState<DatosEmisor>({
     cuit: '',
     razonSocial: '',
@@ -96,6 +97,8 @@ export default function CrearRemito() {
     docNro: '',
     razonSocial: '',
     domicilio: '',
+    condicionIVA: '5',
+    condicionVenta: 'efectivo',
     items: [{ codigo: '', descripcion: '', cantidad: 1, unidadMedida: 'unidad', precioUnitario: 0, alicuotaIVA: '5' } as ItemRemito],
   })
   const [loadingContribuyente, setLoadingContribuyente] = useState(false)
@@ -103,13 +106,18 @@ export default function CrearRemito() {
   const [logoBase64, setLogoBase64] = useState<string>('')
   const [arcaLogoBase64, setArcaLogoBase64] = useState<string>('')
 
-  const caiVigente = useMemo(() => {
-    return cais.find(c => c.activo === 1 && new Date(c.fechaVencimiento).getTime() >= Date.now() && c.proximoNumero <= c.numeroHasta)
-  }, [cais])
-
   const caiGuardado = useMemo(() => {
     return [...cais].sort((a, b) => b.id - a.id)[0] ?? null
   }, [cais])
+
+  const caiVigente = useMemo(() => {
+    return [...cais]
+      .filter(c => c.activo === 1
+        && c.puntoVenta === caiForm.puntoVenta
+        && new Date(c.fechaVencimiento).getTime() >= Date.now()
+        && c.proximoNumero <= c.numeroHasta)
+      .sort((a, b) => b.id - a.id)[0] ?? null
+  }, [cais, caiForm.puntoVenta])
 
   const cargar = async () => {
     const [caisRes, alertasRes] = await Promise.all([listarCaiRemitos(), getAlertasCaiRemitos()])
@@ -128,7 +136,9 @@ export default function CrearRemito() {
         setModoCai('view')
       }
     }
-    if (alertasRes.success && alertasRes.data) setAlertas(alertasRes.data)
+    if (alertasRes.success && alertasRes.data) {
+      setAlertas(alertasRes.data)
+    }
   }
 
   useEffect(() => { void cargar() }, [])
@@ -211,8 +221,10 @@ export default function CrearRemito() {
 
     for (const item of items) {
       const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
-      const baseImponible = item.cantidad * (item.precioUnitario || 0)
-      const importeIVA = baseImponible * (porcentaje / 100)
+      const totalConIVA = item.cantidad * (item.precioUnitario || 0)
+      const factor = 1 + porcentaje / 100
+      const baseImponible = Math.round((totalConIVA / factor) * 100) / 100
+      const importeIVA = Math.round((totalConIVA - baseImponible) * 100) / 100
 
       const actual = grupos.get(item.alicuotaIVA) || {
         alicuota: item.alicuotaIVA,
@@ -271,9 +283,7 @@ export default function CrearRemito() {
       fechaVencimiento: caiForm.fechaVencimiento,
     }
 
-    const result = caiGuardado && modoCai === 'edit' && typeof actualizarCaiRemito === 'function'
-      ? await actualizarCaiRemito(caiGuardado.id, payload)
-      : await guardarCaiRemito(payload)
+    const result = await guardarCaiRemito(payload)
 
     if (result.success) {
       toast.success('CAI guardado')
@@ -309,11 +319,12 @@ export default function CrearRemito() {
     const ivasAgrupados = agruparIVA(remitoForm.items)
     const totales = remitoForm.items.reduce((acc, item) => {
       const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
-      const base = item.cantidad * (item.precioUnitario || 0)
+      const totalConIVA = item.cantidad * (item.precioUnitario || 0)
+      const neto = Math.round((totalConIVA / (1 + porcentaje / 100)) * 100) / 100
       return {
-        neto: acc.neto + base,
-        iva: acc.iva + (base * (porcentaje / 100)),
-        total: acc.total + (base * (1 + porcentaje / 100)),
+        neto: acc.neto + neto,
+        iva: acc.iva + (totalConIVA - neto),
+        total: acc.total + totalConIVA,
       }
     }, { neto: 0, iva: 0, total: 0 })
 
@@ -324,6 +335,8 @@ export default function CrearRemito() {
       docNro: remitoForm.docTipo === '99' ? 0 : Number.parseInt(remitoForm.docNro),
       razonSocial: remitoForm.razonSocial,
       domicilio: remitoForm.domicilio,
+      condicionIVA: remitoForm.condicionIVA,
+      condicionVenta: remitoForm.condicionVenta,
       items: remitoForm.items,
     })
     if (response.success && response.data) {
@@ -332,12 +345,16 @@ export default function CrearRemito() {
         docNro: number
         razonSocial: string
         domicilio: string
+        condicionVenta: string
+        condicionIVA: string
         items: ItemRemito[]
       } = {
         docTipo: Number.parseInt(remitoForm.docTipo),
         docNro: remitoForm.docTipo === '99' ? 0 : Number.parseInt(remitoForm.docNro),
         razonSocial: remitoForm.razonSocial,
         domicilio: remitoForm.domicilio,
+        condicionVenta: remitoForm.condicionVenta,
+        condicionIVA: remitoForm.condicionIVA,
         items: remitoForm.items.map(item => ({ ...item })),
       }
 
@@ -346,6 +363,9 @@ export default function CrearRemito() {
         formData: formDataSnapshot,
       })
       toast.success('Remito emitido')
+
+      const condicionVentaNombre = CONDICIONES_VENTA.find(c => c.id === remitoForm.condicionVenta)?.nombre || 'Efectivo'
+      const condicionIVANombre = CONDICIONES_IVA.find(c => c.id === remitoForm.condicionIVA)?.nombre || 'Consumidor Final'
 
       const pdfData: RemitoPDFData = {
         puntoVenta,
@@ -357,7 +377,8 @@ export default function CrearRemito() {
         DocTipo: Number.parseInt(remitoForm.docTipo),
         DocNro: remitoForm.docTipo === '99' ? 0 : Number.parseInt(remitoForm.docNro),
         Concepto: 'Remito',
-        CondicionVenta: 'Contado',
+        CondicionVenta: condicionVentaNombre,
+        CondicionIVA: condicionIVANombre,
         Articulos: articulosPDF,
         ImpNeto: totales.neto,
         ImpIVA: totales.iva,
@@ -386,7 +407,7 @@ export default function CrearRemito() {
     await cargar()
   }
 
-  const alertaBloqueante = alertas.length > 0 && !caiVigente
+  const alertaBloqueante = !caiVigente
   const caiInputsDisabled = Boolean(caiGuardado) && modoCai !== 'edit'
 
   const handleSelectFolder = async (): Promise<void> => {
@@ -426,23 +447,28 @@ export default function CrearRemito() {
       docNro: remitoForm.docTipo === '99' ? 0 : Number.parseInt(remitoForm.docNro),
       razonSocial: remitoForm.razonSocial,
       domicilio: remitoForm.domicilio,
+      condicionVenta: remitoForm.condicionVenta,
+      condicionIVA: remitoForm.condicionIVA,
       items: remitoForm.items,
     } as {
       docTipo: number
       docNro: number
       razonSocial: string
       domicilio: string
+      condicionVenta: string
+      condicionIVA: string
       items: ItemRemito[]
     }
 
     const ivasAgrupados = agruparIVA(formData.items)
     const totales = formData.items.reduce((acc, item) => {
-      const base = item.cantidad * (item.precioUnitario || 0)
+      const totalConIVA = item.cantidad * (item.precioUnitario || 0)
       const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
+      const neto = Math.round((totalConIVA / (1 + porcentaje / 100)) * 100) / 100
       return {
-        neto: acc.neto + base,
-        iva: acc.iva + (base * (porcentaje / 100)),
-        total: acc.total + (base * (1 + porcentaje / 100)),
+        neto: acc.neto + neto,
+        iva: acc.iva + (totalConIVA - neto),
+        total: acc.total + totalConIVA,
       }
     }, { neto: 0, iva: 0, total: 0 })
 
@@ -472,7 +498,8 @@ export default function CrearRemito() {
       DocTipo: formData.docTipo,
       DocNro: formData.docNro,
       Concepto: 'Remito',
-      CondicionVenta: 'Contado',
+      CondicionVenta: CONDICIONES_VENTA.find(c => c.id === formData.condicionVenta)?.nombre || 'Efectivo',
+      CondicionIVA: CONDICIONES_IVA.find(c => c.id === formData.condicionIVA)?.nombre || 'Consumidor Final',
       ImpNeto: totales.neto,
       ImpIVA: totales.iva,
       ImpTotal: totales.total,
@@ -505,13 +532,13 @@ export default function CrearRemito() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle>CAI de Remitos</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Configuración CAI</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-1.5 md:col-span-3"><Label>CAI</Label><Input disabled={caiInputsDisabled} value={caiForm.cai} onChange={e => setCaiForm(prev => ({ ...prev, cai: e.target.value }))} required /></div>
-            <div className="space-y-1.5"><Label>Punto de venta</Label><Input disabled={caiInputsDisabled} type="number" min="1" value={caiForm.puntoVenta} onChange={e => setCaiForm(prev => ({ ...prev, puntoVenta: Number(e.target.value) || 1 }))} required /></div>
-            <div className="space-y-1.5"><Label>Número desde</Label><Input disabled={caiInputsDisabled} type="number" min="1" value={caiForm.numeroDesde} onChange={e => setCaiForm(prev => ({ ...prev, numeroDesde: Number(e.target.value) || 1 }))} required /></div>
-            <div className="space-y-1.5"><Label>Número hasta</Label><Input disabled={caiInputsDisabled} type="number" min="1" value={caiForm.numeroHasta} onChange={e => setCaiForm(prev => ({ ...prev, numeroHasta: Number(e.target.value) || 1 }))} required /></div>
+            <div className="space-y-1.5"><Label>Punto de venta</Label><Input disabled={caiInputsDisabled} type="number" min="0" placeholder="0" value={caiForm.puntoVenta || ''} onChange={e => setCaiForm(prev => ({ ...prev, puntoVenta: Number(e.target.value) || 0 }))} required /></div>
+            <div className="space-y-1.5"><Label>Número desde</Label><Input disabled={caiInputsDisabled} type="number" min="0" placeholder="0" value={caiForm.numeroDesde || ''} onChange={e => setCaiForm(prev => ({ ...prev, numeroDesde: Number(e.target.value) || 0 }))} required /></div>
+            <div className="space-y-1.5"><Label>Número hasta</Label><Input disabled={caiInputsDisabled} type="number" min="0" placeholder="0" value={caiForm.numeroHasta || ''} onChange={e => setCaiForm(prev => ({ ...prev, numeroHasta: Number(e.target.value) || 0 }))} required /></div>
             <div className="space-y-1.5 md:col-span-2"><Label>Vencimiento</Label><Input disabled={caiInputsDisabled} type="date" value={caiForm.fechaVencimiento} onChange={e => setCaiForm(prev => ({ ...prev, fechaVencimiento: e.target.value }))} required /></div>
             <div className="flex items-end">
               <Button
@@ -534,15 +561,56 @@ export default function CrearRemito() {
         </CardContent>
       </Card>
 
-      {alertaBloqueante && (
-        <Card className="border-red-300 bg-red-50"><CardContent className="pt-6"><div className="flex items-start gap-2 text-red-700"><AlertTriangle className="h-5 w-5 mt-0.5" /><div><p className="font-semibold">No se puede emitir remito</p>{alertas.map(a => <p key={`${a.tipo}-${a.cai}`}>{a.mensaje}</p>)}</div></div></CardContent></Card>
-      )}
+      {/* Información del CAI */}
+      <Card>
+        <CardHeader><CardTitle>Estado del CAI</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 mb-1">CAI Vigente</p>
+              <p className="text-sm font-mono font-semibold">{caiVigente?.cai || '—'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 mb-1">Próximo Número</p>
+              <p className="text-sm font-mono font-semibold">{caiVigente ? String(caiVigente.proximoNumero).padStart(8, '0') : '—'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-xs text-gray-500 mb-1">Disponibles</p>
+              <p className={`text-sm font-semibold ${caiVigente && Math.max(0, caiVigente.numeroHasta - caiVigente.proximoNumero + 1) <= 5 ? 'text-red-600' : ''}`}>
+                {caiVigente ? Math.max(0, caiVigente.numeroHasta - caiVigente.proximoNumero + 1) : 0}
+              </p>
+            </div>
+          </div>
+
+          {alertas.length > 0 && (
+            <div className="space-y-1">
+              {alertas.map(a => (
+                <div
+                  key={`${a.tipo}-${a.cai}`}
+                  className={`flex items-start gap-2 text-sm p-2 rounded ${a.tipo === 'vencimiento' ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'
+                    }`}
+                >
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{a.mensaje}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {alertaBloqueante && (
+            <div className="flex items-start gap-2 text-sm p-3 rounded bg-red-100 text-red-800 font-semibold">
+              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
+              <span>No se puede emitir remito — no hay un CAI activo y vigente</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Emitir Remito R</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleEmitir} className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="flex gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="DocTipo" className="text-xs">Tipo Doc.</Label>
                 <Select value={remitoForm.docTipo} onValueChange={value => handleInputChange('docTipo', value)}>
@@ -570,6 +638,35 @@ export default function CrearRemito() {
                     </Button>
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="CondicionVenta" className="text-xs">Condición de Venta</Label>
+                <Select value={remitoForm.condicionVenta} onValueChange={value => handleInputChange('condicionVenta', value)}>
+                  <SelectTrigger id="CondicionVenta">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONDICIONES_VENTA.map(cv => (
+                      <SelectItem key={cv.id} value={cv.id}>{cv.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="CondicionIVA" className="text-xs">Condición IVA</Label>
+                <Select value={remitoForm.condicionIVA} onValueChange={value => handleInputChange('condicionIVA', value)}>
+                  <SelectTrigger id="CondicionIVA">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONDICIONES_IVA.map(ci => (
+                      <SelectItem key={ci.id} value={ci.id}>{ci.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -675,7 +772,7 @@ export default function CrearRemito() {
                           min="0"
                           placeholder="$"
                           className="bg-white"
-                          value={item.precioUnitario ?? ''}
+                          value={item.precioUnitario || ''}
                           onChange={(e: ChangeEvent<HTMLInputElement>) => handleArticuloChange(index, 'precioUnitario', e.target.value === '' ? null : Number.parseFloat(e.target.value))}
                           required
                         />
@@ -719,7 +816,12 @@ export default function CrearRemito() {
               <div className="space-y-1">
                 <Label className="text-xs">Neto (sin IVA)</Label>
                 <div className="bg-white border rounded-md px-3 h-10 flex items-center font-medium">
-                  {formatearMoneda(remitoForm.items.reduce((acc, item) => acc + (item.cantidad * (item.precioUnitario || 0)), 0))}
+                  {formatearMoneda(remitoForm.items.reduce((acc, item) => {
+                    const totalConIVA = item.cantidad * (item.precioUnitario || 0)
+                    const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
+                    const neto = Math.round((totalConIVA / (1 + porcentaje / 100)) * 100) / 100
+                    return acc + neto
+                  }, 0))}
                 </div>
               </div>
 
@@ -727,9 +829,10 @@ export default function CrearRemito() {
                 <Label className="text-xs">IVA</Label>
                 <div className="bg-white border rounded-md px-3 h-10 flex items-center font-medium">
                   {formatearMoneda(remitoForm.items.reduce((acc, item) => {
-                    const base = item.cantidad * (item.precioUnitario || 0)
+                    const totalConIVA = item.cantidad * (item.precioUnitario || 0)
                     const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
-                    return acc + (base * (porcentaje / 100))
+                    const neto = Math.round((totalConIVA / (1 + porcentaje / 100)) * 100) / 100
+                    return acc + (totalConIVA - neto)
                   }, 0))}
                 </div>
               </div>
@@ -738,9 +841,7 @@ export default function CrearRemito() {
                 <Label className="text-xs">Total</Label>
                 <div className="bg-white border rounded-md px-3 h-10 flex items-center font-bold text-base">
                   {formatearMoneda(remitoForm.items.reduce((acc, item) => {
-                    const base = item.cantidad * (item.precioUnitario || 0)
-                    const porcentaje = ALICUOTAS_IVA.find(a => a.id === item.alicuotaIVA)?.porcentaje || 0
-                    return acc + (base * (1 + porcentaje / 100))
+                    return acc + (item.cantidad * (item.precioUnitario || 0))
                   }, 0))}
                 </div>
               </div>
@@ -759,48 +860,45 @@ export default function CrearRemito() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-          {resultado.success
-            ? (
-              <div>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-green-800 mb-4">
-                  <div><span className="font-medium">Tipo:</span> R</div>
-                  <div><span className="font-medium">Código:</span> 91</div>
-                  <div><span className="font-medium">Razon Social / Nombre:</span> {resultado.data?.razonSocial || resultado.data?.cliente}</div>
-                  <div><span className="font-medium">Domicilio:</span> {resultado.data?.domicilio || '-'}</div>
-                  <div><span className="font-medium">Comprobante Nro:</span> {String(resultado.data?.numero).padStart(8, '0')}</div>
-                  <div><span className="font-medium">CAI:</span> {resultado.data?.cai}</div>
+            {resultado.success
+              ? (
+                <div>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-green-800 mb-4">
+                    <div><span className="font-medium">Tipo:</span> R</div>
+                    <div><span className="font-medium">Código:</span> 91</div>
+                    <div><span className="font-medium">Razon Social / Nombre:</span> {resultado.data?.razonSocial || resultado.data?.cliente}</div>
+                    <div><span className="font-medium">Domicilio:</span> {resultado.data?.domicilio || '-'}</div>
+                    <div><span className="font-medium">Comprobante Nro:</span> {String(resultado.data?.numero).padStart(8, '0')}</div>
+                    <div><span className="font-medium">CAI:</span> {resultado.data?.cai}</div>
+                  </div>
+
+                  {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={null} />}
+
+                  <PDFActions
+                    pdfUrl={pdfUrl}
+                    onGenerar={handleGenerarPDF}
+                    pdfSavePath={pdfSavePath}
+                    onSelectFolder={handleSelectFolder}
+                    loadingPDF={loadingPDF}
+                  />
                 </div>
-
-                {htmlPreview && <PDFPreview htmlContent={htmlPreview} qrUrl={null} />}
-
-                <PDFActions
-                  pdfUrl={pdfUrl}
-                  onGenerar={handleGenerarPDF}
-                  pdfSavePath={pdfSavePath}
-                  onSelectFolder={handleSelectFolder}
-                  loadingPDF={loadingPDF}
-                />
-              </div>
-            )
-            : (
-              <div>
-                <p className="text-red-800">{resultado.error}</p>
-              </div>
-            )}
+              )
+              : (
+                <div>
+                  <p className="text-red-800">{resultado.error}</p>
+                </div>
+              )}
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader><CardTitle>Estado</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p><strong>CAI vigente:</strong> {caiVigente?.cai || 'No disponible'}</p>
-          <p><strong>Proximo número:</strong> {caiVigente ? String(caiVigente.proximoNumero).padStart(8, '0') : '-'}</p>
-          <p><strong>Disponibles:</strong> {caiVigente ? caiVigente.numeroHasta - caiVigente.proximoNumero + 1 : 0}</p>
-          <Separator />
-          {pdfUrl ? <p className="text-green-700">PDF generado: {pdfUrl}</p> : null}
-        </CardContent>
-      </Card>
+      {pdfUrl ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-green-700 text-sm">PDF generado: {pdfUrl}</p>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }

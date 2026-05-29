@@ -10,6 +10,51 @@ export const TIPOS_COMPROBANTE = {
   NOTA_CREDITO_B: 8,
 } as const
 
+export function getLetraComprobante(cbteTipo: number): 'A' | 'B' | 'C' {
+  if (
+    cbteTipo === TIPOS_COMPROBANTE.FACTURA_A
+    || cbteTipo === TIPOS_COMPROBANTE.NOTA_DEBITO_A
+    || cbteTipo === TIPOS_COMPROBANTE.NOTA_CREDITO_A
+  ) {
+    return 'A'
+  }
+
+  if (
+    cbteTipo === TIPOS_COMPROBANTE.FACTURA_B
+    || cbteTipo === TIPOS_COMPROBANTE.NOTA_DEBITO_B
+    || cbteTipo === TIPOS_COMPROBANTE.NOTA_CREDITO_B
+  ) {
+    return 'B'
+  }
+
+  return 'C'
+}
+
+export function getNombreComprobante(cbteTipo: number): string {
+  switch (cbteTipo) {
+    case TIPOS_COMPROBANTE.FACTURA_A:
+      return 'Factura A'
+    case TIPOS_COMPROBANTE.FACTURA_B:
+      return 'Factura B'
+    case TIPOS_COMPROBANTE.FACTURA_C:
+      return 'Factura C'
+    case TIPOS_COMPROBANTE.NOTA_DEBITO_A:
+      return 'Nota de Débito A'
+    case TIPOS_COMPROBANTE.NOTA_DEBITO_B:
+      return 'Nota de Débito B'
+    case TIPOS_COMPROBANTE.NOTA_CREDITO_A:
+      return 'Nota de Crédito A'
+    case TIPOS_COMPROBANTE.NOTA_CREDITO_B:
+      return 'Nota de Crédito B'
+    default:
+      return `Comprobante ${cbteTipo}`
+  }
+}
+
+export function esNotaCredito(cbteTipo: number): boolean {
+  return cbteTipo === TIPOS_COMPROBANTE.NOTA_CREDITO_A || cbteTipo === TIPOS_COMPROBANTE.NOTA_CREDITO_B
+}
+
 /**
  * Tipo de documento del comprador
  *
