@@ -27,16 +27,18 @@ import {
 } from './components'
 import { ComprobantesEmitidos } from './components/ComprobantesEmitidos'
 import { ConfiguracionEmisor } from './components/ConfiguracionEmisor'
+import CrearRemito from './CrearRemito'
 import { generarHTMLFactura } from './components/facturaTemplate'
 import { generarHTMLTicket } from './components/ticketTemplate'
 import logo from '../assets/logo.png'
 import type { LucideIcon } from 'lucide-react'
 
-type Seccion = 'facturar' | 'ticket' | 'comprobantes' | 'configuracion'
+type Seccion = 'facturar' | 'ticket' | 'remito' | 'comprobantes' | 'configuracion'
 
 const secciones: Array<{ value: Seccion; label: string; icon: LucideIcon }> = [
   { value: 'facturar', label: 'Crear Factura', icon: FileText },
   { value: 'ticket', label: 'Crear Ticket', icon: ReceiptText },
+  { value: 'remito', label: 'Crear Remito', icon: FileText },
   { value: 'comprobantes', label: 'Comprobantes Emitidos', icon: ListOrdered },
   { value: 'configuracion', label: 'Configuración Emisor', icon: Settings },
 ]
@@ -1163,6 +1165,8 @@ function CrearFactura() {
             )}
           </>
         )
+      case 'remito':
+        return <CrearRemito />
       case 'comprobantes':
         return <ComprobantesEmitidos />
       case 'configuracion':

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Param, Post, Put, Query, UsePipes, ValidationPipe } from '@nestjs/common'
 import { DatabaseService } from '../../main/database/database.service'
 import { ArcaService } from './arca.service'
 import { AuthWebServiceDevDto } from './dto/auth-web-service-dev.dto'
@@ -44,6 +44,11 @@ export class ArcaController {
   @Post('generar-pdf-ticket')
   generatePDFTicket(@Body() ticketInfo: any) {
     return this.arcaService.generatePDFTicket(ticketInfo)
+  }
+
+  @Post('generar-pdf-remito')
+  generatePDFRemito(@Body() remitoInfo: any) {
+    return this.arcaService.generatePDFRemito(remitoInfo)
   }
 
   /**
@@ -147,6 +152,94 @@ export class ArcaController {
   @Post('mis-comprobantes')
   async getMisComprobantes(@Body() filters: any) {
     return this.arcaService.getMisComprobantes(filters)
+  }
+
+  @Post('cai-remitos')
+  guardarCaiRemito(@Body() body: { cai: string, puntoVenta: number, numeroDesde: number, numeroHasta: number, fechaVencimiento: string, activo?: boolean }) {
+    try {
+      const id = this.databaseService.guardarCaiRemito({
+        cai: body.cai,
+        puntoVenta: body.puntoVenta,
+        numeroDesde: body.numeroDesde,
+        numeroHasta: body.numeroHasta,
+        proximoNumero: body.numeroDesde,
+        fechaVencimiento: body.fechaVencimiento,
+        activo: body.activo ?? true,
+      })
+
+      return { success: true, id }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  @Put('cai-remitos/:id')
+  actualizarCaiRemito(@Param('id') id: string, @Body() body: { cai: string, puntoVenta: number, numeroDesde: number, numeroHasta: number, fechaVencimiento: string, activo?: boolean }) {
+    try {
+      const updated = this.databaseService.actualizarCaiRemito(Number.parseInt(id), {
+        cai: body.cai,
+        puntoVenta: body.puntoVenta,
+        numeroDesde: body.numeroDesde,
+        numeroHasta: body.numeroHasta,
+        proximoNumero: body.numeroDesde,
+        fechaVencimiento: body.fechaVencimiento,
+        activo: body.activo ?? true,
+      })
+
+      return { success: updated }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  @Get('cai-remitos')
+  listarCaiRemitos(@Query('puntoVenta') puntoVenta?: string) {
+    return { success: true, data: this.databaseService.obtenerCaiRemitos(puntoVenta ? { puntoVenta: Number.parseInt(puntoVenta) } : undefined) }
+  }
+
+  @Get('cai-remitos/alertas')
+  alertasCaiRemitos(@Query('puntoVenta') puntoVenta?: string) {
+    return { success: true, data: this.databaseService.obtenerAlertasCaiRemitos(puntoVenta ? Number.parseInt(puntoVenta) : undefined) }
+  }
+
+  @Post('remitos/emitir')
+  emitirRemito(@Body() body: {
+    puntoVenta: number
+    cliente: string
+    docTipo: number
+    docNro: number
+    razonSocial: string
+    domicilio: string
+    items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
+    fecha?: string
+  }) {
+    try {
+      const result = this.databaseService.emitirRemito(body)
+
+      return {
+        success: true,
+        data: {
+          id: result.remito.id,
+          puntoVenta: result.remito.puntoVenta,
+          numero: result.remito.numero,
+          fecha: result.remito.fecha,
+          cliente: result.remito.cliente,
+          docTipo: result.remito.docTipo,
+          docNro: result.remito.docNro,
+          razonSocial: result.remito.razonSocial,
+          domicilio: result.remito.domicilio,
+          cai: result.remito.cai,
+          caiVencimiento: result.remito.caiVencimiento,
+          estado: result.remito.estado,
+          proximoNumero: result.cai.proximoNumero,
+        },
+      }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
   }
 
   /**

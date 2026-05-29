@@ -1136,6 +1136,265 @@ export class ArcaService {
     }
   }
 
+  async generatePDFRemito(remitoInfo: {
+    puntoVenta?: number
+    PtoVta?: number
+    numero?: number
+    CbteDesde?: number
+    fecha?: string
+    FchProceso?: string
+    cliente?: string
+    razonSocial?: string
+    domicilio?: string
+    docTipo?: number
+    DocTipo?: number
+    docNro?: number
+    DocNro?: number
+    items?: Array<{
+      descripcion: string
+      cantidad: number
+      unidadMedida: string
+    }>
+    Articulos?: Array<{
+      codigo?: string
+      descripcion: string
+      cantidad: number
+      unidadMedida: string
+      precioUnitario: number
+      alicuotaIVA: string
+      porcentajeIVA: number
+      subtotal: number
+    }>
+    neto?: number
+    ImpNeto?: number
+    iva?: number
+    ImpIVA?: number
+    total?: number
+    ImpTotal?: number
+    IVAsAgrupados?: Array<{
+      alicuota: string
+      porcentaje: number
+      baseImponible: number
+      importeIVA: number
+    }>
+    cai?: string
+    CAI?: string
+    caiVencimiento?: string
+    CAIFchVto?: string
+    DatosEmisor?: {
+      cuit: string
+      razonSocial: string
+      domicilio: string
+      condicionIVA: string
+      iibb: string
+      inicioActividades: string
+    }
+    customPath?: string
+  }) {
+    try {
+      const projectRoot = join(__dirname, '../..')
+      let logoPathRaw: string
+      let arcaLogoPathRaw: string
+
+      const isPackaged = process.resourcesPath !== undefined && !process.resourcesPath.includes('node_modules')
+
+      if (isPackaged) {
+        const assetsPath = join(process.resourcesPath, 'assets')
+        logoPathRaw = join(assetsPath, 'logo.png')
+        arcaLogoPathRaw = join(assetsPath, 'ARCA.png')
+      }
+      else {
+        logoPathRaw = join(projectRoot, 'src/render/assets/logo.png')
+        arcaLogoPathRaw = join(projectRoot, 'src/render/assets/ARCA.png')
+      }
+
+      const logoBase64 = await this.imageToBase64(logoPathRaw)
+      const arcaLogoBase64 = await this.imageToBase64(arcaLogoPathRaw)
+
+      const { generarHTMLRemito } = await import('@render/factura/components/remitoTemplate')
+
+      const articulosSource = remitoInfo.Articulos || remitoInfo.items || []
+      const remitoPdfData = {
+        PtoVta: remitoInfo.PtoVta ?? remitoInfo.puntoVenta ?? 0,
+        CbteDesde: remitoInfo.CbteDesde ?? remitoInfo.numero ?? 0,
+        DocTipo: remitoInfo.DocTipo ?? remitoInfo.docTipo ?? 80,
+        DocNro: remitoInfo.DocNro ?? remitoInfo.docNro ?? 0,
+        ImpTotal: remitoInfo.ImpTotal ?? remitoInfo.total ?? 0,
+        ImpNeto: remitoInfo.ImpNeto ?? remitoInfo.neto ?? 0,
+        ImpIVA: remitoInfo.ImpIVA ?? remitoInfo.iva ?? 0,
+        CAI: remitoInfo.CAI ?? remitoInfo.cai ?? '',
+        CAIFchVto: remitoInfo.CAIFchVto ?? remitoInfo.caiVencimiento ?? '',
+        FchProceso: remitoInfo.FchProceso ?? remitoInfo.fecha ?? new Date().toISOString().split('T')[0],
+        RazonSocial: remitoInfo.razonSocial || remitoInfo.cliente,
+        Domicilio: remitoInfo.domicilio || '',
+        Concepto: 'Remito',
+        CondicionVenta: '',
+        Articulos: articulosSource.map((item, index) => ({
+          codigo: (item as any).codigo || String(index + 1).padStart(3, '0'),
+          descripcion: item.descripcion,
+          cantidad: item.cantidad,
+          unidadMedida: item.unidadMedida,
+          precioUnitario: (item as any).precioUnitario || 0,
+          alicuotaIVA: (item as any).alicuotaIVA || '0',
+          porcentajeIVA: (item as any).porcentajeIVA || 0,
+          subtotal: (item as any).subtotal || 0,
+        })),
+        IVAsAgrupados: remitoInfo.IVAsAgrupados || [],
+        DatosEmisor: remitoInfo.DatosEmisor || {
+          cuit: String(this.cuitActual || 0),
+          razonSocial: '',
+          domicilio: '',
+          condicionIVA: '',
+          iibb: '',
+          inicioActividades: '',
+        },
+      }
+
+      const html = generarHTMLRemito(remitoPdfData, '', this.cuitActual || 0, logoBase64 || undefined, arcaLogoBase64 || undefined)
+
+      const nroComprobante = String(remitoInfo.numero).padStart(8, '0')
+      const ptoVta = String(remitoInfo.puntoVenta).padStart(4, '0')
+      const fileName = `RemitoR_${ptoVta}-${nroComprobante}.pdf`
+
+      let outputDir: string
+      if (remitoInfo.customPath && existsSync(remitoInfo.customPath)) {
+        outputDir = remitoInfo.customPath
+      }
+      else {
+        outputDir = join(homedir(), 'Desktop')
+      }
+
+      if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true })
+      }
+
+      const pdfPath = join(outputDir, fileName)
+
+      const browser = await puppeteer.launch({
+        executablePath: puppeteer.executablePath(),
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      })
+
+      const page = await browser.newPage()
+      await page.setContent(html, { waitUntil: 'networkidle0' })
+
+      await page.pdf({
+        path: pdfPath,
+        format: 'A4',
+        margin: {
+          top: '0.4in',
+          right: '0.4in',
+          bottom: '0.4in',
+          left: '0.4in',
+        },
+        printBackground: true,
+      })
+
+      await browser.close()
+
+      return {
+        success: true,
+        filePath: pdfPath,
+        fileName,
+        message: pdfPath,
+      }
+    }
+    catch (error) {
+      console.error('Error al generar PDF de remito:', error)
+      return this.handleError(error)
+    }
+  }
+
+  guardarCaiRemito(data: { cai: string, puntoVenta: number, numeroDesde: number, numeroHasta: number, fechaVencimiento: string, activo?: boolean }) {
+    try {
+      const id = this.databaseService.guardarCaiRemito({
+        cai: data.cai,
+        puntoVenta: data.puntoVenta,
+        numeroDesde: data.numeroDesde,
+        numeroHasta: data.numeroHasta,
+        proximoNumero: data.numeroDesde,
+        fechaVencimiento: data.fechaVencimiento,
+        activo: data.activo ?? true,
+      })
+
+      return { success: true, id }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  listarCaiRemitos(puntoVenta?: number) {
+    try {
+      const data = this.databaseService.obtenerCaiRemitos({ puntoVenta })
+      return { success: true, data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  obtenerAlertasCaiRemito(puntoVenta?: number) {
+    try {
+      return { success: true, data: this.databaseService.obtenerAlertasCaiRemitos(puntoVenta) }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  emitirRemito(data: {
+    puntoVenta: number
+    cliente: string
+    docTipo: number
+    docNro: number
+    razonSocial: string
+    domicilio: string
+    items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
+    fecha?: string
+    customPath?: string
+  }) {
+    try {
+      const result = this.databaseService.emitirRemito({
+        puntoVenta: data.puntoVenta,
+        cliente: data.cliente,
+        docTipo: data.docTipo,
+        docNro: data.docNro,
+        razonSocial: data.razonSocial,
+        domicilio: data.domicilio,
+        items: data.items,
+        fecha: data.fecha,
+      })
+
+      return {
+        success: true,
+        data: {
+          id: result.remito.id,
+          puntoVenta: result.remito.puntoVenta,
+          numero: result.remito.numero,
+          fecha: result.remito.fecha,
+          cliente: result.remito.cliente,
+          docTipo: result.remito.docTipo,
+          docNro: result.remito.docNro,
+          razonSocial: result.remito.razonSocial,
+          domicilio: result.remito.domicilio,
+          cai: result.remito.cai,
+          caiVencimiento: result.remito.caiVencimiento,
+          estado: result.remito.estado,
+          proximoNumero: result.cai.proximoNumero,
+        },
+      }
+    }
+    catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  getAlertasCaiRemitos(puntoVenta?: number) {
+    return this.obtenerAlertasCaiRemito(puntoVenta)
+  }
+
   /**
    * Autorizar web service de desarrollo
    * Utiliza las automatizaciones del SDK de AFIP para autorizar un web service

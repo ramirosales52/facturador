@@ -103,7 +103,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
   // Determinar etiqueta del tipo de documento
   let tipoDocLabel = 'CUIT/CUIL'
   let docNroDisplay = String(facturaInfo.DocNro || '-')
-  
+
   if (facturaInfo.DocTipo === 80) {
     tipoDocLabel = 'CUIT'
   } else if (facturaInfo.DocTipo === 96) {
@@ -605,7 +605,7 @@ export function generarHTMLFactura(facturaInfo: FacturaPDFData, qrImageUrl: stri
                     alt="AFIP Logo"
                     style="max-width: 250px; display: block; margin-bottom: 5px"
                   />
-                  <strong style="font-size: 13px; font-style: italic;">Comprobante Autorizado</strong>
+                  <strong style="font-size: 13px; font-style: italic;">Comprobante no válido como factura</strong>
                 </div>
               </div>
             </div>

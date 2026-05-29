@@ -76,6 +76,12 @@ interface PDFResponse {
   error?: string
 }
 
+interface RemitoResponse {
+  success: boolean
+  data?: any
+  error?: string
+}
+
 interface ContribuyenteResponse {
   success: boolean
   data?: {
@@ -147,6 +153,14 @@ export function useArca() {
     return handleRequest(async () => {
       const apiUrl = await getApiUrl()
       const response = await axios.post<PDFResponse>(`${apiUrl}/generar-pdf-ticket`, ticketInfo)
+      return response.data
+    })
+  }
+
+  const generarPDFRemito = async (remitoInfo: any): Promise<PDFResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post<PDFResponse>(`${apiUrl}/generar-pdf-remito`, remitoInfo)
       return response.data
     })
   }
@@ -285,6 +299,83 @@ export function useArca() {
     }
   }
 
+  const guardarCaiRemito = async (data: {
+    cai: string
+    puntoVenta: number
+    numeroDesde: number
+    numeroHasta: number
+    fechaVencimiento: string
+    activo?: boolean
+  }): Promise<RemitoResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post<RemitoResponse>(`${apiUrl}/cai-remitos`, data)
+      return response.data
+    })
+  }
+
+  const actualizarCaiRemito = async (id: number, data: {
+    cai: string
+    puntoVenta: number
+    numeroDesde: number
+    numeroHasta: number
+    fechaVencimiento: string
+    activo?: boolean
+  }): Promise<RemitoResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.put<RemitoResponse>(`${apiUrl}/cai-remitos/${id}`, data)
+      return response.data
+    })
+  }
+
+  const listarCaiRemitos = async (puntoVenta?: number): Promise<RemitoResponse> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const params = new URLSearchParams()
+      if (typeof puntoVenta === 'number') params.append('puntoVenta', String(puntoVenta))
+      const response = await axios.get<RemitoResponse>(`${apiUrl}/cai-remitos${params.toString() ? `?${params.toString()}` : ''}`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener CAI de remitos'
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  const getAlertasCaiRemitos = async (puntoVenta?: number): Promise<RemitoResponse> => {
+    try {
+      const apiUrl = await getApiUrl()
+      const params = new URLSearchParams()
+      if (typeof puntoVenta === 'number') params.append('puntoVenta', String(puntoVenta))
+      const response = await axios.get<RemitoResponse>(`${apiUrl}/cai-remitos/alertas${params.toString() ? `?${params.toString()}` : ''}`)
+      return response.data
+    }
+    catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+      const errorMsg = axiosError.response?.data?.error || axiosError.message || 'Error al obtener alertas de remitos'
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  const emitirRemito = async (data: {
+    puntoVenta: number
+    cliente: string
+    docTipo: number
+    docNro: number
+    razonSocial: string
+    domicilio: string
+    items: Array<{ descripcion: string; cantidad: number; unidadMedida: string }>
+    fecha?: string
+  }): Promise<RemitoResponse> => {
+    return handleRequest(async () => {
+      const apiUrl = await getApiUrl()
+      const response = await axios.post<RemitoResponse>(`${apiUrl}/remitos/emitir`, data)
+      return response.data
+    })
+  }
+
   const clearError = () => {
     setError(null)
   }
@@ -297,6 +388,7 @@ export function useArca() {
     generarQR,
     generarPDF,
     generarPDFTicket,
+    generarPDFRemito,
     obtenerCUITDesdeDNI,
     consultarContribuyente,
     getPuntosVentaHabilitados,
@@ -305,5 +397,10 @@ export function useArca() {
     obtenerFacturas,
     obtenerFacturaPorId,
     actualizarPdfPath,
+    guardarCaiRemito,
+    actualizarCaiRemito,
+    listarCaiRemitos,
+    getAlertasCaiRemitos,
+    emitirRemito,
   }
 }
